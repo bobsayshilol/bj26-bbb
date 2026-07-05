@@ -122,4 +122,4 @@ static_assert((offsetof (struct vdp, UNK_60000))       == 0x60000);
 static_assert((offsetof (struct vdp, SOUND_CTRL))      == 0x80000);
 static_assert((offsetof (struct vdp, SOUND_EXP_DATA))  == 0xA0000);
 
-extern struct vdp VDP;
+extern volatile struct vdp VDP;
