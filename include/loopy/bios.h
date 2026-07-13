@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
 Loopy-specific hardware registers, BIOS functions and reserved memory.
 Addresses are defined as linker symbols in address_sh7021.ld.
@@ -25,8 +29,8 @@ extern void     bios_vsync();
 
 // Sound
 extern void     bios_initSoundTransmission();
-extern void     bios_playBgm(struct soundstate_t *soundState, uint8_t unkp2, uint16_t index, const char *const (*trackList)[]);
-extern void     bios_playSfx(struct soundstate_t *soundState, uint8_t unkp2, uint16_t index, const char *const (*trackList)[]);
+extern void     bios_playBgm(struct soundstate_t *soundState, uint8_t unkp2, uint16_t index, const uint8_t *const (*trackList)[]);
+extern void     bios_playSfx(struct soundstate_t *soundState, uint8_t unkp2, uint16_t index, const uint8_t *const (*trackList)[]);
 extern void     bios_updateBgm(struct soundstate_t*, uint8_t unkp2);
 extern void     bios_soundChannels(int channelMode);
 extern void     bios_soundVolume(int channel, int volume);
@@ -63,4 +67,8 @@ extern uint16_t biosvar_gamepad[3];
 
 
 /*** BIOS constant data ***/
-extern const char *const biosdata_stopBgmTrackList[1];
+extern const uint8_t *const biosdata_stopBgmTrackList[1];
+
+#ifdef __cplusplus
+}
+#endif
