@@ -2,12 +2,14 @@
 #include "debug.h"
 #include "input.h"
 #include "loopy.h"
+#include "graphics.h"
 
 namespace engine::core {
 
 void init() {
 	// Init systems.
 	debug::init();
+	graphics::init();
 
 	// The rest of this is copypasta'd.
 

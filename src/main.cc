@@ -30,8 +30,12 @@ void splash() {
 	const int seconds = 4;
 	for (int frame = 0; frame < seconds * fps; frame++) {
 		bios_vsync();
-		VDP.BM_SCROLLX[0] += 4;
-		VDP.BM_SCROLLY[0] += 4;
+
+		const int speed = 4;
+		engine::graphics::bitmap_0.scroll_x() -= speed;
+		engine::graphics::bitmap_1.scroll_y() -= speed;
+		engine::graphics::bitmap_2.scroll_x() += speed;
+		engine::graphics::bitmap_3.scroll_y() += speed;
 	}
 }
 
