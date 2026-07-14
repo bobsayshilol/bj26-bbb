@@ -48,6 +48,7 @@ SRCS_CXX = $(wildcard $(SRCDIR)/*.cc)
 OBJS_CXX = $(patsubst $(SRCDIR)/%.cc,$(OBJDIR)/%.o,$(SRCS_CXX))
 SRCS_S = $(wildcard $(SRCDIR)/*.s)
 OBJS_S = $(patsubst $(SRCDIR)/%.s,$(OBJDIR)/%.o,$(SRCS_S))
+HDRS = $(wildcard $(SRCDIR)/*.h $(INCDIR)/*.h $(INCDIR)/loopy/*.h)
 
 CFLAGS  = $(OPTIMIZE) -g -gdwarf-4
 CFLAGS += -m1 -mrenesas
@@ -79,11 +80,11 @@ rom: $(ROM)
 
 $(ROM:.bin=.elf): $(OBJS_S) $(OBJS_C) $(OBJS_CXX)
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.s | $(OBJDIR)
+$(OBJDIR)/%.o: $(SRCDIR)/%.s $(HDRS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
-$(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
+$(OBJDIR)/%.o: $(SRCDIR)/%.c $(HDRS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
-$(OBJDIR)/%.o: $(SRCDIR)/%.cc | $(OBJDIR)
+$(OBJDIR)/%.o: $(SRCDIR)/%.cc $(HDRS) | $(OBJDIR)
 	$(CXX) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(OBJDIR):
