@@ -5,7 +5,7 @@
 
 #ifndef __cplusplus
 #ifndef static_assert
-#define static_assert _Static_assert
+#define static_assert(x) _Static_assert(x, #x)
 #endif
 #endif
 

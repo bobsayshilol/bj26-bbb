@@ -22,7 +22,8 @@ static inline void sys_setInterruptMask(int priorityMask) {
 
 static inline void sys_setInterruptPriority(int select, int priority) {
 	// IPRx registers are contiguous so we can offset like this
-	volatile uint16_t *reg = (&INTC_IPRA) + (select >> 4);
+	// However, GCC doesn't like indexing out of a variable's size, so use INTC_IPRA==0x5FFFF84
+	volatile uint16_t *reg = ((volatile uint16_t *)0x5FFFF84) + (select >> 4);
 	int shift = select & 0xF;
 	*reg = (*reg & ~(0xF << shift)) | ((priority & 0xF) << shift);
 }

@@ -36,6 +36,7 @@ ROM    = ./rom.bin
 # Basic compile options
 OPTIMIZE = -Os
 LIBS =
+WARNINGS = -Wall -Wextra -pedantic -Werror
 
 # Below here probably doesn't need to be touched
 
@@ -56,6 +57,7 @@ CFLAGS += -ffreestanding
 CFLAGS += -falign-functions=4 -ffunction-sections -fdata-sections
 CFLAGS += -fomit-frame-pointer -fno-asynchronous-unwind-tables -fno-unwind-tables
 CFLAGS += -Wstack-usage=$(shell numfmt --from=iec $(STACKSIZE)) -I$(INCDIR)
+CFLAGS += $(WARNINGS)
 
 CXXFLAGS = -std=c++23 -fno-exceptions -fno-non-call-exceptions -fno-rtti -fno-threadsafe-statics
 

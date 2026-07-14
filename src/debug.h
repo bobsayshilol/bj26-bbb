@@ -10,14 +10,14 @@ namespace engine::debug {
 
 #if ENABLE_DEBUGGING
 
-static void init() { serial_begin(9600); }
+static inline void init() { serial_begin(9600); }
 
 // TODO: hacked up the emulator to log this out, so newline is always required
 #define DEBUG_MSG(msg) do { serial_print(msg "\n"); } while (false)
 
 #else
 
-static void init() {}
+static inline void init() {}
 
 #define DEBUG_MSG(msg)
 
