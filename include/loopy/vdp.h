@@ -19,7 +19,10 @@ struct vdp {
 		uint8_t BITMAP_VRAM_8BIT[0x20000];
 	};
 	PADBYTES _pad_20000[0x20000];
-	uint16_t TILE_VRAM[0x8000];
+	union {
+		uint16_t TILE_VRAM[0x8000];
+		uint8_t TILE_VRAM_8BIT[0x10000];
+	};
 	uint32_t OAM[0x80];
 	PADBYTES _pad_50200[0xE00];
 	uint16_t PALETTE[0x100];
@@ -31,10 +34,10 @@ struct vdp {
 	PADBYTES _pad_52200[0x5E00];
 	// General registers
 	uint16_t MODE;
-	uint16_t HCOUNT;
-	uint16_t VCOUNT;
-	uint16_t TRIGGER;
-	uint16_t SYNC_IRQ_CTRL;
+	volatile uint16_t HCOUNT;
+	volatile uint16_t VCOUNT;
+	volatile uint16_t TRIGGER;
+	volatile uint16_t SYNC_IRQ_CTRL;
 	PADBYTES _pad_5800A[0xFF6];
 	// Bitmap registers
 	uint16_t BM_SCROLLX[4];
@@ -68,9 +71,9 @@ struct vdp {
 	uint16_t CAPTURE_CTRL;
 	PADBYTES _pad_5B00C[0xFF4];
 	// IRQ0 registers
-	uint16_t IRQ0_NMI_CTRL;
-	uint16_t IRQ0_HCMP;
-	uint16_t IRQ0_VCMP;
+	volatile uint16_t IRQ0_NMI_CTRL;
+	volatile uint16_t IRQ0_HCMP;
+	volatile uint16_t IRQ0_VCMP;
 	PADBYTES _pad_5C006[0xFFA];
 	// Printer and controller MMIO registers (should these be separated?)
 	uint16_t IO_PRINT_TEMP;
@@ -122,4 +125,4 @@ static_assert((offsetof (struct vdp, UNK_60000))       == 0x60000);
 static_assert((offsetof (struct vdp, SOUND_CTRL))      == 0x80000);
 static_assert((offsetof (struct vdp, SOUND_EXP_DATA))  == 0xA0000);
 
-extern volatile struct vdp VDP;
+extern struct vdp VDP;
