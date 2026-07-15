@@ -4,6 +4,58 @@
 
 namespace engine::graphics {
 
+namespace {
+
+void test_sprites() {
+	// Enable sprites.
+	VDP.LAYER_CTRL |= LAYER_ENABLE_OBJ0;
+
+	// Sprites are 16x16?
+	VDP.BG_CTRL = BG_TILESIZE_16X16;
+
+	// Setup sprite stuff.
+	VDP.OBJ_CTRL =
+		  ((0 & 0xFF) <<  0) // global ID offset (8 bits)
+		| ((0 & 0x07) <<  8) // screen1 ID offset (3 bits)
+		| ((0 & 0x07) << 11) // screen0 ID offset (3 bits)
+		| ((1 & 0x01) << 14) // 8bit (1 bit)
+	;
+
+	// Fill tile data.
+	for (int i = 0; i < 0x10000; i++) {
+		VDP.TILE_VRAM_8BIT[i] = i;
+	}
+
+	// Setup some sprites.
+	for (int sprite_id = 0; sprite_id < 4; sprite_id++) {
+		// TODO: move these
+#define SPRITE_SIZE_8x8 0
+#define SPRITE_SIZE_16x16 1
+#define SPRITE_SIZE_16x32 2
+#define SPRITE_SIZE_32x32 3
+
+		int pos = sprite_id * 16;
+
+		uint32_t sprite =
+			  ((pos & 0x1FF) << 0) // x pos (9 bits)
+			| ((0   & 0x001) << 9) // y pos hi (1 bit)
+			| ((SPRITE_SIZE_16x16 & 0x003) << 10) // sprite size (2 bits)
+			| ((0   & 0x003) << 12) // palette something ??? (2 bits)
+			| ((0   & 0x001) << 14) // x-flip (1 bit)
+			| ((0   & 0x001) << 15) // y-flip (1 bit)
+			| ((pos & 0xFF) << 16) // y pos lo (8 bits)
+			| ((0   & 0xFF) << 24) // tile index ??? (8 bits)
+		;
+		VDP.OAM[sprite_id] = sprite;
+	}
+	for (int sprite_id = 4; sprite_id < 128; sprite_id++) {
+		uint32_t sprite = 0;
+		VDP.OAM[sprite_id] = sprite;
+	}
+}
+
+}
+
 void init() {
 	// 8bpp simplifies things, probably won't need 4bpp.
 	VDP.BM_CTRL = BM_MODE_8BPP_SHARED; // bitmap_ctrl
@@ -16,6 +68,8 @@ void init() {
 
 	set_background_a(RGB555(0, 0, 0));
 	set_background_b(RGB555(0, 0, 0));
+
+	test_sprites();
 }
 
 void draw_something() {
