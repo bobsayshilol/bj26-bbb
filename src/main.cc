@@ -59,14 +59,14 @@ int main() {
 		const auto held = engine::input::g_buttons_held;
 		const auto speed = (held & GAMEPAD_BTN_A) ? 4 : 1;
 		if (held & GAMEPAD_BTN_LEFT) {
-			VDP.BM_SCROLLX[0] += speed;
+			engine::graphics::bitmap_0.scroll_x() += speed;
 		} else if (held & GAMEPAD_BTN_RIGHT) {
-			VDP.BM_SCROLLX[0] -= speed;
+			engine::graphics::bitmap_0.scroll_x() -= speed;
 		}
 		if (held & GAMEPAD_BTN_UP) {
-			VDP.BM_SCROLLY[0] += speed;
+			engine::graphics::bitmap_0.scroll_y() += speed;
 		} else if (held & GAMEPAD_BTN_DOWN) {
-			VDP.BM_SCROLLY[0] -= speed;
+			engine::graphics::bitmap_0.scroll_y() -= speed;
 		}
 	}
 
