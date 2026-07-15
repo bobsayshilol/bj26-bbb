@@ -6,11 +6,11 @@ namespace engine::graphics {
 
 void init() {
 	// 8bpp simplifies things, probably won't need 4bpp.
-	VDP.BM_CTRL = BM_MODE_8BPP_SHARED;
+	VDP.BM_CTRL = BM_MODE_8BPP_SHARED; // bitmap_ctrl
 
 	// TODO
 	VDP.BLEND           = BLEND_MATH;
-	VDP.BM_SUBPAL       = BM_SUBPAL(0,0,0,0);
+	VDP.BM_SUBPAL       = BM_SUBPAL(0,0,0,0); // bitmap_palsel
 	VDP.SCREENPRIO      = BLEND_MATH_ADD | SCREEN_A_ENABLE | PRIORITY_BM_A | PRIORITY_BG0_A | PRIORITY_OBJ0_A;
 	VDP.LAYER_CTRL      = LAYER_SCREEN(LAYER_SCREEN_A, LAYER_SCREEN_A, LAYER_SCREEN_A, LAYER_SCREEN_A);
 
@@ -42,15 +42,15 @@ void draw_something() {
 
 	// Split the screen into 4 quads
 	auto draw_quad = [](auto bitmap, bool x, bool y) {
-		const auto w = SCREEN_WIDTH / 2 - 1;
-		const auto h = SCREEN_HEIGHT / 2 - 1;
+		const auto w = SCREEN_WIDTH / 2;
+		const auto h = SCREEN_HEIGHT / 2;
 		bitmap.disable();
 			bitmap.position_x() = x ? w : 0;
 			bitmap.position_y() = y ? h : 0;
 			bitmap.scroll_x() = 0;
 			bitmap.scroll_y() = 0;
-			bitmap.width() = w;
-			bitmap.height() = h;
+			bitmap.width() = w - 1;
+			bitmap.height() = h - 1;
 			bitmap.latch() = 0;
 		bitmap.enable();
 	};
@@ -58,9 +58,6 @@ void draw_something() {
 	draw_quad(bitmap_1, 1, 0);
 	draw_quad(bitmap_2, 0, 1);
 	draw_quad(bitmap_3, 1, 1);
-
-	// TODO: why do we need to set this again?
-	VDP.SCREENPRIO = BLEND_MATH_ADD | SCREEN_A_ENABLE | PRIORITY_BM_A | PRIORITY_BG0_A | PRIORITY_OBJ0_A;
 }
 
 } // namespace engine::graphics

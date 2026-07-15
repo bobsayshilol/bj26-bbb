@@ -13,11 +13,6 @@ void init() {
 
 	// The rest of this is copypasta'd.
 
-	// Turn off all video output
-	VDP.SCREENPRIO = 0;
-	VDP.BACKDROP_A = 0;
-	VDP.BACKDROP_B = 0;
-
 	// Turn off controller input
 	bios_vdpMode(CONTROL_MODE_NONE, VIDEO_HEIGHT_224P);
 
