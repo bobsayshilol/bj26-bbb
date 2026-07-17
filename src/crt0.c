@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stddef.h>
 
 extern uint32_t __bss_link_start __asm("__bss_link_start");
 extern uint32_t __bss_link_end __asm("__bss_link_end");
@@ -36,4 +37,14 @@ void crt_init(void)
 	while (start < end) {
 		((init_t*)(*start++))();
 	}
+}
+
+// Even with -ffreestanding, GCC will still emit calls to memset.
+void *memset(void *s, int c, size_t n) {
+	uint8_t *p = s;
+	uint8_t v = c;
+	for (size_t i = 0; i < n; i++) {
+		*p++ = v;
+	}
+	return s;
 }
