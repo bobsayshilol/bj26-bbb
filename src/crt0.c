@@ -39,12 +39,41 @@ void crt_init(void)
 	}
 }
 
+#define likely(x) __builtin_expect(!!(x), 1)
+
 // Even with -ffreestanding, GCC will still emit calls to memset.
 void *memset(void *s, int c, size_t n) {
+#if 1
 	uint8_t *p = s;
 	uint8_t v = c;
-	for (size_t i = 0; i < n; i++) {
+	while (likely(n > 0)) {
 		*p++ = v;
+		--n;
 	}
 	return s;
+#else // TODO: untested optimised version
+	if (n == 0) return s;
+	void * const o = s;
+	const uint8_t v = c;
+	// Store single.
+	if ((uintptr_t)s & 1) {
+		uint8_t *p = s;
+		*p++ = v;
+		s = p;
+		--n;
+	}
+	// Store as words.
+	uint16_t *p16 = s;
+	const uint16_t v16 = (((uint16_t)v) << 8) | v;
+	while (likely(n >= 2)) {
+		*p16++ = v16;
+		n -= 2;
+	}
+	// Store single.
+	if (n & 1) {
+		uint8_t *p = (void*)p16;
+		*p++ = v;
+	}
+	return o;
+#endif
 }
