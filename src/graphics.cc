@@ -6,17 +6,6 @@ namespace engine::graphics {
 
 namespace {
 
-// TODO: move these
-#define BG_TILEMAP_SIZE_64x64 0
-#define BG_TILEMAP_SIZE_64x32 1
-#define BG_TILEMAP_SIZE_32x64 2
-#define BG_TILEMAP_SIZE_32x32 3
-
-#define SPRITE_SIZE_8x8 0
-#define SPRITE_SIZE_16x16 1
-#define SPRITE_SIZE_16x32 2
-#define SPRITE_SIZE_32x32 3
-
 // TODO: LAYER_WRITE values seem wrong...
 #define LAYER_WRITE_BG0_TO_A 0x100
 #define LAYER_WRITE_BG0_TO_B 0x200
@@ -28,15 +17,10 @@ namespace {
 #define LAYER_WRITE_OBJ1_TO_B 0x8000
 
 void test_sprites() {
-	const int bg_tilemap_size = 32;
-	const int bg_tilemap_size_enum = BG_TILEMAP_SIZE_32x32;
-	const int bg_tile_size_enum = BG_TILESIZE_8X8;
-	const bool bg_shared_tilemap = false;
-
 	VDP.LAYER_CTRL |=
 		  LAYER_ENABLE_BG0  // Enable background0.
 		//| LAYER_WRITE_BG0_TO_A // Write BG0 to screenA.
-		| LAYER_ENABLE_BG1  // Enable background1.
+		//| LAYER_ENABLE_BG1  // Enable background1.
 		//| LAYER_WRITE_BG1_TO_B // Write BG1 to screenB.
 		| LAYER_ENABLE_OBJ0 // Enable sprites.
 		//| LAYER_WRITE_OBJ0_TO_A // Write sprites to screenA.
@@ -45,7 +29,7 @@ void test_sprites() {
 	VDP.BG_CTRL =
 		  ((bg_shared_tilemap & 0x1) << 0) // BG0 and BG1 are the same tilemap (1 bit)
 		| ((bg_tilemap_size_enum & 0x3) << 1) // BG tilemap size (2 bits)
-		| ((1 & 0x1) << 3) // BG0 8bit(1)/4bit(0) (1 bit)
+		| ((sprite_is_8bpp & 0x1) << 3) // BG0 8bit(1)/4bit(0) (1 bit)
 		| ((bg_tile_size_enum & 0x3) << 4) // BG1 tile size (2 bits)
 		| ((bg_tile_size_enum & 0x3) << 6) // BG0 tile size (2 bits)
 	;
@@ -55,57 +39,55 @@ void test_sprites() {
 		  ((0 & 0xFF) <<  0) // global ID offset (8 bits)
 		| ((0 & 0x07) <<  8) // screen1 ID offset (3 bits)
 		| ((0 & 0x07) << 11) // screen0 ID offset (3 bits)
-		| ((1 & 0x01) << 14) // 8bit(1)/4bit(0) (1 bit)
+		| ((sprite_is_8bpp & 0x01) << 14) // 8bit(1)/4bit(0) (1 bit)
 	;
 
 	// No tileset offset.
 	VDP.CHARBASE = 0;
 
-	VDP.PALETTE[1] = RGB555(15, 15, 15); // BG0
-	VDP.PALETTE[2] = RGB555(0, 15, 0); // BG1
+	const int num_sprites = 6;
+	for (int i = 0; i < num_sprites; i++) {
+		// Add a sprite.
+		auto & sprite = get_sprite(i);
+		sprite.set_x(8 * i);
+		sprite.set_y(8 * i);
+		sprite.set_tile_index(i);
+		sprite.set_size(SpriteSize::Size8x8);
 
-	// First comes BG0 tile sprites, then BG1 tile sprites (if not shared), then tile data.
-	const int tile_data_start = bg_tilemap_size * bg_tilemap_size * (bg_shared_tilemap ? 1 : 2);
-
-	// Setup background tile sprites.
-	for (int i = 0; i < tile_data_start; i++) {
-		uint16_t sprite =
-			  ((i   & 0x7FF) << 0) // tilemap index (11 bits)
-			| ((0   & 0x1) << 11) // screen index (1 bit)
-			| ((0   & 0x3) << 12) // palette something ??? (2 bits)
-			| ((0   & 0x001) << 14) // x-flip (1 bit)
-			| ((0   & 0x001) << 15) // y-flip (1 bit)
-		;
-		VDP.TILE_VRAM[i] = sprite;
+		// Give it a colour.
+		const int g = i * 31 / num_sprites;
+		VDP.PALETTE[i] = RGB555(g, g, g);
+		uint8_t * data = get_tile_data(i);
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				*data++ = i;
+			}
+		}
 	}
 
-	// Setup some sprites.
-	for (int sprite_id = 0; sprite_id < 4; sprite_id++) {
-		int pos = (sprite_id + 1) * 16;
-
-		uint32_t sprite =
-			  ((pos & 0x1FF) << 0) // x pos (9 bits)
-			| ((0   & 0x001) << 9) // y pos hi (1 bit)
-			| ((SPRITE_SIZE_8x8 & 0x003) << 10) // sprite size (2 bits)
-			| ((0   & 0x003) << 12) // palette something ??? (2 bits)
-			| ((0   & 0x001) << 14) // x-flip (1 bit)
-			| ((0   & 0x001) << 15) // y-flip (1 bit)
-			| ((pos & 0xFF) << 16) // y pos lo (8 bits)
-			| ((sprite_id & 0xFF) << 24) // tilemap index (8 bits)
-		;
-		VDP.OAM[sprite_id] = sprite;
-	}
-	for (int sprite_id = 4; sprite_id < 128; sprite_id++) {
-		uint32_t sprite = 0;
-		VDP.OAM[sprite_id] = sprite;
+	// Point BG tiles to data.
+	for (uint32_t y = 0; y < bg_tilemap_size; y++) {
+		for (uint32_t x = 0; x < bg_tilemap_size; x++) {
+			// BG0 is rows.
+			auto & tile0 = get_bg_sprite<0>(x, y);
+			tile0.set_tile_index(num_sprites + y);
+			// BG1 is columns.
+			auto & tile1 = get_bg_sprite<1>(x, y);
+			tile1.set_tile_index(num_sprites + x);
+		}
 	}
 
-	// Fill tile data.
-#if 0 // should default to 0
-	for (int i = tile_data_start; i < 0x8000; i++) {
-		VDP.TILE_VRAM[i] = 0;
+	// Add colours.
+	for (uint32_t i = 0; i < bg_tilemap_size; i++) {
+		const int g = i * 31 / bg_tilemap_size;
+		VDP.PALETTE[num_sprites + i] = RGB555(g, g, g);
+		uint8_t * data = get_tile_data(num_sprites + i);
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				*data++ = num_sprites + i;
+			}
+		}
 	}
-#endif
 }
 
 }
