@@ -16,6 +16,8 @@ static inline void init() { serial_begin(9600); }
 
 #define DEBUG_MSG(...) engine::debug::internal::print(__VA_ARGS__)
 
+#define ASSERT(x) if (!(x)) { DEBUG_MSG(__FILE__, ":", __LINE__, ": assert failed: ", #x); while(true); }
+
 namespace internal {
 
 inline void print_type(const char *msg) {
@@ -41,6 +43,8 @@ inline void print(Strs&&... strs) {
 static inline void init() {}
 
 #define DEBUG_MSG(msg)
+
+#define ASSERT(x)
 
 #endif
 
