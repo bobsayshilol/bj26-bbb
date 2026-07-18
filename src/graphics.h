@@ -12,15 +12,17 @@ constexpr uint16_t VIDEO_MODE = VIDEO_HEIGHT_224P;
 
 void init();
 
-void draw_something();
+// Backdrop is a solid colour.
+inline void set_backdrop_a(uint16_t rgb) { VDP.BACKDROP_A = rgb; }
+inline void set_backdrop_b(uint16_t rgb) { VDP.BACKDROP_B = rgb; }
 
-inline void set_background_a(uint16_t rgb) { VDP.BACKDROP_A = rgb; }
-inline void set_background_b(uint16_t rgb) { VDP.BACKDROP_B = rgb; }
+// Use RGB555() for palette colours. 256 colours.
+inline void set_palette_colour(uint8_t idx, uint16_t rgb) { VDP.PALETTE[idx] = rgb; }
 
 // Each Bitmap views a region of vram.
-template <int Index>
+template <uint8_t Index>
 struct Bitmap {
-    static_assert(0 <= Index && Index < 4);
+    static_assert(Index < 4);
     static auto & position_x() { return VDP.BM_SCREENX[Index]; }
     static auto & position_y() { return VDP.BM_SCREENY[Index]; }
     static auto & scroll_x() { return VDP.BM_SCROLLX[Index]; }
@@ -183,5 +185,22 @@ inline BGSprite & get_bg_sprite(uint8_t x, uint8_t y) {
     bg += y * bg_tilemap_size + x;
     return *bg;
 }
+
+
+
+// Backgrounds are made of tiles (see above).
+template <uint8_t Index>
+struct Background {
+    static_assert(Index <= 1);
+    static void enable() { VDP.LAYER_CTRL |= uint16_t(LAYER_ENABLE_BG0) << Index; }
+    static void disable() { VDP.LAYER_CTRL &= ~(uint16_t(LAYER_ENABLE_BG0) << Index); };
+    static BGSprite & get_sprite(uint8_t x, uint8_t y) { return get_bg_sprite<Index>(x, y); }
+};
+constexpr inline Background<0> background_0;
+constexpr inline Background<1> background_1;
+
+// For now only OBJ0 is displayed (OBJ1 requires tile index offsets).
+inline void enable_sprites() { VDP.LAYER_CTRL |= uint16_t(LAYER_ENABLE_OBJ0); }
+inline void disable_sprites() { VDP.LAYER_CTRL &= ~uint16_t(LAYER_ENABLE_OBJ0); }
 
 } // namespace engine::graphics

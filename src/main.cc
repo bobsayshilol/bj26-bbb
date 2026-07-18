@@ -18,9 +18,53 @@ void init() {
 	bios_vdpMode(CONTROL_MODE_GAMEPAD, VIDEO_HEIGHT_224P);
 }
 
+void draw_something() {
+	using namespace engine::graphics;
+
+	bios_vsync();
+
+	// Fill a 256x224 area with a 16x15 grid of colors 1-240
+	for(uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
+		uint16_t gradY = bios_mathDivU16(y, 15);
+		for(uint16_t x = 0; x < SCREEN_WIDTH; x++) {
+			uint16_t gradX = x / 16;
+			VDP.BITMAP_VRAM_8BIT[(y*SCREEN_WIDTH)+x] = gradY * 16 + gradX + 1;
+		}
+	}
+
+	// Create a 2D gradient in colors 1-240
+	for(int j = 1; j <= 240; j++) {
+		int gradX = (j-1) % 16;
+		int gradY = (j-1) / 16;
+		set_palette_colour(j, RGB555(gradX*2+1, gradY*2+1, 0));
+	}
+
+	set_backdrop_a(RGB555(0, 0, 31));
+	set_backdrop_b(RGB555(0, 31, 0));
+
+	// Split the screen into 4 quads
+	auto draw_quad = [](auto bitmap, bool x, bool y) {
+		const auto w = SCREEN_WIDTH / 2;
+		const auto h = SCREEN_HEIGHT / 2;
+		bitmap.disable();
+			bitmap.position_x() = x ? w : 0;
+			bitmap.position_y() = y ? h : 0;
+			bitmap.scroll_x() = 0;
+			bitmap.scroll_y() = 0;
+			bitmap.width() = w - 1;
+			bitmap.height() = h - 1;
+			bitmap.latch() = 0;
+		bitmap.enable();
+	};
+	draw_quad(bitmap_0, 0, 0);
+	draw_quad(bitmap_1, 1, 0);
+	draw_quad(bitmap_2, 0, 1);
+	draw_quad(bitmap_3, 1, 1);
+}
+
 void splash() {
 	// TODO: draw a logo
-	engine::graphics::draw_something();
+	draw_something();
 
 	// Play the music.
 	engine::sound::play_startup_sound();
@@ -39,13 +83,69 @@ void splash() {
 	}
 }
 
+void test_sprites() {
+	using namespace engine::graphics;
+
+	bitmap_1.disable();
+	bitmap_2.disable();
+	bitmap_3.disable();
+
+	enable_sprites();
+
+	const int num_sprites = 6;
+	for (int i = 0; i < num_sprites; i++) {
+		// Add a sprite.
+		auto & sprite = get_sprite(i);
+		sprite.set_x(8 * i);
+		sprite.set_y(8 * i);
+		sprite.set_tile_index(i);
+		sprite.set_size(SpriteSize::Size8x8);
+
+		// Give it a colour.
+		const int g = i * 31 / num_sprites;
+		set_palette_colour(i, RGB555(g, g, g));
+		uint8_t * data = get_tile_data(i);
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				*data++ = i;
+			}
+		}
+	}
+
+	background_0.enable();
+
+	// Point BG tiles to data.
+	for (uint32_t y = 0; y < bg_tilemap_size; y++) {
+		for (uint32_t x = 0; x < bg_tilemap_size; x++) {
+			// BG0 is rows.
+			auto & tile0 = get_bg_sprite<0>(x, y);
+			tile0.set_tile_index(num_sprites + y);
+			// BG1 is columns.
+			auto & tile1 = get_bg_sprite<1>(x, y);
+			tile1.set_tile_index(num_sprites + x);
+		}
+	}
+
+	// Add colours.
+	for (uint32_t i = 0; i < bg_tilemap_size; i++) {
+		const int g = i * 31 / bg_tilemap_size;
+		set_palette_colour(num_sprites + i, RGB555(g, g, g));
+		uint8_t * data = get_tile_data(num_sprites + i);
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				*data++ = num_sprites + i;
+			}
+		}
+	}
+}
+
 } // namespace
 
 int main() {
 	init();
 	splash();
 
-	engine::graphics::draw_something();
+	test_sprites();
 
 	// Main game loop.
 	while(1) {
