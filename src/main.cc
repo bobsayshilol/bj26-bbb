@@ -4,8 +4,14 @@
 #include "debug.h"
 #include "sound.h"
 #include "game.h"
+#include "profiler.h"
 
 namespace {
+
+PROFILE_STORAGE(sprite_drawing);
+PROFILE_STORAGE(bg_tilemap);
+PROFILE_STORAGE(bg_drawing);
+PROFILE_STORAGE(vsync); // bios_vsync takes ~266426 cycles, which matches the expected 266666.
 
 void init() {
 	// Initialise components.
@@ -94,6 +100,8 @@ void test_sprites() {
 
 	const int num_sprites = 6;
 	for (int i = 0; i < num_sprites; i++) {
+		PROFILE_SCOPE(sprite_drawing);
+
 		// Add a sprite.
 		auto & sprite = get_sprite(i);
 		sprite.set_x(8 * i);
@@ -116,6 +124,8 @@ void test_sprites() {
 
 	// Point BG tiles to data.
 	for (uint32_t y = 0; y < bg_tilemap_size; y++) {
+		PROFILE_SCOPE(bg_tilemap);
+
 		for (uint32_t x = 0; x < bg_tilemap_size; x++) {
 			// BG0 is rows.
 			auto & tile0 = get_bg_sprite<0>(x, y);
@@ -128,6 +138,8 @@ void test_sprites() {
 
 	// Add colours.
 	for (uint32_t i = 0; i < bg_tilemap_size; i++) {
+		PROFILE_SCOPE(bg_drawing);
+
 		const int g = i * 31 / bg_tilemap_size;
 		set_palette_colour(num_sprites + i, RGB555(g, g, g));
 		uint8_t * data = get_tile_data(num_sprites + i);
@@ -137,6 +149,8 @@ void test_sprites() {
 			}
 		}
 	}
+
+	engine::profiler::print_timings();
 }
 
 } // namespace
@@ -168,6 +182,8 @@ int main() {
 		} else if (held & GAMEPAD_BTN_DOWN) {
 			engine::graphics::bitmap_0.scroll_y() -= speed;
 		}
+
+		engine::profiler::print_timings();
 	}
 
 	return 0;
