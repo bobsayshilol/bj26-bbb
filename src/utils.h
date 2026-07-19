@@ -95,6 +95,11 @@ public:
 };
 extern RNG g_rng;
 
+// std::min(), std::max(), std::clamp()
+template <typename T> constexpr inline T min(T a, T b) { return a < b ? a : b; }
+template <typename T> constexpr inline T max(T a, T b) { return a > b ? a : b; }
+template <typename T> constexpr inline T clamp(T x, T lo, T hi) { return min(max(x, lo), hi); }
+
 
 
 // Sanity check that the above works.
@@ -180,6 +185,47 @@ constexpr int check_size() {
     return -1;
 }
 static_assert(check_size() == -1);
+
+constexpr int check_min_max_clamp() {
+    {
+        constexpr int a = min(2, 1);
+        if (a != 1) return 0;
+    }
+    {
+        constexpr int a = min(-2, 1);
+        if (a != -2) return 1;
+    }
+    {
+        constexpr int a = max(2, 1);
+        if (a != 2) return 2;
+    }
+    {
+        constexpr int a = max(-2, 1);
+        if (a != 1) return 3;
+    }
+    {
+        constexpr int a = clamp(1, 0, 2);
+        if (a != 1) return 4;
+    }
+    {
+        constexpr int a = clamp(0, 0, 2);
+        if (a != 0) return 5;
+    }
+    {
+        constexpr int a = clamp(-1, 0, 2);
+        if (a != 0) return 6;
+    }
+    {
+        constexpr int a = clamp(2, 0, 2);
+        if (a != 2) return 7;
+    }
+    {
+        constexpr int a = clamp(3, 0, 2);
+        if (a != 2) return 8;
+    }
+    return -1;
+}
+static_assert(check_min_max_clamp() == -1);
 
 } // test
 
