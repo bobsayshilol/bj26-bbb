@@ -28,9 +28,12 @@ namespace engine::profiler {
 
 void print_timings();
 
-#define PROFILE_STORAGE(name) static engine::profiler::internal::ProfileStorage _prof_storage_##name (#name)
+#define PROFILE_STORAGE(name) \
+    static_assert(engine::utils::size(#name) < 8, "Long names slow down transfer"); \
+    static engine::profiler::internal::ProfileStorage _prof_storage_##name (#name)
 
-#define PROFILE_SCOPE(name) engine::profiler::internal::ScopedProfile CONCAT(_prof_scope_, __LINE__) (_prof_storage_##name)
+#define PROFILE_SCOPE(name) \
+    engine::profiler::internal::ScopedProfile CONCAT(_prof_scope_, __LINE__) (_prof_storage_##name)
 
 namespace internal {
 

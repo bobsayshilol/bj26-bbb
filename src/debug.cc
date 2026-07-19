@@ -7,7 +7,7 @@
 
 namespace engine::debug {
 
-void init() { serial_begin(9600); }
+void init() { serial_begin(38400); }
 
 namespace internal {
 

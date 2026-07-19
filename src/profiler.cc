@@ -26,7 +26,7 @@ void print_timings() {
 
         // Log it if it came up.
         if (total > 0) {
-            DEBUG_MSG("P:", info->name, ",", total);
+            DEBUG_MSG(info->name, ",", total);
         }
     }
 }

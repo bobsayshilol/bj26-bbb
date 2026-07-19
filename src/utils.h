@@ -78,6 +78,12 @@ constexpr inline auto to_string(int32_t i) {
     return result;
 }
 
+// std::size()
+template <typename T, uint32_t N>
+constexpr inline uint32_t size(const T (&)[N]) {
+    return N;
+}
+
 
 
 // Sanity check that the above works.
@@ -146,6 +152,23 @@ constexpr int check_to_string() {
     return -1;
 }
 static_assert(check_to_string() == -1);
+
+constexpr int check_size() {
+    {
+        constexpr char a[1] = {};
+        if (size(a) != 1) return 1;
+    }
+    {
+        constexpr char a[2] = {};
+        if (size(a) != 2) return 2;
+    }
+    {
+        constexpr uint32_t a[3] = {};
+        if (size(a) != 3) return 3;
+    }
+    return -1;
+}
+static_assert(check_size() == -1);
 
 } // test
 
