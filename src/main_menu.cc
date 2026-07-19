@@ -95,8 +95,8 @@ void bouncers_setup() {
 
         // Place this one so that it's not colliding.
         while (true) {
-            bouncer.x = (rng() % (SCREEN_WIDTH - bg_tile_size)) << bouncer_pos_shift;
-            bouncer.y = (rng() % (SCREEN_HEIGHT - bg_tile_size)) << bouncer_pos_shift;
+            bouncer.x = (rng() % (SCREEN_WIDTH - tile_size)) << bouncer_pos_shift;
+            bouncer.y = (rng() % (SCREEN_HEIGHT - tile_size)) << bouncer_pos_shift;
 
             bool colliding = false; // TODO
             if (!colliding) {
@@ -155,25 +155,25 @@ void bouncers_setup() {
 
 //
 
+constexpr uint8_t bg_sprite_start = bouncer_sprite_start + bouncer_count;
+constexpr uint8_t bg_sprite_count = engine::graphics::bg_tilemap_size * 2 - 1;
+
 void background_setup() {
     using namespace engine::graphics;
 
     PROFILE_SCOPE(bg_set);
 
-    constexpr uint8_t bg_sprite_start = bouncer_sprite_start + bouncer_count;
-
     // Point BG tiles to data.
     for (uint32_t y = 0; y < bg_tilemap_size; y++) {
         for (uint32_t x = 0; x < bg_tilemap_size; x++) {
-            // BG0 is rows.
             auto & tile0 = get_bg_sprite<0>(x, y);
-            tile0.set_tile_index(bg_sprite_start + y);
+            tile0.set_tile_index(bg_sprite_start + x + y);
         }
     }
 
     // Add colours.
-    for (uint32_t i = 0; i < bg_tilemap_size; i++) {
-        const int g = i * 31 / bg_tilemap_size;
+    for (uint32_t i = 0; i < bg_sprite_count; i++) {
+        const int g = i * 31 / bg_sprite_count;
         set_palette_colour(bg_sprite_start + i, RGB555(g, g, g));
         uint16_t * data16 = (uint16_t *)get_tile_data(bg_sprite_start + i);
         for (int y = 0; y < 8; y++) {
