@@ -112,10 +112,13 @@ void test_sprites() {
 		// Give it a colour.
 		const int g = i * 31 / num_sprites;
 		set_palette_colour(i, RGB555(g, g, g));
-		uint8_t * data = get_tile_data(i);
+		uint16_t * data16 = (uint16_t*)get_tile_data(i);
 		for (int y = 0; y < 8; y++) {
-			for (int x = 0; x < 8; x++) {
-				*data++ = i;
+			for (int x = 0; x < 8; x += 2) {
+				// Write 2 pixels at a time.
+				uint16_t v16 = i;
+				v16 |= v16 << 8;
+				*data16++ = v16;
 			}
 		}
 	}
@@ -130,9 +133,10 @@ void test_sprites() {
 			// BG0 is rows.
 			auto & tile0 = get_bg_sprite<0>(x, y);
 			tile0.set_tile_index(num_sprites + y);
+			// BG1 isn't enabled so skip it.
 			// BG1 is columns.
-			auto & tile1 = get_bg_sprite<1>(x, y);
-			tile1.set_tile_index(num_sprites + x);
+			//auto & tile1 = get_bg_sprite<1>(x, y);
+			//tile1.set_tile_index(num_sprites + x);
 		}
 	}
 
@@ -142,12 +146,20 @@ void test_sprites() {
 
 		const int g = i * 31 / bg_tilemap_size;
 		set_palette_colour(num_sprites + i, RGB555(g, g, g));
-		uint8_t * data = get_tile_data(num_sprites + i);
+		uint16_t * data16 = (uint16_t *)get_tile_data(num_sprites + i);
 		for (int y = 0; y < 8; y++) {
-			for (int x = 0; x < 8; x++) {
-				*data++ = num_sprites + i;
+			for (int x = 0; x < 8; x += 2) {
+				// Write 2 pixels at a time.
+				uint16_t v16 = num_sprites + i;
+				v16 |= v16 << 8;
+				*data16++ = v16;
 			}
 		}
+	}
+
+	{
+		PROFILE_SCOPE(vsync);
+		bios_vsync();
 	}
 
 	engine::profiler::print_timings();

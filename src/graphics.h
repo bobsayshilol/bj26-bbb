@@ -159,7 +159,8 @@ static_assert(sizeof(BGSprite) == sizeof(uint16_t));
 
 
 // Returns data for the given tile.
-inline uint8_t * get_tile_data(TileIndex idx) {
+// It's much more efficient to store to this 2 pixels at a time (uint16_t) rather than 1.
+inline void * get_tile_data(TileIndex idx) {
     ASSERT(idx < (0x10000 - sprite_tile_data_start) / (bg_tile_size * bg_tile_size));
     const uint32_t offset = idx * bg_tile_size * bg_tile_size;
     return VDP.TILE_VRAM_8BIT + sprite_tile_data_start + offset;
