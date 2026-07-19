@@ -1,5 +1,7 @@
 #pragma once
 
+#include "debug.h"
+
 #include <stdint.h>
 
 #define CONCAT2(a, b) a##b
@@ -20,8 +22,8 @@ struct Array {
     constexpr T * begin() { return raw; }
     constexpr T * end() { return raw + Size; }
 
-    constexpr T & operator[](uint8_t i) { return raw[i]; }
-    constexpr const T & operator[](uint8_t i) const { return raw[i]; }
+    constexpr T & operator[](uint8_t i) { ASSERT(i < Size); return raw[i]; }
+    constexpr const T & operator[](uint8_t i) const { ASSERT(i < Size); return raw[i]; }
 
     constexpr bool operator==(const Array & o) const {
         for (int i = 0; i < Size; i++) {
