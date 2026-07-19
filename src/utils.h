@@ -84,6 +84,17 @@ constexpr inline uint32_t size(const T (&)[N]) {
     return N;
 }
 
+// LCG based RNG.
+class RNG {
+    uint32_t state;
+public:
+    constexpr RNG(uint32_t s = 0) : state(s) { }
+    constexpr void seed(uint32_t s) { state = s; }
+    constexpr uint32_t operator()() { return state = state * 134775813U + 1U; }
+    constexpr void add_entropy(uint32_t e) { state += e; } // not really
+};
+extern RNG g_rng;
+
 
 
 // Sanity check that the above works.

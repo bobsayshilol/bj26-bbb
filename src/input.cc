@@ -1,5 +1,12 @@
 #include "input.h"
 #include "loopy.h"
+#include "utils.h"
+
+namespace engine::utils {
+
+RNG g_rng(123);
+
+} // namespace engine::utils
 
 namespace engine::input {
 
@@ -26,6 +33,10 @@ void update_inputs() {
 	uint32_t buttonsNow = MOUSE_BUTTONS(mouseXB) | READ_GAMEPAD1;
 	g_buttons_pressed = buttonsNow & ~g_buttons_held;
 	g_buttons_held = buttonsNow;
+
+	// Add some randomness to the global RNG.
+	utils::g_rng.add_entropy(g_mouse_dx);
+	utils::g_rng.add_entropy(g_buttons_held);
 }
 
 } // namespace engine::input
