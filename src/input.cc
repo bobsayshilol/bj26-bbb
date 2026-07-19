@@ -30,7 +30,7 @@ void update_inputs() {
 	g_mouse_dy = -MOUSE_DELTA(mouseY)  / 2; // Y is +up so invert it
 
 	// Update button state from mouse and gamepad buttons
-	uint32_t buttonsNow = MOUSE_BUTTONS(mouseXB) | READ_GAMEPAD1;
+	uint32_t buttonsNow = MOUSE_BUTTONS(mouseXB) | READ_GAMEPAD1_RAW;
 	g_buttons_pressed = buttonsNow & ~g_buttons_held;
 	g_buttons_held = buttonsNow;
 
