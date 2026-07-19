@@ -2,6 +2,10 @@
 
 #include <stdint.h>
 
+#define CONCAT2(a, b) a##b
+#define CONCAT(a, b) CONCAT2(a, b)
+#define STRINGIFY(x) #x
+
 namespace engine::utils {
 
 // Replacement for std::array<>
