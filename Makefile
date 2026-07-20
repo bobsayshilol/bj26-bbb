@@ -26,6 +26,7 @@ MV     = mv
 MKDIR  = mkdir -p
 RMDIR  = rm -rf
 FIXROM = /usr/bin/env python3 ./tools/fixrom.py # Change to "python" if necessary
+CONVLE = /usr/bin/env python3 ./tools/convert_le.py
 
 # File/dir locations
 SRCDIR = ./src
@@ -79,6 +80,7 @@ rom: $(ROM)
 %.bin: %.elf
 	$(OBJ) -O binary $< $@
 	$(FIXROM) $(ROM)
+	$(CONVLE) $(ROM)
 
 $(ROM:.bin=.elf): $(OBJS_S) $(OBJS_C) $(OBJS_CXX)
 
