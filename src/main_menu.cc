@@ -74,11 +74,12 @@ void bouncers_update() {
         const auto & bouncer = s_bouncers[idx];
         const uint16_t rot_frame = (bouncer.rot >> bouncer_rot_shift) % bouncer_tile_count;
 
-        ObjSprite & sprite = get_sprite(bouncer_sprite_start + idx);
+        ObjSprite sprite;
         sprite.set_x(bouncer.x >> bouncer_pos_shift);
         sprite.set_y(bouncer.y >> bouncer_pos_shift);
         sprite.set_tile_index(bouncer_tile_start + rot_frame);
         sprite.set_size(SpriteSize::Size8x8);
+        set_sprite(bouncer_sprite_start + idx, sprite);
     }
 }
 
@@ -166,8 +167,9 @@ void background_setup() {
     // Point BG tiles to data.
     for (uint32_t y = 0; y < bg_tilemap_size; y++) {
         for (uint32_t x = 0; x < bg_tilemap_size; x++) {
-            auto & tile0 = get_bg_sprite<0>(x, y);
-            tile0.set_tile_index(bg_sprite_start + x + y);
+            BGSprite sprite;
+            sprite.set_tile_index(bg_sprite_start + x + y);
+            set_bg_sprite<0>(x, y, sprite);
         }
     }
 

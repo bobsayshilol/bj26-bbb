@@ -78,80 +78,92 @@ enum class Screen : uint8_t {
 };
 
 // Movable object sprite.
-class ObjSprite {
+union ObjSprite {
+private:
+    struct {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    uint32_t x : 9;
-    uint32_t y_hi : 1;
-    uint32_t size : 2; // SpriteSize
-    uint32_t palsel : 2;
-    uint32_t x_flip : 1;
-    uint32_t y_flip : 1;
-    uint32_t y_lo : 8;
-    uint32_t tile_index : 8;
+        uint32_t x : 9;
+        uint32_t y_hi : 1;
+        uint32_t size : 2; // SpriteSize
+        uint32_t palsel : 2;
+        uint32_t x_flip : 1;
+        uint32_t y_flip : 1;
+        uint32_t y_lo : 8;
+        uint32_t tile_index : 8;
 #else
-    uint32_t tile_index : 8;
-    uint32_t y_lo : 8;
-    uint32_t y_flip : 1;
-    uint32_t x_flip : 1;
-    uint32_t palsel : 2;
-    uint32_t size : 2; // SpriteSize
-    uint32_t y_hi : 1;
-    uint32_t x : 9;
+        uint32_t tile_index : 8;
+        uint32_t y_lo : 8;
+        uint32_t y_flip : 1;
+        uint32_t x_flip : 1;
+        uint32_t palsel : 2;
+        uint32_t size : 2; // SpriteSize
+        uint32_t y_hi : 1;
+        uint32_t x : 9;
 #endif
+    } parts;
 
 public:
+    // Value must be read/written as u16x2 or u32x1 (according to MAME).
+    uint32_t raw = {};
+
     void set_x(uint16_t x_) {
-        x = x_;
+        parts.x = x_;
     }
     void set_y(uint16_t y_) {
-        y_lo = y_;
-        y_hi = !!(y_ & 0x100);
+        parts.y_lo = y_;
+        parts.y_hi = !!(y_ & 0x100);
     }
     void set_size(SpriteSize size_) {
         ASSERT(size_ == SpriteSize::Size8x8); static_assert(bg_tile_size == 8); // TODO: will need changes to get_tile_data
-        size = static_cast<uint32_t>(size_);
+        parts.size = static_cast<uint32_t>(size_);
     }
     void set_x_flip(bool flip_) {
-        x_flip = flip_;
+        parts.x_flip = flip_;
     }
     void set_y_flip(bool flip_) {
-        y_flip = flip_;
+        parts.y_flip = flip_;
     }
     void set_tile_index(TileIndex idx_) {
-        tile_index = idx_;
+        parts.tile_index = idx_;
     }
 };
 static_assert(sizeof(ObjSprite) == sizeof(uint32_t));
 
 // BG tile sprite.
-class BGSprite {
+union BGSprite {
+private:
+    struct {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    uint16_t tile_index : 11;
-    uint16_t screen_idx : 1;
-    uint16_t palsel : 2;
-    uint16_t x_flip : 1;
-    uint16_t y_flip : 1;
+        uint16_t tile_index : 11;
+        uint16_t screen_idx : 1;
+        uint16_t palsel : 2;
+        uint16_t x_flip : 1;
+        uint16_t y_flip : 1;
 #else
-    uint16_t y_flip : 1;
-    uint16_t x_flip : 1;
-    uint16_t palsel : 2;
-    uint16_t screen_idx : 1;
-    uint16_t tile_index : 11;
+        uint16_t y_flip : 1;
+        uint16_t x_flip : 1;
+        uint16_t palsel : 2;
+        uint16_t screen_idx : 1;
+        uint16_t tile_index : 11;
 #endif
+    } parts;
 
 public:
+    // Value must be read/written as u16x2 or u32x1 (according to MAME).
+    uint16_t raw = {};
+
     // Note: we have an extra 3 bits here, so BG tiles should be larger if possible!
     void set_tile_index(TileIndex idx_) {
-        tile_index = idx_;
+        parts.tile_index = idx_;
     }
     void set_screen(Screen screen_) {
-        screen_idx = static_cast<uint8_t>(screen_);
+        parts.screen_idx = static_cast<uint8_t>(screen_);
     }
     void set_x_flip(bool flip_) {
-        x_flip = flip_;
+        parts.x_flip = flip_;
     }
     void set_y_flip(bool flip_) {
-        y_flip = flip_;
+        parts.y_flip = flip_;
     }
 };
 static_assert(sizeof(BGSprite) == sizeof(uint16_t));
@@ -167,24 +179,23 @@ inline void * get_tile_data(TileIndex idx) {
 }
 
 // Get a sprite.
-inline ObjSprite & get_sprite(uint8_t idx) {
+inline void set_sprite(uint8_t idx, ObjSprite const & sprite) {
     ASSERT(idx < 128);
-    auto * sprites = (ObjSprite *)VDP.OAM;
-    return sprites[idx];
+    VDP.OAM[idx] = sprite.raw;
 }
 
 // Get a BG tile.
 template <uint8_t BGx>
-inline BGSprite & get_bg_sprite(uint8_t x, uint8_t y) {
+inline void set_bg_sprite(uint8_t x, uint8_t y, BGSprite const & sprite) {
     ASSERT(x < bg_tilemap_size);
     ASSERT(y < bg_tilemap_size);
     static_assert(BGx == 0 || (BGx == 1 && !bg_shared_tilemap));
-    auto * bg = (BGSprite *)VDP.TILE_VRAM;
+    auto * bg = VDP.TILE_VRAM;
     if constexpr (BGx == 1) {
         bg += bg_tilemap_size * bg_tilemap_size;
     }
     bg += y * bg_tilemap_size + x;
-    return *bg;
+    *bg = sprite.raw;
 }
 
 
