@@ -206,6 +206,13 @@ Entry driving_loop() {
         // Update gamepad/mouse input.
         engine::input::update_inputs();
 
+        // TODO: just for testing atm
+        const auto pressed = engine::input::g_buttons_pressed;
+        if (pressed & GAMEPAD_BTN_A) {
+            next = Entry::MainMenu;
+            break;
+        }
+
         // Print the last frame's timings before updating logic since we don't seem to have enough time after.
 #if 0 // This still causes corruption!
         engine::profiler::print_timings();

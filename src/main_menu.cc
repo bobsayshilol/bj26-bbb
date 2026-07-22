@@ -245,6 +245,7 @@ Entry main_menu_loop() {
         const auto pressed = engine::input::g_buttons_pressed;
         if (pressed & GAMEPAD_BTN_A) {
             // TODO
+            next = Entry::Driving;
             break;
         }
 
