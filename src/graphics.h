@@ -218,4 +218,12 @@ constexpr inline Background<1> background_1;
 inline void enable_sprites() { VDP.LAYER_CTRL |= uint16_t(LAYER_ENABLE_OBJ0); }
 inline void disable_sprites() { VDP.LAYER_CTRL &= ~uint16_t(LAYER_ENABLE_OBJ0); }
 
+inline void reset_sprites(uint8_t count) {
+    ASSERT(count < 128);
+    ObjSprite sprite;
+    for (int i = 0; i < count; i++) {
+        set_sprite(i, sprite);
+    }
+}
+
 } // namespace engine::graphics

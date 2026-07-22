@@ -222,6 +222,7 @@ void leave() {
     // Reset graphics state.
     engine::graphics::disable_sprites();
     engine::graphics::background_0.disable();
+    engine::graphics::reset_sprites(bouncer_sprite_start + bouncer_count);
 }
 
 } // namespace
