@@ -15,8 +15,13 @@ void print_type(const char *msg) {
     serial_print(msg);
 }
 
-void print_type(int32_t i) {
-    auto msg = utils::to_string(i);
+void print_type(uint32_t i) {
+    auto msg = utils::to_hex(i);
+    serial_print(msg.data());
+}
+
+void print_type(as_int i) {
+    auto msg = utils::to_string(i.v);
     serial_print(msg.data());
 }
 

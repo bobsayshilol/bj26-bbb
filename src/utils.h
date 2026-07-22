@@ -59,6 +59,7 @@ constexpr inline void reverse(Iter b, Iter e) {
 }
 
 // int to string
+// WARNING: /10 is slow
 constexpr inline auto to_string(int32_t i) {
     // Longest str is "-4294967296", so 11+NUL.
     Array<char, 12> result{}; // TODO: unnecessary initialisation
@@ -73,6 +74,25 @@ constexpr inline auto to_string(int32_t i) {
         *d++ = '0' + (i % 10);
         i /= 10;
     }
+    reverse(start, d);
+    *d++ = '\0';
+    return result;
+}
+
+// int to string
+constexpr inline auto to_hex(uint32_t i) {
+    // Longest str is "0xAABBCCDD", so 10+NUL.
+    Array<char, 11> result{}; // TODO: unnecessary initialisation
+    char *d = result.data();
+    *d++ = '0';
+    *d++ = 'x';
+    char * const start = d;
+    do {
+        for (int k = 0; k < 2; k++) {
+            *d++ = "0123456789ABCDEF"[i & 0xf];
+            i >>= 4;
+        }
+    } while (i);
     reverse(start, d);
     *d++ = '\0';
     return result;
@@ -168,6 +188,36 @@ constexpr int check_to_string() {
     return -1;
 }
 static_assert(check_to_string() == -1);
+
+constexpr int check_to_hex() {
+    {
+        constexpr auto str = to_hex(0x0);
+        constexpr Array<char, 11> e = { '0', 'x', '0', '0' };
+        if (str != e) return 0;
+    }
+    {
+        constexpr auto str = to_hex(0x1);
+        constexpr Array<char, 11> e = { '0', 'x', '0', '1' };
+        if (str != e) return 1;
+    }
+    {
+        constexpr auto str = to_hex(15);
+        constexpr Array<char, 11> e = { '0', 'x', '0', 'F' };
+        if (str != e) return 2;
+    }
+    {
+        constexpr auto str = to_hex(0x123);
+        constexpr Array<char, 11> e = { '0', 'x', '0', '1', '2', '3' };
+        if (str != e) return 3;
+    }
+    {
+        constexpr auto str = to_hex(0x89abcdef);
+        constexpr Array<char, 11> e = { '0', 'x', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+        if (str != e) return 4;
+    }
+    return -1;
+}
+static_assert(check_to_hex() == -1);
 
 constexpr int check_size() {
     {
