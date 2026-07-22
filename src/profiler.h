@@ -20,7 +20,7 @@
 #include "utils.h"
 
 // WARNING: this won't work on a real device because of read_timer()
-#define ENABLE_PROFILING 1
+#define ENABLE_PROFILING 0
 
 namespace engine::profiler {
 

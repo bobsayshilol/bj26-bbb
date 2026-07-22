@@ -12,7 +12,7 @@
 
 #include <stdint.h>
 
-#define ENABLE_DEBUGGING 1
+#define ENABLE_DEBUGGING 0
 
 namespace engine::debug {
 
