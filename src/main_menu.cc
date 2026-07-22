@@ -177,11 +177,11 @@ void background_setup() {
     for (uint32_t i = 0; i < bg_sprite_count; i++) {
         const int g = i * 31 / bg_sprite_count;
         set_palette_colour(bg_sprite_start + i, RGB555(g, g, g));
-        uint16_t * data16 = (uint16_t *)get_tile_data(bg_sprite_start + i);
+        Pixel2 * data16 = get_tile_data(bg_sprite_start + i);
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x += 2) {
                 // Write 2 pixels at a time.
-                uint16_t v16 = bg_sprite_start + i;
+                Pixel2 v16 = bg_sprite_start + i;
                 v16 |= v16 << 8;
                 *data16++ = v16;
             }

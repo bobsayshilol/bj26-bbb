@@ -19,10 +19,7 @@ struct vdp {
 		uint8_t BITMAP_VRAM_8BIT[0x20000];
 	};
 	PADBYTES _pad_20000[0x20000];
-	union {
-		uint16_t TILE_VRAM[0x8000];
-		uint8_t TILE_VRAM_8BIT[0x10000];
-	};
+	uint16_t TILE_VRAM[0x8000];
 	uint32_t OAM[0x80];
 	PADBYTES _pad_50200[0xE00];
 	uint16_t PALETTE[0x100];

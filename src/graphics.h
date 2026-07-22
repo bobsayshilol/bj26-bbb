@@ -172,10 +172,13 @@ static_assert(sizeof(BGSprite) == sizeof(uint16_t));
 
 // Returns data for the given tile.
 // It's much more efficient to store to this 2 pixels at a time (uint16_t) rather than 1.
-inline void * get_tile_data(TileIndex idx) {
+// MAME says it's only legal to store uint16_t's too...
+using Pixel2 = uint16_t;
+inline Pixel2 * get_tile_data(TileIndex idx) {
     ASSERT(idx < (0x10000 - sprite_tile_data_start) / (bg_tile_size * bg_tile_size));
     const uint32_t offset = idx * bg_tile_size * bg_tile_size;
-    return VDP.TILE_VRAM_8BIT + sprite_tile_data_start + offset;
+    // |sprite_tile_data_start| and |offset| are both even so this is safe.
+    return VDP.TILE_VRAM + ((sprite_tile_data_start + offset) >> 1);
 }
 
 // Get a sprite.
@@ -206,7 +209,7 @@ struct Background {
     static_assert(Index <= 1);
     static void enable() { VDP.LAYER_CTRL |= uint16_t(LAYER_ENABLE_BG0) << Index; }
     static void disable() { VDP.LAYER_CTRL &= ~(uint16_t(LAYER_ENABLE_BG0) << Index); };
-    static BGSprite & get_sprite(uint8_t x, uint8_t y) { return get_bg_sprite<Index>(x, y); }
+    static void set_sprite(uint8_t x, uint8_t y, const BGSprite & sprite) { set_bg_sprite<Index>(x, y, sprite); }
 };
 constexpr inline Background<0> background_0;
 constexpr inline Background<1> background_1;
