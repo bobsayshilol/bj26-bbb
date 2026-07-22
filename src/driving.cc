@@ -165,13 +165,15 @@ void enter() {
     engine::graphics::set_backdrop_a(RGB555(0, 0, 31));
 
     // Setup sprites.
-    engine::graphics::enable_sprites();
     // TODO
 
     // Draw the parts of the screen.
+    draw_bitmaps();
+
+    // Show everything now that it's drawn.
     engine::graphics::bitmap_0.enable();
     engine::graphics::bitmap_2.enable();
-    draw_bitmaps();
+    engine::graphics::enable_sprites();
 
     engine::profiler::print_timings();
 }

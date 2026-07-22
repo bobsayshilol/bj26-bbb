@@ -205,15 +205,15 @@ void enter() {
     engine::graphics::set_palette_colour(pal_white, RGB555(31, 31, 31));
     engine::graphics::set_palette_colour(pal_grey, RGB555(15, 15, 15));
 
-    // This screen uses sprites and has a background.
-    engine::graphics::enable_sprites();
-    engine::graphics::background_0.enable();
-
     // Draw a background.
     background_setup();
 
     // Setup the bouncers.
     bouncers_setup();
+
+    // This screen uses sprites and has a background.
+    engine::graphics::enable_sprites();
+    engine::graphics::background_0.enable();
 
     engine::profiler::print_timings();
 }
