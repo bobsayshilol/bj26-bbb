@@ -48,10 +48,12 @@ Ball s_ball;
 
 constexpr engine::utils::FixedU88 s_ball_speeds[] = {
     engine::utils::FixedU88::div(-7, 8),
+    engine::utils::FixedU88::div(-5, 8),
     engine::utils::FixedU88::div(-3, 8),
     engine::utils::FixedU88::div(-1, 8),
     engine::utils::FixedU88::div(1, 8),
     engine::utils::FixedU88::div(3, 8),
+    engine::utils::FixedU88::div(5, 8),
     engine::utils::FixedU88::div(7, 8),
 };
 
@@ -75,15 +77,23 @@ void ball_update() {
     auto & ball = s_ball;
 
     // Bounds check walls.
-    const uint16_t nx = (ball.x + ball.vx).value(); // unsigned to wrap
-    const uint16_t ny = (ball.y + ball.vy).value(); // unsigned to wrap
-    if (nx >= (engine::graphics::SCREEN_WIDTH - wall_padding - ball_width)) {
+    const uint16_t nx = (ball.x + ball.vx).value() - wall_padding; // unsigned to wrap
+    const uint16_t ny = (ball.y + ball.vy).value() - wall_padding; // unsigned to wrap
+    if (nx >= (engine::graphics::SCREEN_WIDTH - 2 * wall_padding - ball_width)) {
+        // Increase/decrease if going same/opposite direction
+        const bool left_side = nx > engine::graphics::SCREEN_WIDTH * 2;
+        const bool moving_up = ball.vy.value() < 0;
+        if (left_side == moving_up) ball.rot_speed++; else ball.rot_speed--;
+
         ball.vx = -ball.vx;
-        ball.rot_speed++; // TODO: increase/decrease if going same/opposite direction
     }
-    if (ny >= (engine::graphics::SCREEN_HEIGHT - wall_padding - ball_height)) {
+    if (ny >= (engine::graphics::SCREEN_HEIGHT - 2 * wall_padding - ball_height)) {
+        // Increase/decrease if going same/opposite direction
+        const bool top_side = ny > engine::graphics::SCREEN_WIDTH * 2;
+        const bool moving_left = ball.vx.value() < 0;
+        if (top_side != moving_left) ball.rot_speed++; else ball.rot_speed--;
+
         ball.vy = -ball.vy;
-        ball.rot_speed--;
     }
 
     // Apply movement.
@@ -91,7 +101,7 @@ void ball_update() {
     ball.y += ball.vy;
 
     // Apply rotation.
-    ball.rot_speed = engine::utils::clamp<int8_t>(ball.rot_speed, 0, engine::utils::size(s_ball_speeds));
+    ball.rot_speed = engine::utils::clamp<int8_t>(ball.rot_speed, 0, engine::utils::size(s_ball_speeds) - 1);
     ball.frame += s_ball_speeds[ball.rot_speed];
 }
 
