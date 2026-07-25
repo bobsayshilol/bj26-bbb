@@ -140,8 +140,8 @@ void ball_draw() {
 void ball_reset() {
     s_ball.x = engine::utils::FixedS1616::from(engine::graphics::SCREEN_WIDTH / 2);
     s_ball.y = engine::utils::FixedS1616::from(engine::graphics::SCREEN_HEIGHT / 2);
-    s_ball.vx = engine::utils::FixedS1616::div(1, 2);
-    s_ball.vy = engine::utils::FixedS1616::div(1, 2);
+    s_ball.vx = engine::utils::FixedS1616::div(3, 2);
+    s_ball.vy = engine::utils::FixedS1616::div(3, 2);
     s_ball.frame = engine::utils::FixedU88::from(0);
     s_ball.rot_speed = engine::utils::size(s_ball_speeds) / 2;
 }
