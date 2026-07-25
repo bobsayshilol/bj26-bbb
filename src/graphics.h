@@ -221,6 +221,7 @@ inline void disable_sprites() { VDP.LAYER_CTRL &= ~uint16_t(LAYER_ENABLE_OBJ0); 
 inline void reset_sprites(uint8_t count) {
     ASSERT(count < 128);
     ObjSprite sprite;
+    sprite.raw = 0x0200; // default value in LoopyMSE and MAME, looks like x=256,y=256
     for (int i = 0; i < count; i++) {
         set_sprite(i, sprite);
     }
