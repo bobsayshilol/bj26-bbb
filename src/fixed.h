@@ -50,9 +50,13 @@ struct FixedT {
 
     constexpr FixedT & operator+=(const FixedT & f) { raw += f.raw; return *this; }
     constexpr FixedT & operator-=(const FixedT & f) { raw -= f.raw; return *this; }
+    //constexpr FixedT & operator*=(const FixedT & f) { raw = (raw * f.raw) >> Shift; return *this; }
+    constexpr FixedT & operator*=(Integer x) { raw *= x; return *this; }
 
-    constexpr FixedT operator+(const FixedT & f) { FixedT t = *this; t += f; return t; }
-    constexpr FixedT operator-(const FixedT & f) { FixedT t = *this; t -= f; return t; }
+    constexpr FixedT operator+(const FixedT & f) const { FixedT t = *this; t += f; return t; }
+    constexpr FixedT operator-(const FixedT & f) const { FixedT t = *this; t -= f; return t; }
+    //constexpr FixedT operator*(const FixedT & f) const { FixedT t = *this; t *= f; return t; }
+    constexpr FixedT operator*(Integer x) const { FixedT t = *this; t *= x; return t; }
 
     constexpr FixedT operator-() {
         FixedT t = *this;
@@ -111,6 +115,15 @@ constexpr int check_fixed() {
         fixed = -Fixed::from(0); if (fixed.value() != 0) return 8;
         fixed = -Fixed::from(1); if (fixed.value() != -1) return 8;
         fixed = -Fixed::from(2); if (fixed.value() != -2) return 8;
+    }
+    {
+        fixed = Fixed::from(3) * 2; if (fixed.value() != 6) return 9;
+        fixed = Fixed::from(5) * 3; if (fixed.value() != 15) return 9;
+    }
+    if constexpr (Fixed::IsSigned) {
+        fixed = Fixed::from(3) * -2; if (fixed.value() != -6) return 10;
+        fixed = Fixed::from(-5) * 3; if (fixed.value() != -15) return 9;
+        fixed = Fixed::from(2) * 3; if (fixed.value() != 6) return 9;
     }
     return -1;
 };
