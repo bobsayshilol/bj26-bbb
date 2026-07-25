@@ -1,9 +1,11 @@
+#include "debug.h"
 #include "game.h"
 #include "input.h"
 #include "graphics.h"
 #include "maths.h"
 #include "memory.h"
 #include "profiler.h"
+#include "fixed.h"
 
 namespace game {
 
@@ -25,16 +27,14 @@ constexpr uint8_t bouncer_sprite_start = mouse_sprite_idx + 1;
 constexpr uint8_t bouncer_count = 16;
 constexpr uint8_t bouncer_tile_start = 0;
 constexpr uint8_t bouncer_tile_count = 8;
-constexpr uint8_t bouncer_pos_shift = 2;
-constexpr uint8_t bouncer_rot_shift = 4;
 struct Bouncer {
-    int16_t x;
-    int16_t y;
+    engine::utils::FixedS1616 x;
+    engine::utils::FixedS1616 y;
     // TODO: store angles instead?
-    int8_t vx;
-    int8_t vy;
-    uint8_t rot;
-    int8_t avel;
+    engine::utils::FixedS1616 vx;
+    engine::utils::FixedS1616 vy;
+    engine::utils::FixedU88 rot;
+    engine::utils::FixedU88 avel;
 };
 Bouncer s_bouncers[bouncer_count];
 
@@ -48,13 +48,13 @@ void bouncers_update() {
         auto & bouncer = s_bouncers[idx];
 
         // Bounds check walls.
-        const uint16_t nx = bouncer.x + bouncer.vx; // unsigned to wrap
-        const uint16_t ny = bouncer.y + bouncer.vy; // unsigned to wrap
-        if (nx >= (SCREEN_WIDTH - bg_tile_size) << bouncer_pos_shift) {
+        const uint16_t nx = (bouncer.x + bouncer.vx).value(); // unsigned to wrap
+        const uint16_t ny = (bouncer.y + bouncer.vy).value(); // unsigned to wrap
+        if (nx >= (SCREEN_WIDTH - bg_tile_size)) {
             bouncer.vx = -bouncer.vx;
             bouncer.avel = -bouncer.avel;
         }
-        if (ny >= (SCREEN_HEIGHT - bg_tile_size) << bouncer_pos_shift) {
+        if (ny >= (SCREEN_HEIGHT - bg_tile_size)) {
             bouncer.vy = -bouncer.vy;
             bouncer.avel = -bouncer.avel;
         }
@@ -72,11 +72,11 @@ void bouncers_update() {
         PROFILE_SCOPE(b_sprt);
 
         const auto & bouncer = s_bouncers[idx];
-        const uint16_t rot_frame = (bouncer.rot >> bouncer_rot_shift) % bouncer_tile_count;
+        const uint16_t rot_frame = bouncer.rot.value() % bouncer_tile_count;
 
         ObjSprite sprite;
-        sprite.set_x(bouncer.x >> bouncer_pos_shift);
-        sprite.set_y(bouncer.y >> bouncer_pos_shift);
+        sprite.set_x(bouncer.x.value());
+        sprite.set_y(bouncer.y.value());
         sprite.set_tile_index(bouncer_tile_start + rot_frame);
         sprite.set_size(SpriteSize::Size8x8);
         set_sprite(bouncer_sprite_start + idx, sprite);
@@ -96,8 +96,8 @@ void bouncers_setup() {
 
         // Place this one so that it's not colliding.
         while (true) {
-            bouncer.x = (rng() % (SCREEN_WIDTH - tile_size)) << bouncer_pos_shift;
-            bouncer.y = (rng() % (SCREEN_HEIGHT - tile_size)) << bouncer_pos_shift;
+            bouncer.x = engine::utils::FixedS1616::from(rng() % (SCREEN_WIDTH - tile_size));
+            bouncer.y = engine::utils::FixedS1616::from(rng() % (SCREEN_HEIGHT - tile_size));
 
             bool colliding = false; // TODO
             if (!colliding) {
@@ -105,20 +105,11 @@ void bouncers_setup() {
             }
         }
 
-#if 1
-        const uint8_t angle = rng() & 0b11100000; // 8 choices
-        bouncer.vx = engine::maths::cos(angle) >> (6 - bouncer_pos_shift);
-        bouncer.vy = engine::maths::sin(angle) >> (6 - bouncer_pos_shift);
-#elif 0
-        bouncer.vx = (1 - (idx & 1) * 2) << bouncer_pos_shift;
-        bouncer.vy = (1 - (idx & 2)) << bouncer_pos_shift;
-#else
-        const uint8_t angle = rng();
-        bouncer.vx = engine::maths::cos(angle) >> (5 - bouncer_pos_shift);
-        bouncer.vy = engine::maths::sin(angle) >> (5 - bouncer_pos_shift);
-#endif
-        DEBUG_MSG(idx, " -> ", bouncer.vx, ", ", bouncer.vy);
-        bouncer.avel = 1 - (rng() & 2);// << bouncer_rot_shift;
+        const uint8_t angle = rng() & 0b11110000; // 16 choices
+        bouncer.vx = engine::utils::FixedS1616::div(engine::maths::cos(angle), 32);
+        bouncer.vy = engine::utils::FixedS1616::div(engine::maths::sin(angle), 32);
+        bouncer.avel = engine::utils::FixedU88::div(1, 16);
+        if (rng() & 1) bouncer.avel -= engine::utils::FixedU88::div(2, 16);
     }
 
     // TODO: these should be premade sprites
