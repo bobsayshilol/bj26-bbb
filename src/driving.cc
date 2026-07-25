@@ -1,4 +1,5 @@
 #include "debug.h"
+#include "fixed.h"
 #include "game.h"
 #include "graphics.h"
 #include "profiler.h"
@@ -31,9 +32,8 @@ static_assert(road_length < engine::graphics::SCREEN_HEIGHT);
 constexpr uint16_t road_start = engine::graphics::SCREEN_HEIGHT - road_length;
 
 // Currently location.
-constexpr uint8_t xpos_shift = 6;
-constexpr uint8_t xpos_max = 1 << xpos_shift;
-int8_t s_xpos;
+constexpr auto dx_per_frame = engine::utils::FixedS1616::div(1, 32);
+engine::utils::FixedS1616 s_xpos;
 
 // How fast we move through the road.
 // TODO: shifts
@@ -41,6 +41,9 @@ int8_t s_xpos;
 //constexpr uint8_t road_max_speed = 1 << road_shift;
 uint8_t s_road_position;
 uint8_t s_road_speed = 1;
+
+// Current road rotation.
+engine::utils::FixedS1616 s_road_rotation;
 
 // Incoming road layouts.
 // TODO: just use an RNG
@@ -121,8 +124,8 @@ void update_logic() {
     PROFILE_SCOPE(rd_log);
 
     // Handle input.
-    if (engine::input::g_buttons_held & GAMEPAD_BTN_LEFT) { s_xpos -= 1; }
-    else if (engine::input::g_buttons_held & GAMEPAD_BTN_RIGHT) { s_xpos += 1; }
+    if (engine::input::g_buttons_held & GAMEPAD_BTN_LEFT) { s_xpos -= dx_per_frame; }
+    else if (engine::input::g_buttons_held & GAMEPAD_BTN_RIGHT) { s_xpos += dx_per_frame; }
 
     // TODO: proper speed handling
     //if ((engine::input::g_buttons_pressed & GAMEPAD_BTN_UP) && s_road_speed < road_max_speed) { s_road_speed += 1; }
@@ -130,10 +133,14 @@ void update_logic() {
 
     // Move along the road.
     s_road_position += s_road_speed;
-    s_xpos += s_road_offsets[s_road_position];
+    s_road_rotation += engine::utils::FixedS1616::div(s_road_offsets[s_road_position], 32); // TODO: move to array
 
     // Clamp position.
-    s_xpos = engine::utils::clamp<int8_t>(s_xpos, -xpos_max, xpos_max);
+    if (s_xpos.value() >= 1) {
+        s_xpos = engine::utils::FixedS1616::from(1);
+    } else if (s_xpos.value() < -1) { // TODO: this should be <=, but off-by-one with -ve (see header)
+        s_xpos = engine::utils::FixedS1616::from(-1);
+    }
 
     //
 
@@ -141,10 +148,12 @@ void update_logic() {
     wait_until_line(road_start - 10);
 }
 
-void update_road() {
+void draw_road() {
     PROFILE_SCOPE(rd_upd);
 
-    const int8_t xpos = s_xpos; // Store to a local since wait_until_line() issues a barrier.
+    // Store to a local since wait_until_line() issues a barrier.
+    const auto xpos = s_xpos;
+    const auto road_rot = s_road_rotation;
 
     // Wait for the next section and scroll the scanline.
     uint8_t ridx = s_road_position;
@@ -152,8 +161,14 @@ void update_road() {
     for (uint16_t line = road_start; line < engine::graphics::SCREEN_HEIGHT; line += scanlines_per_section, ridx++, road_section++) {
         wait_until_line(line);
 
-        // Bend the road.
-        int8_t dx = (xpos * s_turning_offset[road_section]) >> xpos_shift;
+        int8_t dx = 0;
+
+        // Road curvature.
+        dx += (road_rot * s_turning_offset[road_section]).value();
+
+        // Translation of car.
+        dx += (xpos * road_section).value();
+
         engine::graphics::bitmap_0.scroll_x() = dx;
     }
 }
@@ -222,7 +237,7 @@ Entry driving_loop() {
         update_logic();
 
         // Draw the road.
-        update_road();
+        draw_road();
 
         // TODO: there should be breathing room after too, ie during vblank?
     }
