@@ -104,15 +104,35 @@ constexpr inline uint32_t size(const T (&)[N]) {
     return N;
 }
 
-// LCG based RNG.
-class RNG {
+// LFSR based.
+// https://www.analog.com/en/resources/design-notes/random-number-generation-using-lfsr.html
+class LFSR {
     uint32_t state;
 public:
-    constexpr RNG(uint32_t s = 0) : state(s) { }
+    constexpr LFSR(uint32_t s = 1) : state(s) { }
+    constexpr void seed(uint32_t s) { state = s; }
+    constexpr uint32_t operator()() {
+        const bool bit = state & 1;
+        state >>= 1;
+        if (bit) state ^= 0xB4BCD35C;
+        return state;
+    }
+    constexpr void add_entropy(uint32_t e) { state = (state + e) | 1; } // not really
+};
+
+// LCG based.
+// https://en.wikipedia.org/wiki/Linear_congruential_generator#Parameters_in_common_use
+class LCG {
+    uint32_t state;
+public:
+    constexpr LCG(uint32_t s = 0) : state(s) { }
     constexpr void seed(uint32_t s) { state = s; }
     constexpr uint32_t operator()() { return state = state * 134775813U + 1U; }
     constexpr void add_entropy(uint32_t e) { state += e; } // not really
 };
+
+// Global RNG.
+using RNG = LFSR;
 extern RNG g_rng;
 
 // std::min(), std::max(), std::clamp()
