@@ -74,7 +74,7 @@ void splash() {
 	engine::sound::play_startup_sound();
 
 	const int fps = 60;
-	const int seconds = 4;
+	const int seconds = 1;
 	for (int frame = 0; frame < seconds * fps; frame++) {
 		const int speed = 4;
 		bitmap_0.scroll_x() -= speed;
