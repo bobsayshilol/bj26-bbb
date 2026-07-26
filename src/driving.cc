@@ -14,6 +14,8 @@
 // +-----+
 //
 
+#define PRINT_PROFILING 0 // This causes UI corruption when enabled
+
 namespace game {
 
 namespace {
@@ -229,7 +231,7 @@ Entry driving_loop() {
         }
 
         // Print the last frame's timings before updating logic since we don't seem to have enough time after.
-#if 0 // This still causes corruption!
+#if PRINT_PROFILING
         engine::profiler::print_timings();
 #endif
 
