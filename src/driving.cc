@@ -2,19 +2,20 @@
 #include "fixed.h"
 #include "game.h"
 #include "graphics.h"
+#include "memory.h"
 #include "profiler.h"
 #include "input.h"
 
 //
-// +-----+
-// |     | < bitmap2 for skyline
-// +-----+
+// +--+--+
+// |  |  | < bitmap1+bitmap2 for skyline
+// +--+--+
 // |     | < bitmap0 for road bending
-// |     | < bitmap1 overlapped for center line?
 // +-----+
 //
 
 #define PRINT_PROFILING 0 // This causes UI corruption when enabled
+#define SPRITES_FOR_ROAD 0 // This seems like it'd be more hassle to shift and requires lots of sprites if not multiplexing
 
 namespace game {
 
@@ -22,7 +23,31 @@ namespace {
 
 PROFILE_STORAGE(rd_vsy);
 PROFILE_STORAGE(rd_upd);
+PROFILE_STORAGE(rd_til);
 PROFILE_STORAGE(rd_log);
+
+//
+
+constexpr uint8_t pal_black = 1;
+constexpr uint8_t pal_white = 2;
+constexpr uint8_t pal_grey = 3;
+constexpr uint8_t pal_car_start = 4; // shared with trees
+constexpr uint8_t pal_car_count = 16;
+
+constexpr uint8_t car_sprite_start = 0;
+constexpr uint8_t car_sprite_count = 1;
+constexpr uint8_t car_tile_start = 0;
+constexpr uint8_t car_tile_count = 1; // TODO: more for turning
+
+constexpr uint8_t tree_sprite_start = car_sprite_start + car_sprite_count;
+constexpr uint8_t tree_sprite_count = 2; // one on each side
+constexpr uint8_t tree_tile_start = car_tile_start + car_tile_count;
+constexpr uint8_t tree_tile_count = 3; // far/med/close -> tiny/small/big
+
+constexpr uint8_t transparent_sprite_start = tree_sprite_start + tree_sprite_count;
+constexpr uint8_t transparent_sprite_count = 3; // max 3 road splits
+constexpr uint8_t transparent_tile_start = tree_tile_start + tree_tile_count;
+constexpr uint8_t transparent_tile_count = 1;
 
 //
 
@@ -33,9 +58,11 @@ constexpr uint16_t road_length = road_sections * scanlines_per_section;
 static_assert(road_length < engine::graphics::SCREEN_HEIGHT);
 constexpr uint16_t road_start = engine::graphics::SCREEN_HEIGHT - road_length;
 
+uint8_t s_center_line_widths[road_length]; // built during setup
+
 // Currently location.
 constexpr auto dx_per_frame = engine::utils::FixedS1616::div(1, 32);
-engine::utils::FixedS1616 s_xpos;
+engine::utils::FixedS1616 s_xpos; // clamped to [-1, 1]
 
 // How fast we move through the road.
 // TODO: shifts
@@ -77,7 +104,39 @@ void wait_until_line(uint16_t line) { while (VDP.VCOUNT < line) __asm__ volatile
 
 //
 
-void draw_bitmaps() {
+void setup_tiles() {
+    using namespace engine::graphics;
+
+    // Car tiles.
+    // TODO: replace with real tiles
+    static_assert(pal_car_count >= car_tile_count);
+    for (int idx = 0; idx < car_tile_count; idx++) {
+        engine::graphics::set_palette_colour(pal_car_start + idx, RGB555(31, idx+2, idx+2));
+        engine::utils::fast_memset8(get_tile_data(car_tile_start + idx), pal_car_start + idx, bg_tile_size * bg_tile_size);
+    }
+
+    // Tree tiles.
+    // TODO: replace with real tiles
+    static_assert(pal_car_count >= car_tile_count + tree_tile_count);
+    for (int idx = 0; idx < tree_tile_count; idx++) {
+        const auto pal_idx = car_tile_count + idx + 1;
+        engine::graphics::set_palette_colour(pal_car_start + pal_idx, RGB555(pal_idx+2, 31, pal_idx+2));
+        engine::utils::fast_memset8(get_tile_data(tree_tile_start + idx), pal_car_start + pal_idx, bg_tile_size * bg_tile_size);
+    }
+
+#if SPRITES_FOR_ROAD
+    // Transparent line split tiles.
+    for (int idx = 0; idx < transparent_sprite_count; idx++) {
+        Pixel2 * tile_data = get_tile_data(transparent_sprite_start + idx);
+        // First line is road colour.
+        engine::utils::fast_memset8(tile_data, pal_black, bg_tile_size);
+        // The rest is transparent.
+        engine::utils::fast_memset8((char*)tile_data + bg_tile_size, pal_transparent, bg_tile_size * (bg_tile_size - 1));
+    }
+#endif
+}
+
+void setup_bitmaps() {
     using namespace engine::graphics;
 
     // Skyline bitmap.
@@ -98,9 +157,6 @@ void draw_bitmaps() {
     bitmap_0.scroll_y() = road_start;
 
     // Setup colours.
-    constexpr uint8_t pal_black = 1;
-    constexpr uint8_t pal_white = 2;
-    constexpr uint8_t pal_grey = 3;
     set_palette_colour(pal_black, RGB555(0, 0, 0));
     set_palette_colour(pal_white, RGB555(31, 31, 31));
     set_palette_colour(pal_grey, RGB555(15, 15, 15));
@@ -111,10 +167,11 @@ void draw_bitmaps() {
     for (int32_t y = road_start; y < SCREEN_HEIGHT; y++) {
         const int32_t pavement_width = max_pavement_width - (max_pavement_width - min_pavement_width) * (y - road_start) / (SCREEN_HEIGHT - 16 - road_start);
         const int32_t stripes_width = (SCREEN_WIDTH / 2 - pavement_width) / 8;
+        s_center_line_widths[y - road_start] = stripes_width;
         for (int32_t x = 0; x < 256; x++) {
             uint8_t col = pal_black;
             if (x < pavement_width || x > 256 - pavement_width) col = pal_grey;
-            if (128 - stripes_width <= x && x <= 128 + stripes_width && (y & 31)) col = pal_white;
+            if (128 - stripes_width <= x && x < 128 + stripes_width) col = pal_white;
             VDP.BITMAP_VRAM_8BIT[y * 256 + x] = col;
         }
     }
@@ -143,14 +200,47 @@ void update_logic() {
     } else if (s_xpos.value() < -1) { // TODO: this should be <=, but off-by-one with -ve (see header)
         s_xpos = engine::utils::FixedS1616::from(-1);
     }
+}
 
-    //
+void draw_sprites() {
+    using namespace engine::graphics;
 
-    // For now just wait a few lines.
-    wait_until_line(road_start - 10);
+    PROFILE_SCOPE(rd_til);
+
+    constexpr uint16_t car_x_scale = 32;
+    constexpr uint16_t car_y_offset = 40;
+
+    // Car sprite.
+    ObjSprite sprite;
+    const auto car_x = s_xpos * car_x_scale;
+    sprite.set_y(SCREEN_HEIGHT - car_y_offset);
+    for (int idx = 0; idx < car_sprite_count; idx++) {
+        sprite.set_x(SCREEN_WIDTH / 2 + car_x.value());
+        sprite.set_tile_index(car_tile_start + idx);
+        set_sprite(car_sprite_start + idx, sprite);
+    }
+
+    // Tree sprites.
+    // TODO
+
+#if SPRITES_FOR_ROAD
+    // Transparent line split tiles.
+    sprite.set_tile_index(transparent_tile_start); // single tile
+    constexpr int split_every = 64;
+    static_assert(SCREEN_HEIGHT - road_start <= transparent_sprite_count * split_every);
+    uint8_t split_idx = 0;
+    const uint8_t offset = s_road_position & (split_every - 1);
+    for (int line = road_start + offset; line <= SCREEN_HEIGHT; line += split_every, split_idx++) {
+        sprite.set_x(SCREEN_WIDTH / 2);
+        sprite.set_y(line);
+        set_sprite(transparent_sprite_start + split_idx, sprite);
+    }
+#endif
 }
 
 void draw_road() {
+    using namespace engine::graphics;
+
     PROFILE_SCOPE(rd_upd);
 
     // Store to a local since wait_until_line() issues a barrier.
@@ -158,9 +248,9 @@ void draw_road() {
     const auto road_rot = s_road_rotation;
 
     // Wait for the next section and scroll the scanline.
-    uint8_t ridx = s_road_position;
+    uint8_t road_pos = s_road_position;
     uint8_t road_section = 0;
-    for (uint16_t line = road_start; line < engine::graphics::SCREEN_HEIGHT; line += scanlines_per_section, ridx++, road_section++) {
+    for (uint16_t line = road_start; line < SCREEN_HEIGHT; line += scanlines_per_section, road_pos++, road_section++) {
         wait_until_line(line);
 
         int8_t dx = 0;
@@ -171,12 +261,31 @@ void draw_road() {
         // Translation of car.
         dx += (xpos * road_section).value();
 
-        engine::graphics::bitmap_0.scroll_x() = dx;
+        bitmap_0.scroll_x() = dx;
+
+#if !SPRITES_FOR_ROAD
+        // See if this is a line with a stripe.
+        constexpr uint8_t split_every = 31;
+        static_assert((split_every & (split_every + 1)) == 0);
+        if ((line & split_every) == (road_pos & split_every)) {
+            const uint8_t road_width = s_center_line_widths[line - road_start];
+            const int32_t y = line;
+            uint8_t * line_data = VDP.BITMAP_VRAM_8BIT + y * SCREEN_WIDTH + SCREEN_WIDTH / 2 - road_width;
+
+            // Put the last line back.
+            engine::utils::fast_memset8(line_data, pal_white, road_width * 2);
+
+            // Add a split to the current line
+            line_data += scanlines_per_section * SCREEN_WIDTH;
+            engine::utils::fast_memset8(line_data, pal_black, road_width * 2);
+            // TODO: ^ might write past the end, so ignore first line after SCREEN_HEIGHT
+        }
+#endif
     }
 
     // Wait for the final line to pass then reset scroll for the skyline.
-    wait_until_line(engine::graphics::SCREEN_HEIGHT);
-    engine::graphics::bitmap_0.scroll_x() = 0;
+    wait_until_line(SCREEN_HEIGHT);
+    bitmap_0.scroll_x() = 0;
 }
 
 //
@@ -185,11 +294,9 @@ void enter() {
     // Setup colours.
     engine::graphics::set_backdrop_a(RGB555(0, 0, 31));
 
-    // Setup sprites.
-    // TODO
-
     // Draw the parts of the screen.
-    draw_bitmaps();
+    setup_tiles();
+    setup_bitmaps();
 
     // Show everything now that it's drawn.
     engine::graphics::bitmap_0.enable();
@@ -237,6 +344,7 @@ Entry driving_loop() {
 
         // We have a bit of breathing room before we need to draw the road.
         update_logic();
+        draw_sprites();
 
         // Draw the road.
         draw_road();
