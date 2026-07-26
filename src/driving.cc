@@ -171,6 +171,10 @@ void draw_road() {
 
         engine::graphics::bitmap_0.scroll_x() = dx;
     }
+
+    // Wait for the final line to pass then reset scroll for the skyline.
+    wait_until_line(engine::graphics::SCREEN_HEIGHT);
+    engine::graphics::bitmap_0.scroll_x() = 0;
 }
 
 //
@@ -208,10 +212,6 @@ Entry driving_loop() {
 
     Entry next = Entry::MainMenu;
     while (true) {
-        // Reset scroll for the skyline.
-        // TODO: this should scroll too.
-        engine::graphics::bitmap_0.scroll_x() = 0;
-
         // Wait for vblank to end.
         {
             PROFILE_SCOPE(rd_vsy);
