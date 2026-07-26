@@ -65,8 +65,13 @@ constexpr auto dx_per_frame = engine::utils::FixedS1616::div(1, 32);
 engine::utils::FixedS1616 s_xpos; // clamped to [-1, 1]
 
 // How fast we move through the road.
+constexpr uint8_t min_road_speed = 1;
+constexpr uint8_t max_road_speed = 4;
 engine::utils::FixedS1616 s_road_position; // clamped to [0, 256]
-engine::utils::FixedS1616 s_road_speed = engine::utils::FixedS1616::from(1);
+engine::utils::FixedS1616 s_road_speed = engine::utils::FixedS1616::from(min_road_speed);
+
+constexpr auto accel_per_frame = engine::utils::FixedS1616::div(2, 60); // 2 units per frame
+constexpr auto drag_per_frame = engine::utils::FixedS1616::div(1, 60); // 1 unit per frame
 
 // Current road rotation.
 engine::utils::FixedS1616 s_road_rotation;
@@ -196,9 +201,26 @@ void update_logic() {
     if (engine::input::g_buttons_held & GAMEPAD_BTN_LEFT) { s_xpos -= dx_per_frame; }
     else if (engine::input::g_buttons_held & GAMEPAD_BTN_RIGHT) { s_xpos += dx_per_frame; }
 
-    // TODO: proper speed handling
-    //if ((engine::input::g_buttons_pressed & GAMEPAD_BTN_UP) && s_road_speed < road_max_speed) { s_road_speed += 1; }
-    //else if ((engine::input::g_buttons_pressed & GAMEPAD_BTN_DOWN) && s_road_speed > 0) { s_road_speed -= 1; }
+    // Clamp position.
+    if (s_xpos.value() >= 1) {
+        s_xpos = engine::utils::FixedS1616::from(1);
+    } else if (s_xpos.value() < -1) { // TODO: this should be <=, but off-by-one with -ve (see header)
+        s_xpos = engine::utils::FixedS1616::from(-1);
+    }
+
+    //
+
+    // Speed.
+    if ((engine::input::g_buttons_held & GAMEPAD_BTN_UP) && s_road_speed.value() < max_road_speed) { s_road_speed += accel_per_frame; }
+    else if ((engine::input::g_buttons_held & GAMEPAD_BTN_DOWN)) { s_road_speed -= accel_per_frame; } // clamp happens after drag
+
+    // Apply drag.
+    s_road_speed -= drag_per_frame;
+    if (s_road_speed.value() < min_road_speed) {
+        s_road_speed = engine::utils::FixedS1616::from(min_road_speed);
+    }
+
+    //
 
     // Move along the road.
     s_road_position += s_road_speed;
@@ -208,13 +230,6 @@ void update_logic() {
     ASSERT(s_road_position.value() >= 0);
     ASSERT(s_road_position.value() <= 255);
     s_road_rotation += s_road_offsets[s_road_position.value()];
-
-    // Clamp position.
-    if (s_xpos.value() >= 1) {
-        s_xpos = engine::utils::FixedS1616::from(1);
-    } else if (s_xpos.value() < -1) { // TODO: this should be <=, but off-by-one with -ve (see header)
-        s_xpos = engine::utils::FixedS1616::from(-1);
-    }
 }
 
 void draw_sprites() {
