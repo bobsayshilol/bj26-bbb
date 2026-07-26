@@ -177,7 +177,7 @@ void setup_bitmaps() {
     for (int32_t y = road_start; y < SCREEN_HEIGHT; y++) {
         const int32_t pavement_width = max_pavement_width - (max_pavement_width - min_pavement_width) * (y - road_start) / (SCREEN_HEIGHT - 16 - road_start);
         const int32_t stripes_width = (SCREEN_WIDTH / 2 - pavement_width) / 8;
-        s_center_line_widths[y - road_start] = stripes_width;
+        s_center_line_widths[y - road_start] = stripes_width & ~1; // must be even for fast memset later
         for (int32_t x = 0; x < 256; x++) {
             uint8_t col = pal_black;
             if (x < pavement_width || x > 256 - pavement_width) col = pal_grey;
