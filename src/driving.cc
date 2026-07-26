@@ -258,6 +258,26 @@ void draw_road() {
 
     PROFILE_SCOPE(rd_upd);
 
+#if !SPRITES_FOR_ROAD
+    // Store the last splits so we can remove them next frame.
+    constexpr uint16_t max_num_splits = 6;
+    static uint16_t s_num_last_splits = 0;
+    static uint16_t s_last_splits[max_num_splits];
+
+    // Clear out old splits.
+    const int num_last_splits = s_num_last_splits;
+    for (uint16_t i = 0; i < num_last_splits; i++) {
+        const uint16_t line = s_last_splits[i];
+        const uint8_t split_width = s_center_line_widths[line - road_start];
+        uint8_t * line_data = VDP.BITMAP_VRAM_8BIT + line * SCREEN_WIDTH + SCREEN_WIDTH / 2 - split_width;
+        engine::utils::fast_memset8(line_data, pal_white, split_width * 2);
+    }
+
+    // Build this frame's splits.
+    s_num_last_splits = 0;
+    uint16_t * last_splits = s_last_splits;
+#endif
+
     // Store to a local since wait_until_line() issues a barrier.
     const auto xpos = s_xpos;
     const auto road_rot = s_road_rotation;
@@ -279,21 +299,21 @@ void draw_road() {
         bitmap_0.scroll_x() = dx;
 
 #if !SPRITES_FOR_ROAD
+        constexpr uint8_t split_every = 32;
+        static_assert(max_num_splits > road_length / split_every);
+
         // See if this is a line with a stripe.
-        constexpr uint8_t split_every = 31;
-        static_assert((split_every & (split_every + 1)) == 0);
-        if ((line & split_every) == (road_pos & split_every)) {
-            const uint8_t road_width = s_center_line_widths[line - road_start];
-            const int32_t y = line;
-            uint8_t * line_data = VDP.BITMAP_VRAM_8BIT + y * SCREEN_WIDTH + SCREEN_WIDTH / 2 - road_width;
-
-            // Put the last line back.
-            engine::utils::fast_memset8(line_data, pal_white, road_width * 2);
-
+        constexpr uint8_t split_mask = split_every - 1;
+        static_assert((split_every & split_mask) == 0);
+        if ((line & split_mask) == (road_pos & split_mask)) {
             // Add a split to the current line
-            line_data += scanlines_per_section * SCREEN_WIDTH;
-            engine::utils::fast_memset8(line_data, pal_black, road_width * 2);
-            // TODO: ^ might write past the end, so ignore first line after SCREEN_HEIGHT
+            const uint8_t split_width = s_center_line_widths[line - road_start];
+            uint8_t * line_data = VDP.BITMAP_VRAM_8BIT + line * SCREEN_WIDTH + SCREEN_WIDTH / 2 - split_width;
+            engine::utils::fast_memset8(line_data, pal_black, split_width * 2);
+
+            // Add it to the list.
+            *last_splits++ = line;
+            s_num_last_splits++;
         }
 #endif
     }
