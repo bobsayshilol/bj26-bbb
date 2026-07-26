@@ -78,6 +78,7 @@ void *memset(void *s, int c, size_t n) {
 #endif
 }
 
+#if 0 // non-static array in function triggers this
 // And memcpy too...
 void *memcpy(void * dst, const void * src, size_t n) {
 	uint8_t *out = dst;
@@ -88,3 +89,4 @@ void *memcpy(void * dst, const void * src, size_t n) {
 	}
 	return dst;
 }
+#endif

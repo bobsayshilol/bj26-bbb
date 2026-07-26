@@ -69,8 +69,8 @@ constexpr uint8_t min_road_speed = 1;
 engine::utils::FixedS1616 s_road_position; // clamped to [0, 256]
 engine::utils::FixedS1616 s_road_speed = engine::utils::FixedS1616::from(min_road_speed);
 
-constexpr uint8_t get_current_max_speed() {
-    constexpr uint8_t max_road_speeds[8+1] = {
+uint8_t get_current_max_speed() {
+    static constexpr uint8_t max_road_speeds[8+1] = {
         1, 2, 3, 4, 4, 3, 2, 1,
         1, // extra in case of xpos=1
     };
