@@ -25,7 +25,7 @@ void init();
 // Converting to int is much slower than hex, so default to hex.
 #define AS_INT(x) engine::debug::internal::as_int{.v = (int32_t)x}
 
-#define ASSERT(x) if (!(x)) { DEBUG_MSG(__FILE__, ":", __LINE__, ": assert failed: ", #x); while(true); }
+#define ASSERT(x) if (!(x)) { DEBUG_MSG(__FILE__, ":", AS_INT(__LINE__), ": assert failed: ", #x); while(true); }
 
 namespace internal {
 
