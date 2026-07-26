@@ -10,6 +10,8 @@ constexpr uint16_t SCREEN_WIDTH = 256;
 constexpr uint16_t SCREEN_HEIGHT = 224;
 constexpr uint16_t VIDEO_MODE = VIDEO_HEIGHT_224P;
 
+constexpr uint8_t pal_transparent = 0;
+
 void init();
 
 // Backdrop is a solid colour.
