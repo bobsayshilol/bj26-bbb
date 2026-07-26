@@ -66,9 +66,19 @@ engine::utils::FixedS1616 s_xpos; // clamped to [-1, 1]
 
 // How fast we move through the road.
 constexpr uint8_t min_road_speed = 1;
-constexpr uint8_t max_road_speed = 4;
 engine::utils::FixedS1616 s_road_position; // clamped to [0, 256]
 engine::utils::FixedS1616 s_road_speed = engine::utils::FixedS1616::from(min_road_speed);
+
+constexpr uint8_t get_current_max_speed() {
+    constexpr uint8_t max_road_speeds[8+1] = {
+        1, 2, 3, 4, 4, 3, 2, 1,
+        1, // extra in case of xpos=1
+    };
+    const int16_t idx = 4 + (s_xpos * 4).value(); // 4 + [-4, 4]
+    ASSERT(idx >= 0);
+    ASSERT(idx <= 8);
+    return max_road_speeds[idx];
+}
 
 constexpr auto accel_per_frame = engine::utils::FixedS1616::div(2, 60); // 2 units per frame
 constexpr auto drag_per_frame = engine::utils::FixedS1616::div(1, 60); // 1 unit per frame
@@ -211,6 +221,7 @@ void update_logic() {
     //
 
     // Speed.
+    const uint16_t max_road_speed = get_current_max_speed();
     if ((engine::input::g_buttons_held & GAMEPAD_BTN_UP) && s_road_speed.value() < max_road_speed) { s_road_speed += accel_per_frame; }
     else if ((engine::input::g_buttons_held & GAMEPAD_BTN_DOWN)) { s_road_speed -= accel_per_frame; } // clamp happens after drag
 

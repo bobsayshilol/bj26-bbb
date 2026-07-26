@@ -77,3 +77,14 @@ void *memset(void *s, int c, size_t n) {
 	return o;
 #endif
 }
+
+// And memcpy too...
+void *memcpy(void * dst, const void * src, size_t n) {
+	uint8_t *out = dst;
+	const uint8_t *in = src;
+	while (likely(n > 0)) {
+		*out++ = *in++;
+		--n;
+	}
+	return dst;
+}
