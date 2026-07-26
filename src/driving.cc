@@ -65,30 +65,40 @@ constexpr auto dx_per_frame = engine::utils::FixedS1616::div(1, 32);
 engine::utils::FixedS1616 s_xpos; // clamped to [-1, 1]
 
 // How fast we move through the road.
-// TODO: shifts
-//constexpr uint8_t road_shift = 3; // 8 speed levels
-//constexpr uint8_t road_max_speed = 1 << road_shift;
-uint8_t s_road_position;
-uint8_t s_road_speed = 1;
+engine::utils::FixedS1616 s_road_position; // clamped to [0, 256]
+engine::utils::FixedS1616 s_road_speed = engine::utils::FixedS1616::from(1);
 
 // Current road rotation.
 engine::utils::FixedS1616 s_road_rotation;
 
 // Incoming road layouts.
 // TODO: just use an RNG
-static const int8_t s_road_offsets[256] = {
-    1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
-    1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
-    1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
-    1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    -1, 0, -1, 0, -1, 0, -1, 0,
-    -1, 0, -1, 0, -1, 0, -1, 0,
-    -1, 0, -1, 0, -1, 0, -1, 0,
-    -1, 0, -1, 0, -1, 0, -1, 0,
+static constexpr engine::utils::FixedS1616 s_road_offsets[256] = {
+#define F(x) engine::utils::FixedS1616::div(x, 32)
+    F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0),
+    F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0),
+    F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0),
+    F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0),
+    F(0), F(0), F(0), F(0), F(0), F(0), F(0), F(0),
+    F(0), F(0), F(0), F(0), F(0), F(0), F(0), F(0),
+    F(0), F(0), F(0), F(0), F(0), F(0), F(0), F(0),
+    F(0), F(0), F(0), F(0), F(0), F(0), F(0), F(0),
+    F(-1), F(0), F(-1), F(0), F(-1), F(0), F(-1), F(0),
+    F(-1), F(0), F(-1), F(0), F(-1), F(0), F(-1), F(0),
+    F(-1), F(0), F(-1), F(0), F(-1), F(0), F(-1), F(0),
+    F(-1), F(0), F(-1), F(0), F(-1), F(0), F(-1), F(0),
+
+    // Silence compiler warning...
+    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
+    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
+    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
+    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
+    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
+    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
+    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
+    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
+    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
+#undef F
 };
 
 // Generated with `for i in range(80): print(int(math.pow(1.06, 79-i)-1), end=',')`
@@ -192,7 +202,12 @@ void update_logic() {
 
     // Move along the road.
     s_road_position += s_road_speed;
-    s_road_rotation += engine::utils::FixedS1616::div(s_road_offsets[s_road_position], 32); // TODO: move to array
+    if (s_road_position.value() >= 256) {
+        s_road_position -= engine::utils::FixedS1616::from(256); // emulate wrapping like uint8_t
+    }
+    ASSERT(s_road_position.value() >= 0);
+    ASSERT(s_road_position.value() <= 255);
+    s_road_rotation += s_road_offsets[s_road_position.value()];
 
     // Clamp position.
     if (s_xpos.value() >= 1) {
@@ -248,7 +263,7 @@ void draw_road() {
     const auto road_rot = s_road_rotation;
 
     // Wait for the next section and scroll the scanline.
-    uint8_t road_pos = s_road_position;
+    uint8_t road_pos = s_road_position.value();
     uint8_t road_section = 0;
     for (uint16_t line = road_start; line < SCREEN_HEIGHT; line += scanlines_per_section, road_pos++, road_section++) {
         wait_until_line(line);
