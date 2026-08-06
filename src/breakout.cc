@@ -191,6 +191,7 @@ void enter() {
     ball_setup();
 
     // This screen uses sprites and has a background.
+    bios_vsync();
     engine::graphics::enable_sprites();
     //engine::graphics::background_0.enable();
 
@@ -199,6 +200,7 @@ void enter() {
 
 void leave() {
     // Reset graphics state.
+    bios_vsync();
     engine::graphics::disable_sprites();
     //engine::graphics::background_0.disable();
     engine::graphics::reset_sprites(block_sprite_start + block_sprite_count);

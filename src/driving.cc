@@ -360,6 +360,7 @@ void enter() {
     setup_bitmaps();
 
     // Show everything now that it's drawn.
+    bios_vsync();
     engine::graphics::bitmap_0.enable();
     engine::graphics::bitmap_2.enable();
     engine::graphics::enable_sprites();
@@ -369,6 +370,7 @@ void enter() {
 
 void leave() {
     // Reset graphics state.
+    bios_vsync();
     engine::graphics::disable_sprites();
     engine::graphics::bitmap_0.disable();
     engine::graphics::bitmap_2.disable();
