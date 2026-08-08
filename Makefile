@@ -25,13 +25,16 @@ OBJ = $(TOOLBIN)$(PREFIX)objcopy
 MV     = mv
 MKDIR  = mkdir -p
 RMDIR  = rm -rf
-FIXROM = /usr/bin/env python3 ./tools/fixrom.py # Change to "python" if necessary
-CONVLE = /usr/bin/env python3 ./tools/convert_le.py
+PYTHON3 = /usr/bin/env python3 # Change to "python" if necessary
+FIXROM = $(PYTHON3) ./tools/fixrom.py
+CONVLE = $(PYTHON3) ./tools/convert_le.py
+CONVMIDI = $(PYTHON3) ./tools/convert_midi.py
 
 # File/dir locations
 SRCDIR = ./src
 INCDIR = ./include
 OBJDIR = ./obj
+DATADIR = ./data
 ROM    = ./rom.bin
 
 # Basic compile options
@@ -68,7 +71,7 @@ SIZEDEFS += -Wl,--defsym=STACKSIZE=$(STACKSIZE)
 LDFLAGS  = -nostartfiles -nolibc -Wl,--gc-sections -Wl,--no-warn-rwx-segment -Wl,--orphan-handling=error -Wl,--print-memory-usage
 LDFLAGS += $(SIZEDEFS) -Wl,-T $(LDSCRIPT) $(LIBS)
 
-.PHONY: clean rom
+.PHONY: clean rom data music
 
 all: rom
 
@@ -94,7 +97,19 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cc $(HDRS) | $(OBJDIR)
 $(OBJDIR):
 	$(MKDIR) $@
 
+
+MIDIS = $(wildcard $(DATADIR)/*.mid)
+MIDIS_C = $(patsubst $(DATADIR)/%.mid,$(SRCDIR)/data_%.mid.c,$(MIDIS))
+music: $(MIDIS)
+	for f in $(MIDIS) ; do \
+		$(CONVMIDI) $${f} $(SRCDIR)/data_$$(basename $${f}).c $$(basename $${f}); \
+	done
+
+data: music
+
+
 clean:
 	$(RMDIR) $(OBJDIR)
 	$(RM) $(ROM)
+	$(RM) $(MIDIS_C)
 
