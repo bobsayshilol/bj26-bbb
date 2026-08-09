@@ -50,7 +50,6 @@ max_event_size = 3
 class MIDIConverter:
 	def _reset(self):
 		self._midi :BufferedReader = None
-		self._events :list[Event] = []
 		self._bpm = 0
 
 
@@ -84,7 +83,7 @@ class MIDIConverter:
 			v *= 127
 
 
-	def _parse_event(self, cumdt):
+	def _parse_event(self, cumdt :int, events :list[Event], trk_chan :int) -> int:
 		dt = self._parse_vlen()
 		if dt < 0:
 			self._error(f"-ve dt: {dt}")
@@ -94,6 +93,13 @@ class MIDIConverter:
 
 		evt = int.from_bytes(self._midi.read(1))
 		event = None
+
+		if self._fmt == 1 and 0x80 <= evt and evt <= 0xEF:
+			if (evt & 0xF) != 0:
+				# We can't support multi-tracks that also have multiple channels per track.
+				self._error(f"Multi track file has multiple channels per track: 0x{evt:x}")
+			# Add the current track number as the channel.
+			evt = evt | trk_chan
 
 		if 0x00 <= evt and evt <= 0x7F: # ???
 			print(f"Unknown: 0x{evt:x}")
@@ -150,39 +156,80 @@ class MIDIConverter:
 
 
 		if event:
-			self._events.append(event)
+			events.append(event)
 			return 0 # event was consumed
 		else:
 			return dt # event was skipped, but dt must be preserved
 
 
-	def _parse_chunk(self):
-		# Check that this is a chunk.
+	def _parse_track(self, trk_chan :int):
+		# Check that this is a track chunk.
 		if self._midi.read(4).decode() != "MTrk":
 			self._error("Bad chunk in MIDI file")
 		length = int.from_bytes(self._midi.read(4))
 		end = self._midi.tell() + length
 
+
 		# Read the events.
+		trk_events :list[Event] = []
 		cumdt = 0
 		while self._midi.tell() < end:
-			cumdt = self._parse_event(cumdt)
+			cumdt = self._parse_event(cumdt, trk_events, trk_chan)
 		if self._midi.tell() != end:
-			self._error("Read past the end of the chunk")
+			self._error("Read past the end of a track chunk")
+
+		return trk_events
+
+
+	def _combine_tracks(self, tracks :list[list[Event]]):
+		if self._fmt == 0:
+			return tracks[0]
+
+		events :list[Event] = []
+
+		while any([len(t) > 0 for t in tracks]):
+			# Look for the next event.
+			next_track :list[Event] = None
+			next_dt = 100000 # assuming no huge jumps
+			for track in tracks:
+				if len(track) > 0 and track[0].dt < next_dt:
+					next_dt = track[0].dt
+					next_track = track
+
+			# Add the event.
+			events.append(next_track.pop(0))
+
+			# Reduce the timeout of the rest of the next events.
+			for track in tracks:
+				if track != next_track and len(track) > 0:
+					track[0].dt -= next_dt
+
+		return events
 
 
 	def _parse_file(self, filename):
 		with open(filename, "rb") as midi:
 			self._midi = midi
 			fmt, num_chunks, bpm = self._read_header()
-			self._bpm = bpm
-			if fmt != 0: # 0 = single track
+
+			# Sanity check the header.
+			if fmt not in [0, 1]: # 0 = single track, 1 = multi track
 				self._error(f"Unhandled MIDI format: {fmt}")
-			for _ in range(num_chunks):
-				self._parse_chunk()
+			if fmt == 0 and num_chunks > 1:
+				self._error("Too many track chunks in single track file")
+			if fmt == 1 and num_chunks > 15:
+				self._error("Too many track chunks in multi track file")
+			self._bpm = bpm
+			self._fmt = fmt
+
+			# Read each track and combine them.
+			tracks = []
+			for trk_chan in range(num_chunks):
+				tracks.append(self._parse_track(trk_chan))
+			return self._combine_tracks(tracks)
 
 
-	def _write_file(self, sym, filename):
+	def _write_file(self, sym :str, filename, events :list[Event]):
 		output = bytearray()
 
 		# Write out the header.
@@ -204,7 +251,7 @@ class MIDIConverter:
 
 		current_block = bytearray()
 		last_dt = 0
-		for event in self._events:
+		for event in events:
 			# Emit the current block if it's at a new timestamp, or it's gotten too big.
 			max_block_size = 0xF0 # arbitrary, might need a proper cap
 			if event.dt != 0 or len(current_block) + max_event_size > max_block_size:
@@ -238,8 +285,8 @@ class MIDIConverter:
 	# Load MIDI |infile|, spit out .c file at |outfile|, with symbol named |sym|.
 	def convert_file(self, sym, infile, outfile):
 		self._reset()
-		self._parse_file(infile)
-		self._write_file(sym, outfile)
+		events = self._parse_file(infile)
+		self._write_file(sym, outfile, events)
 
 
 
