@@ -128,6 +128,11 @@ class MIDIConverter:
 			voice = int.from_bytes(self._midi.read(1))
 			event = ProgramChangeEvent(dt, chan, voice)
 
+		elif 0xD0 <= evt and evt <= 0xDF: # pressure change
+			print(f"Ignored: 0x{evt:x}")
+			chan = evt & 0xF
+			prs = int.from_bytes(self._midi.read(1))
+
 		elif 0xE0 <= evt and evt <= 0xEF: # pitch bend
 			print(f"Ignored: 0x{evt:x}")
 			chan = evt & 0xF
