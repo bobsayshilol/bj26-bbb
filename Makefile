@@ -99,10 +99,10 @@ $(OBJDIR):
 
 
 MIDIS = $(wildcard $(DATADIR)/*.mid)
-MIDIS_C = $(patsubst $(DATADIR)/%.mid,$(SRCDIR)/data_%.mid.c,$(MIDIS))
+MIDIS_C = $(patsubst $(DATADIR)/%.mid,$(SRCDIR)/data_%.mid.cc,$(MIDIS))
 music: $(MIDIS)
 	for f in $(MIDIS) ; do \
-		$(CONVMIDI) $${f} $(SRCDIR)/data_$$(basename $${f}).c $$(basename $${f}); \
+		$(CONVMIDI) $${f} $(SRCDIR)/data_$$(basename $${f}).cc $$(basename $${f}); \
 	done
 
 data: music

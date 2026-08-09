@@ -1,12 +1,6 @@
 #include "music.h"
 #include "utils.h"
 
-// BGMs are generated from .mid files.
-extern uint8_t bgm_test_mid[];
-extern uint8_t canyon_mid[];
-
-
-
 // Effects are manual.
 namespace {
 

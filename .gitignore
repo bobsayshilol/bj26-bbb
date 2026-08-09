@@ -5,7 +5,7 @@ __pycache__/
 obj/
 bin/
 data/
-src/data_*.mid.c
+src/data_*.cc
 *.bin
 *.nib
 *.o

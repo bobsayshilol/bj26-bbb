@@ -271,7 +271,9 @@ class MIDIConverter:
 		escaped_name = "".join(x if x.isalnum() else "_" for x in sym)
 		with open(filename, "w") as out:
 			out.write("#include <stdint.h>\n")
-			out.write(f"const uint8_t {escaped_name}[] = {{\n")
+			out.write("#include \"music.h\"\n")
+			out.write("namespace game::music {\n")
+			out.write(f"constexpr uint8_t {escaped_name}[] = {{\n")
 			i = 0
 			for b in output:
 				out.write(f"0x{b:x},")
@@ -279,7 +281,8 @@ class MIDIConverter:
 				if i == 15:
 					out.write("\n")
 					i = 0
-			out.write("\n};")
+			out.write("\n};\n")
+			out.write("} // namespace game::music")
 
 
 	# Load MIDI |infile|, spit out .c file at |outfile|, with symbol named |sym|.
