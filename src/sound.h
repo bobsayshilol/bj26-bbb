@@ -1,19 +1,32 @@
 #pragma once
 
 #include "loopy/bios.h"
+#include "debug.h"
 
 namespace engine::sound {
 
-// Magic sound state.
+namespace detail {
 extern soundstate_t g_sound_state;
+extern const uint8_t * const * s_sfx_tracks;
+extern const uint8_t * const * s_bgm_tracks;
+} // detail
 
 void init();
 
 // Set the BGM and SFX track lists.
-void set_lists(const uint8_t * const * bgm, const uint8_t * const * sfx);
+inline void set_lists(const uint8_t * const * bgm, const uint8_t * const * sfx) {
+	detail::s_bgm_tracks = bgm;
+	detail::s_sfx_tracks = sfx;
+}
 
 // Play a BGM or SFX track.
-void play_bgm(uint8_t index);
-void play_effect(uint8_t index);
+inline void play_bgm(uint8_t index) {
+	ASSERT(detail::s_bgm_tracks);
+	bios_playBgm(&detail::g_sound_state, 0x80, index, detail::s_bgm_tracks);
+}
+inline void play_effect(uint8_t index) {
+	ASSERT(detail::s_sfx_tracks);
+	bios_playSfx(&detail::g_sound_state, 0x80, index, detail::s_sfx_tracks);
+}
 
 } // namespace engine::sound
