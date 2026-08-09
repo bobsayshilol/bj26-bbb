@@ -1,5 +1,6 @@
 #include "fixed.h"
 #include "game.h"
+#include "images.h"
 #include "input.h"
 #include "graphics.h"
 #include "memory.h"
@@ -25,7 +26,7 @@ constexpr uint8_t pal_ball_count = 16; // TODO: less colours
 constexpr uint8_t ball_sprite_start = 0;
 constexpr uint8_t ball_sprite_count = 4; // big quad - TODO: look into 32x32 tile instead
 constexpr uint8_t ball_tile_start = 0;
-constexpr uint8_t ball_tile_count = 16; // animation frames
+constexpr uint8_t ball_tile_count = ball_sprite_count * 8; // animation frames
 
 constexpr uint8_t block_sprite_start = ball_sprite_start + ball_sprite_count;
 constexpr uint8_t block_sprite_count = 8 * 4;
@@ -49,14 +50,10 @@ struct Ball {
 Ball s_ball;
 
 constexpr engine::utils::FixedU88 s_ball_speeds[] = {
-    engine::utils::FixedU88::div(-7, 8),
-    engine::utils::FixedU88::div(-5, 8),
-    engine::utils::FixedU88::div(-3, 8),
-    engine::utils::FixedU88::div(-1, 8),
-    engine::utils::FixedU88::div(1, 8),
-    engine::utils::FixedU88::div(3, 8),
-    engine::utils::FixedU88::div(5, 8),
-    engine::utils::FixedU88::div(7, 8),
+    engine::utils::FixedU88::div(-9, 8),
+    engine::utils::FixedU88::div(-2, 8),
+    engine::utils::FixedU88::div(2, 8),
+    engine::utils::FixedU88::div(9, 8),
 };
 
 #if 0
@@ -119,7 +116,9 @@ void ball_draw() {
     static_assert(ball_tile_count % ball_sprite_count == 0, "Each part needs a tile");
     static_assert((ball_tile_count & (ball_tile_count - 1)) == 0, "Power of 2");
 
-    const uint8_t rot_frame = ball_tile_start + s_ball.frame.value();
+    uint8_t rot_frame = ball_tile_start + s_ball.frame.value();
+    // Round down to multiple of sprite count since data is stored a full quad at a time.
+    rot_frame &= ~(ball_sprite_count - 1);
     const uint16_t x = s_ball.x.value();
     const uint16_t y = s_ball.y.value();
 
@@ -127,19 +126,13 @@ void ball_draw() {
     sprite.set_size(SpriteSize::Size8x8);
 
     // Draw the parts.
-    //  0 1
-    //  3 2
-    constexpr uint8_t idxs[4] = { 0, 1, 3, 2 };
-    static_assert(ball_sprite_count <= 4);
     for (uint8_t i = 0; i < ball_sprite_count; i++) {
         const uint16_t dx = (i & 1) ? engine::graphics::bg_tile_size : 0;
         const uint16_t dy = (i & 2) ? engine::graphics::bg_tile_size : 0;
-        const uint8_t idx = idxs[i];
-        const uint8_t frame_idx = idx * (ball_tile_count / ball_sprite_count);
         sprite.set_x(x + dx);
         sprite.set_y(y + dy);
-        sprite.set_tile_index((rot_frame + frame_idx) % ball_tile_count);
-        set_sprite(ball_sprite_start + idx, sprite);
+        sprite.set_tile_index((rot_frame + i) % ball_tile_count);
+        set_sprite(ball_sprite_start + i, sprite);
     }
 }
 
@@ -152,30 +145,25 @@ void ball_reset() {
     s_ball.rot_speed = engine::utils::size(s_ball_speeds) / 2;
 }
 
-// TODO: generate these from an image
-/*const*/ uint8_t s_ball_sprites[ball_tile_count][engine::graphics::bg_tile_size * engine::graphics::bg_tile_size] {
-
-};
-
 void ball_setup() {
-    using namespace engine::graphics;
-
     PROFILE_SCOPE(bl_set);
 
     // Reset the ball.
     ball_reset();
 
+    // Set ball palette.
+    static_assert(pal_ball_start == game::images::bucko_ball_offset);
+    static_assert(pal_ball_count == engine::utils::size(game::images::bucko_ball_pal));
+    for (int idx = 0; idx < pal_ball_count; idx++) {
+        engine::graphics::set_palette_colour(pal_ball_start + idx, game::images::bucko_ball_pal[idx]);
+    }
+
     // Copy each frame to a tile.
+    static_assert(ball_tile_count * game::images::TileSize == engine::utils::size(game::images::bucko_ball_data));
     for (int idx = 0; idx < ball_tile_count; idx++) {
-        auto & tile = s_ball_sprites[idx];
-        static_assert(sizeof(tile) > 16); // sanity check it's not decayed
-
-        // TODO: temp to show it's working
-        static_assert(ball_tile_count == pal_ball_count);
-        engine::graphics::set_palette_colour(pal_ball_start + idx, RGB555(idx+1, idx+1, idx+1));
-        engine::utils::fast_memset8(tile, pal_ball_start + idx, sizeof(tile));
-
-        engine::utils::fast_memcpy(engine::graphics::get_tile_data(ball_tile_start + idx), tile, sizeof(tile));
+        auto * dst = engine::graphics::get_tile_data(ball_tile_start + idx);
+        auto * tile = game::images::bucko_ball_data + game::images::TileSize * idx;
+        engine::utils::fast_memcpy(dst, tile, game::images::TileSize);
     }
 
     // Draw it.
