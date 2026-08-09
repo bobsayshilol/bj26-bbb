@@ -36,7 +36,7 @@ static inline void sys_setDmaEnabled(bool enable) {
 }
 
 static inline void sys_stopBgm(struct soundstate_t *soundState) {
-	bios_playBgm(soundState, 0x80, 0, &biosdata_stopBgmTrackList);
+	bios_playBgm(soundState, 0x80, 0, biosdata_stopBgmTrackList);
 }
 
 static inline bool sys_bgmRunning() {

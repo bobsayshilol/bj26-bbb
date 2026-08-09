@@ -29,8 +29,8 @@ extern void     bios_vsync();
 
 // Sound
 extern void     bios_initSoundTransmission();
-extern void     bios_playBgm(struct soundstate_t *soundState, uint8_t unkp2, uint16_t index, const uint8_t *const (*trackList)[]);
-extern void     bios_playSfx(struct soundstate_t *soundState, uint8_t unkp2, uint16_t index, const uint8_t *const (*trackList)[]);
+extern void     bios_playBgm(struct soundstate_t *soundState, uint8_t unkp2, uint16_t index, const uint8_t *const *trackList);
+extern void     bios_playSfx(struct soundstate_t *soundState, uint8_t unkp2, uint16_t index, const uint8_t *const *trackList);
 extern void     bios_updateBgm(struct soundstate_t*, uint8_t unkp2);
 extern void     bios_soundChannels(int channelMode);
 extern void     bios_soundVolume(int channel, int volume);
