@@ -198,17 +198,19 @@ class MIDIConverter:
 				blk.resize(0)
 
 		current_block = bytearray()
+		last_dt = 0
 		for event in self._events:
 			# Emit the current block if it's at a new timestamp, or it's gotten too big.
 			max_block_size = 0xF0 # arbitrary, might need a proper cap
 			if event.dt != 0 or len(current_block) + max_event_size > max_block_size:
-				emit(event.dt, current_block, output)
+				emit(last_dt, current_block, output)
+				last_dt = event.dt
 
 			# Add the new event.
 			event.write(current_block)
 
 		# Emit final one.
-		emit(0, current_block, output)
+		emit(last_dt, current_block, output)
 
 		# Write footer.
 		output += bytearray([0x00, 0xFE, 0xFF, 0xFF])
