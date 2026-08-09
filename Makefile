@@ -29,6 +29,7 @@ PYTHON3 = /usr/bin/env python3 # Change to "python" if necessary
 FIXROM = $(PYTHON3) ./tools/fixrom.py
 CONVLE = $(PYTHON3) ./tools/convert_le.py
 CONVMIDI = $(PYTHON3) ./tools/convert_midi.py
+CONVTILES = $(PYTHON3) ./tools/convert_tiles.py
 
 # File/dir locations
 SRCDIR = ./src
@@ -71,7 +72,7 @@ SIZEDEFS += -Wl,--defsym=STACKSIZE=$(STACKSIZE)
 LDFLAGS  = -nostartfiles -nolibc -Wl,--gc-sections -Wl,--no-warn-rwx-segment -Wl,--orphan-handling=error -Wl,--print-memory-usage
 LDFLAGS += $(SIZEDEFS) -Wl,-T $(LDSCRIPT) $(LIBS)
 
-.PHONY: clean rom data music
+.PHONY: clean rom data music images
 
 all: rom
 
@@ -105,11 +106,19 @@ music: $(MIDIS)
 		$(CONVMIDI) $${f} $(SRCDIR)/data_$$(basename $${f}).cc $$(basename $${f}); \
 	done
 
-data: music
+TILES = $(wildcard $(DATADIR)/*.png)
+TILES_C = $(patsubst $(DATADIR)/%.png,$(SRCDIR)/data_%.png.cc,$(TILES))
+images: $(TILES)
+	for f in $(TILES) ; do \
+		$(CONVTILES) $${f} $(SRCDIR)/data_$$(basename $${f}).cc; \
+	done
+
+data: music images
 
 
 clean:
 	$(RMDIR) $(OBJDIR)
 	$(RM) $(ROM)
 	$(RM) $(MIDIS_C)
+	$(RM) $(TILES_C)
 
