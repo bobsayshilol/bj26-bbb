@@ -1,6 +1,7 @@
 #include "engine.h"
 #include "graphics.h"
 #include "debug.h"
+#include "music.h"
 #include "sound.h"
 #include "game.h"
 #include "profiler.h"
@@ -18,6 +19,8 @@ void init() {
 	// Enable gamepad.
 	// TODO: move this
 	bios_vdpMode(CONTROL_MODE_GAMEPAD, VIDEO_HEIGHT_224P);
+
+	engine::sound::set_lists(game::music::bgm_list, game::music::sfx_list);
 }
 
 void draw_something() {
@@ -71,7 +74,7 @@ void splash() {
 	draw_something();
 
 	// Play the music.
-	engine::sound::play_startup_sound();
+	engine::sound::play_bgm(game::music::Bgm::Bgm_Test);
 
 	const int fps = 60;
 	const int seconds = 1;

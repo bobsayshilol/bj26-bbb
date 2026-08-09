@@ -3,7 +3,9 @@
 #include "input.h"
 #include "graphics.h"
 #include "memory.h"
+#include "music.h"
 #include "profiler.h"
+#include "sound.h"
 #include "utils.h"
 
 namespace game {
@@ -86,6 +88,8 @@ void ball_update() {
         if (left_side == moving_up) ball.rot_speed++; else ball.rot_speed--;
 
         ball.vx = -ball.vx;
+
+        engine::sound::play_effect(game::music::SoundEffect::SE_Breakout_Bounce);
     }
     if (ny >= (engine::graphics::SCREEN_HEIGHT - 2 * wall_padding - ball_height)) {
         // Increase/decrease if going same/opposite direction
@@ -94,6 +98,8 @@ void ball_update() {
         if (top_side != moving_left) ball.rot_speed++; else ball.rot_speed--;
 
         ball.vy = -ball.vy;
+
+        engine::sound::play_effect(game::music::SoundEffect::SE_Breakout_Bounce);
     }
 
     // Apply movement.
