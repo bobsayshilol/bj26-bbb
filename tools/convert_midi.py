@@ -6,6 +6,9 @@
 #   https://www.ccarh.org/courses/253/handout/smf/
 #   https://ccrma.stanford.edu/~craig/articles/linuxmidi/misc/essenmidi.html
 #
+# Loopy format is same as MIDI, but with a reduced header and chunk prefix,
+# ie [dt, size, [MIDI:size]].
+#
 # Only tested with: https://jakeonaut.itch.io/neocomposer and canyon.mid
 #
 # TODO: check https://yurisizov.itch.io/boscaceoil-blue
@@ -81,12 +84,16 @@ class MIDIConverter:
 			v *= 127
 
 
-	def _parse_event(self):
+	def _parse_event(self, cumdt):
 		dt = self._parse_vlen()
 		if dt < 0:
 			self._error(f"-ve dt: {dt}")
 
+		# Add on any existing dts for events that we might have skipped.
+		dt += cumdt
+
 		evt = int.from_bytes(self._midi.read(1))
+		event = None
 
 		if 0x00 <= evt and evt <= 0x7F: # ???
 			print(f"Unknown: 0x{evt:x}")
@@ -96,13 +103,13 @@ class MIDIConverter:
 			chan = evt & 0xF
 			key = int.from_bytes(self._midi.read(1))
 			vel = int.from_bytes(self._midi.read(1))
-			self._events.append(NoteOffEvent(dt, chan, key, vel))
+			event = NoteOffEvent(dt, chan, key, vel)
 
 		elif 0x90 <= evt and evt <= 0x9F: # note on
 			chan = evt & 0xF
 			key = int.from_bytes(self._midi.read(1))
 			vel = int.from_bytes(self._midi.read(1))
-			self._events.append(NoteOnEvent(dt, chan, key, vel))
+			event = NoteOnEvent(dt, chan, key, vel)
 
 		elif 0xA0 <= evt and evt <= 0xAF: # aftertouch
 			print(f"Ignored: 0x{evt:x}")
@@ -119,7 +126,7 @@ class MIDIConverter:
 		elif 0xC0 <= evt and evt <= 0xCF: # program change
 			chan = evt & 0xF
 			voice = int.from_bytes(self._midi.read(1))
-			self._events.append(ProgramChangeEvent(dt, chan, voice))
+			event = ProgramChangeEvent(dt, chan, voice)
 
 		elif 0xE0 <= evt and evt <= 0xEF: # pitch bend
 			print(f"Ignored: 0x{evt:x}")
@@ -131,10 +138,17 @@ class MIDIConverter:
 			self._midi.read(1) # ignore
 			size = int.from_bytes(self._midi.read(1)) # size
 			self._midi.read(size) # ignore
-			self._events.append(ResetEvent(dt))
+			event = ResetEvent(dt)
 
 		else:
 			self._error(f"Unhandled event: 0x{evt:x}")
+
+
+		if event:
+			self._events.append(event)
+			return 0 # event was consumed
+		else:
+			return dt # event was skipped, but dt must be preserved
 
 
 	def _parse_chunk(self):
@@ -145,8 +159,9 @@ class MIDIConverter:
 		end = self._midi.tell() + length
 
 		# Read the events.
+		cumdt = 0
 		while self._midi.tell() < end:
-			self._parse_event()
+			cumdt = self._parse_event(cumdt)
 		if self._midi.tell() != end:
 			self._error("Read past the end of the chunk")
 
@@ -173,9 +188,8 @@ class MIDIConverter:
 
 		# Write out into blocks as we go.
 		def emit(dt, blk, out):
-			max_block_size = 0xF0 # arbitrary, might need a proper cap
 			blk_len = len(blk)
-			if blk_len > 0 or blk_len + max_event_size < max_block_size:
+			if blk_len > 0:
 				if dt > 255:
 					print(f"Warning: event delta too big: {dt}. Capping to 255")
 					dt = 255
@@ -185,8 +199,9 @@ class MIDIConverter:
 
 		current_block = bytearray()
 		for event in self._events:
-			# Emit the current block if it's at a new timestamp.
-			if event.dt != 0:
+			# Emit the current block if it's at a new timestamp, or it's gotten too big.
+			max_block_size = 0xF0 # arbitrary, might need a proper cap
+			if event.dt != 0 or len(current_block) + max_event_size > max_block_size:
 				emit(event.dt, current_block, output)
 
 			# Add the new event.
