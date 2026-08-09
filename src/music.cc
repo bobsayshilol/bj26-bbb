@@ -4,20 +4,31 @@
 // Effects are manual.
 namespace {
 
-#define CHECK_SIZE(sfx) static_assert(sizeof(sfx) == (sfx)[1] + 2);
+// Make a sound effect.
+// ... is in MIDI data format.
+#define MAKE_SFX(name, ...) \
+    constexpr uint8_t name [] = { \
+        0x00, /* ??? */ \
+        engine::utils::size({ __VA_ARGS__ }), \
+        __VA_ARGS__ \
+    }; \
+    static_assert(sizeof(name) == (name)[1] + 2)
 
-constexpr uint8_t sfx_test[] = {
-    0x0, // ???
-    3 * 6, // size, bytes
-    // MIDI data
+MAKE_SFX(sfx_test,
     0x90,0x3c,0x40, // note on
     0x90,0x3d,0x40,
     0x90,0x3f,0x40,
     0x90,0x3c,0x00, // note off
     0x90,0x3d,0x00,
     0x90,0x3f,0x00,
-};
-CHECK_SIZE(sfx_test);
+);
+
+MAKE_SFX(sfx_bounce,
+    0x90,0x3f,0x40, // note on
+    0x90,0x20,0x40,
+    0x90,0x3f,0x00, // note off
+    0x90,0x20,0x00,
+);
 
 } // namespace
 
@@ -36,7 +47,7 @@ static_assert(Bgm::Bgm_Count == engine::utils::size(bgm_list));
 
 const uint8_t * const sfx_list[] {
     [SoundEffect::SE_Test] = sfx_test,
-    [SoundEffect::SE_Breakout_Bounce] = sfx_test,
+    [SoundEffect::SE_Breakout_Bounce] = sfx_bounce,
 };
 static_assert(SoundEffect::SE_Count == engine::utils::size(sfx_list));
 
