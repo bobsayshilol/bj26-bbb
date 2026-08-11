@@ -268,12 +268,11 @@ class MIDIConverter:
 		output += bytearray([0x00, 0xFE, 0xFF, 0xFF])
 
 		# Dump it to a file.
-		escaped_name = "".join(x if x.isalnum() else "_" for x in sym)
 		with open(filename, "w") as out:
 			out.write("#include <stdint.h>\n")
 			out.write("#include \"music.h\"\n")
 			out.write("namespace game::music {\n")
-			out.write(f"constexpr uint8_t {escaped_name}[] = {{\n")
+			out.write(f"constexpr uint8_t {sym}[] = {{\n")
 			i = 0
 			for b in output:
 				out.write(f"0x{b:x},")
@@ -287,9 +286,11 @@ class MIDIConverter:
 
 	# Load MIDI |infile|, spit out .c file at |outfile|, with symbol named |sym|.
 	def convert_file(self, sym, infile, outfile):
+		escaped_name = "".join(x if x.isalnum() else "_" for x in sym)
+		print(f"Converting {infile} to {outfile}, symbol name '{escaped_name}'")
 		self._reset()
 		events = self._parse_file(infile)
-		self._write_file(sym, outfile, events)
+		self._write_file(escaped_name, outfile, events)
 
 
 

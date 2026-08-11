@@ -27,12 +27,18 @@ def _make_palette(img :ImageFile):
 		for x in range(img.width):
 			r,g,b,a = img.getpixel((x, y))
 			if a != 0:
+				# Quantize so we don't have duplicate colours.
+				r = r * 32 // 256
+				g = g * 32 // 256
+				b = b * 32 // 256
 				pal_all.add((r,g,b))
 
 	if len(pal_all) > palette_size:
 		# TODO: near-ness approach to reduce palette size
 		# ^Note: intentionally not a map because of this
 		raise RuntimeError(f"Too many colours in tiles: {len(pal_all)}")
+	else:
+		print(f"  Palette size: {len(pal_all)}")
 
 	pal = [x for x in pal_all]
 	while len(pal) < palette_size:
@@ -44,6 +50,9 @@ def _get_idx(pal, px):
 	r, g, b, a = px
 	if a == 0:
 		return pal_transparent
+	r = r * 32 // 256
+	g = g * 32 // 256
+	b = b * 32 // 256
 	for i,pax in enumerate(pal):
 		if pax == (r,g,b):
 			return i
@@ -91,15 +100,13 @@ def _write_tile(offset :str, tile :list[int], file :TextIOWrapper):
 
 def _write_pal(pal, file :TextIOWrapper):
 	for (r,g,b) in pal:
-		r = r * 32 // 256
-		g = g * 32 // 256
-		b = b * 32 // 256
 		file.write(f"RGB555({r}, {g}, {b}),\n")
 
 
 def convert(filename :Path, out :Path):
+	print(f"Converting {filename} to {out}")
 	tiles, palette = _extract(filename)
-	with open(f"src/data_{filename.name}.cc", "w") as output:
+	with open(out, "w") as output:
 		output.write("#include \"images.h\"\n")
 		output.write("namespace game::images {\n")
 
