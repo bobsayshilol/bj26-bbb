@@ -41,6 +41,13 @@ struct Bouncer {
 };
 Bouncer s_bouncers[bouncer_count];
 
+constexpr engine::utils::FixedU88 s_avel_choices[4] {
+    engine::utils::FixedU88::div(9, 16),
+    engine::utils::FixedU88::div(3, 16),
+    engine::utils::FixedU88::div(-3, 16),
+    engine::utils::FixedU88::div(-9, 16),
+};
+
 void bouncers_update() {
     using namespace engine::graphics;
 
@@ -107,11 +114,12 @@ void bouncers_setup() {
             }
         }
 
-        const uint8_t angle = rng() & 0b11110000; // 16 choices
+        const uint8_t angle = rng();
         bouncer.vx = engine::utils::FixedS1616::div(engine::maths::cos(angle), 32);
         bouncer.vy = engine::utils::FixedS1616::div(engine::maths::sin(angle), 32);
-        bouncer.avel = engine::utils::FixedU88::div(1, 16);
-        if (rng() & 1) bouncer.avel -= engine::utils::FixedU88::div(2, 16);
+
+        const uint8_t avel = rng() % engine::utils::size(s_avel_choices);
+        bouncer.avel = s_avel_choices[avel];
     }
 
     // Copy the tile data for the bouncers.
@@ -129,6 +137,27 @@ void bouncers_setup() {
 constexpr uint8_t bg_sprite_start = bouncer_sprite_start + bouncer_count;
 constexpr uint8_t bg_sprite_count = engine::graphics::bg_tilemap_size * 2 - 1;
 
+constexpr uint8_t pal_bg_start = pal_bouncer_start + pal_bouncer_count;
+constexpr uint8_t pal_bg_count = bg_sprite_count + 1;
+static_assert((pal_bg_count & (pal_bg_count - 1)) == 0);
+
+uint8_t s_bg_pal_idx;
+uint16_t s_bg_pal[pal_bg_count];
+
+void background_update() {
+    using namespace engine::graphics;
+
+    PROFILE_SCOPE(bg_upd);
+
+    // Moving wave effect thing.
+    uint8_t pal_idx = s_bg_pal_idx++;
+    for (uint32_t i = 0; i < pal_bg_count; i++) {
+        const uint16_t pal = s_bg_pal[i];
+        pal_idx = (pal_idx + 1) % pal_bg_count;
+        set_palette_colour(pal_bg_start + pal_idx, pal);
+    }
+}
+
 void background_setup() {
     using namespace engine::graphics;
 
@@ -145,26 +174,35 @@ void background_setup() {
 
     // Add colours.
     for (uint32_t i = 0; i < bg_sprite_count; i++) {
-        const int g = i * 31 / bg_sprite_count;
-        set_palette_colour(bg_sprite_start + i, RGB555(g, g, g));
         Pixel2 * data16 = get_tile_data(bg_sprite_start + i);
-        for (int y = 0; y < 8; y++) {
-            for (int x = 0; x < 8; x += 2) {
-                // Write 2 pixels at a time.
-                Pixel2 v16 = bg_sprite_start + i;
-                v16 |= v16 << 8;
-                *data16++ = v16;
-            }
-        }
+        const Pixel2 v16 = pal_bg_start + i;
+        engine::utils::fast_memset16(data16, v16, 8 * 8 / 2);
     }
-}
 
-void background_update() {
-    using namespace engine::graphics;
+    // Precalculate colour palette.
+    for (uint32_t i = 0; i < pal_bg_count; i++) {
+        // Wave thing.
+        const uint16_t x = (i >= pal_bg_count / 2) ? 2 * pal_bg_count - 2 * i : 2 * i;
 
-    PROFILE_SCOPE(bg_upd);
+        // Colour split.
+        constexpr uint16_t base = 19;
+        constexpr uint16_t fade = 12;
+        static_assert(base + fade == 31);
 
-    // TODO: make things move
+        // Colour to fade.
+        constexpr uint16_t r = 244;
+        constexpr uint16_t g = 192;
+        constexpr uint16_t b = 238;
+
+        const uint16_t rx = (base * r / 255) + bios_mathDivU16(x * (fade * r / 255), pal_bg_count);
+        const uint16_t gx = (base * g / 255) + bios_mathDivU16(x * (fade * g / 255), pal_bg_count);
+        const uint16_t bx = (base * b / 255) + bios_mathDivU16(x * (fade * b / 255), pal_bg_count);
+
+        s_bg_pal[i] = RGB555(rx, gx, bx);
+    }
+
+    // Draw the background once.
+    background_update();
 }
 
 //
