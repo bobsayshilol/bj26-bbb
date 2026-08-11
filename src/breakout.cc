@@ -151,20 +151,12 @@ void ball_setup() {
     // Reset the ball.
     ball_reset();
 
-    // Set ball palette.
-    static_assert(pal_ball_start == game::images::bucko_ball_offset);
-    static_assert(pal_ball_count == engine::utils::size(game::images::bucko_ball_pal));
-    for (int idx = 0; idx < pal_ball_count; idx++) {
-        engine::graphics::set_palette_colour(pal_ball_start + idx, game::images::bucko_ball_pal[idx]);
-    }
-
-    // Copy each frame to a tile.
-    static_assert(ball_tile_count * game::images::TileSize == engine::utils::size(game::images::bucko_ball_data));
-    for (int idx = 0; idx < ball_tile_count; idx++) {
-        auto * dst = engine::graphics::get_tile_data(ball_tile_start + idx);
-        auto * tile = game::images::bucko_ball_data + game::images::TileSize * idx;
-        engine::utils::fast_memcpy(dst, tile, game::images::TileSize);
-    }
+    // Copy the tile data for the ball.
+    game::images::copy_tile_data<
+        pal_ball_start, pal_ball_count,
+        ball_tile_start, ball_tile_count,
+        game::images::bucko_ball
+    >();
 
     // Draw it.
     ball_draw();

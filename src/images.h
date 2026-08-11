@@ -1,13 +1,41 @@
 #pragma once
 
 #include "graphics.h"
+#include "memory.h"
+#include "utils.h"
 
 namespace game::images {
 
 constexpr size_t TileSize = engine::graphics::bg_tile_size * engine::graphics::bg_tile_size;
 
-constexpr size_t bucko_ball_offset = 3;
-extern const uint8_t bucko_ball_data[32 * TileSize];
-extern const uint16_t bucko_ball_pal[16];
+struct bucko_ball {
+static constexpr uint8_t pal_offset = 3;
+static const uint8_t data[32 * TileSize];
+static const uint16_t palette[16];
+};
+
+struct mm_bouncer {
+static constexpr uint8_t pal_offset = 3;
+static const uint8_t data[8 * TileSize];
+static const uint16_t palette[16];
+};
+
+template <uint8_t PalStart, uint8_t PalCount, uint8_t TileStart, uint8_t TileCount, typename Tileset>
+inline void copy_tile_data() {
+    // Set the palette.
+    static_assert(PalStart == Tileset::pal_offset);
+    static_assert(PalCount == engine::utils::size(Tileset::palette));
+    for (int idx = 0; idx < PalCount; idx++) {
+        engine::graphics::set_palette_colour(PalStart + idx, Tileset::palette[idx]);
+    }
+
+    // Copy each frame to a tile.
+    static_assert(TileCount * TileSize == engine::utils::size(Tileset::data));
+    for (int idx = 0; idx < TileCount; idx++) {
+        auto * dst = engine::graphics::get_tile_data(TileStart + idx);
+        auto * tile = Tileset::data + TileSize * idx;
+        engine::utils::fast_memcpy(dst, tile, TileSize);
+    }
+}
 
 } // namespace game::images

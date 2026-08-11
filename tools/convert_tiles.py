@@ -111,14 +111,14 @@ def convert(filename :Path, out :Path):
 		output.write("namespace game::images {\n")
 
 		# Tile data.
-		output.write(f"alignas(uint16_t) constexpr uint8_t {filename.stem}_data[{len(tiles)} * TileSize] = {{\n")
+		output.write(f"alignas(uint16_t) constexpr uint8_t {filename.stem}::data[{len(tiles)} * TileSize] = {{\n")
 		for tile in tiles:
-			_write_tile(filename.stem + "_offset", tile, output)
+			_write_tile("pal_offset", tile, output)
 			output.write("\n")
 		output.write("};\n")
 
 		# Palette.
-		output.write(f"constexpr uint16_t {filename.stem}_pal[{len(palette)}] = {{\n")
+		output.write(f"constexpr uint16_t {filename.stem}::palette[{len(palette)}] = {{\n")
 		_write_pal(palette, output)
 		output.write("};\n")
 

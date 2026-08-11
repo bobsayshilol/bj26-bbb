@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "game.h"
+#include "images.h"
 #include "input.h"
 #include "graphics.h"
 #include "maths.h"
@@ -20,11 +21,13 @@ PROFILE_STORAGE(vsync);
 
 constexpr uint8_t pal_white = 1;
 constexpr uint8_t pal_grey = 2;
+constexpr uint8_t pal_bouncer_start = 3;
+constexpr uint8_t pal_bouncer_count = 16;
 
 constexpr uint8_t mouse_sprite_idx = 0;
 
 constexpr uint8_t bouncer_sprite_start = mouse_sprite_idx + 1;
-constexpr uint8_t bouncer_count = 16;
+constexpr uint8_t bouncer_count = 24;
 constexpr uint8_t bouncer_tile_start = 0;
 constexpr uint8_t bouncer_tile_count = 8;
 struct Bouncer {
@@ -86,8 +89,7 @@ void bouncers_update() {
 void bouncers_setup() {
     using namespace engine::graphics;
 
-    constexpr uint8_t tile_size = bg_tile_size;
-    uint8_t tile_data[tile_size * tile_size];
+    constexpr uint8_t tile_size = game::images::TileSize;
 
     // Pick some random places.
     auto & rng = engine::utils::g_rng;
@@ -112,35 +114,12 @@ void bouncers_setup() {
         if (rng() & 1) bouncer.avel -= engine::utils::FixedU88::div(2, 16);
     }
 
-    // TODO: these should be premade sprites
-    for (int idx = 0; idx < bouncer_tile_count; idx++) {
-        PROFILE_SCOPE(b_tile);
-
-        // Clear it to white.
-        engine::utils::fast_memset8(tile_data, pal_white, tile_size * tile_size);
-        // Corners.
-        tile_data[0 * tile_size + 0] = 0;
-        tile_data[0 * tile_size + (tile_size - 1)] = 0;
-        tile_data[(tile_size - 1) * tile_size + 0] = 0;
-        tile_data[(tile_size - 1) * tile_size + (tile_size - 1)] = 0;
-
-        static const int8_t angle_to_dir[] = {0, 1, 1, 1, 0, -1, -1, -1, 0, 1};
-        static_assert(engine::utils::size(angle_to_dir) == bouncer_tile_count + 2);
-
-        // Draw a line for an angle.
-        int x = tile_size / 2;
-        int y = tile_size / 2;
-        const int dx = angle_to_dir[idx + 2];
-        const int dy = angle_to_dir[idx];
-        for (int i = 0; i < tile_size / 2; i++) {
-            tile_data[y * tile_size + x] = pal_grey;
-            x += dx;
-            y += dy;
-        }
-
-        // Copy it to the tile.
-        engine::utils::fast_memcpy(engine::graphics::get_tile_data(bouncer_tile_start + idx), tile_data, tile_size * tile_size);
-    }
+    // Copy the tile data for the bouncers.
+    game::images::copy_tile_data<
+        pal_bouncer_start, pal_bouncer_count,
+        bouncer_tile_start, bouncer_tile_count,
+        game::images::mm_bouncer
+    >();
 
     bouncers_update();
 }
