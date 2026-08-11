@@ -141,8 +141,10 @@ constexpr uint8_t pal_bg_start = pal_bouncer_start + pal_bouncer_count;
 constexpr uint8_t pal_bg_count = bg_sprite_count + 1;
 static_assert((pal_bg_count & (pal_bg_count - 1)) == 0);
 
-uint8_t s_bg_pal_idx;
-uint16_t s_bg_pal[pal_bg_count];
+uint16_t s_bg_pal_idx;
+constexpr uint8_t bg_pal_extra = 2; // so we can scroll it slower
+uint16_t s_bg_pal[pal_bg_count * bg_pal_extra];
+static_assert((engine::utils::size(s_bg_pal) & (engine::utils::size(s_bg_pal) - 1)) == 0);
 
 void background_update() {
     using namespace engine::graphics;
@@ -150,11 +152,11 @@ void background_update() {
     PROFILE_SCOPE(bg_upd);
 
     // Moving wave effect thing.
-    uint8_t pal_idx = s_bg_pal_idx++;
-    for (uint32_t i = 0; i < pal_bg_count; i++) {
-        const uint16_t pal = s_bg_pal[i];
-        pal_idx = (pal_idx + 1) % pal_bg_count;
-        set_palette_colour(pal_bg_start + pal_idx, pal);
+    uint16_t pal_idx = s_bg_pal_idx++ / bg_pal_extra;
+    for (uint32_t i = 0; i < bg_sprite_count; i++) {
+        pal_idx = (pal_idx + 1) % engine::utils::size(s_bg_pal);
+        const uint16_t pal = s_bg_pal[pal_idx];
+        set_palette_colour(pal_bg_start + i, pal);
     }
 }
 
@@ -180,9 +182,10 @@ void background_setup() {
     }
 
     // Precalculate colour palette.
-    for (uint32_t i = 0; i < pal_bg_count; i++) {
+    constexpr uint32_t pal_full = engine::utils::size(s_bg_pal);
+    for (uint32_t i = 0; i < pal_full; i++) {
         // Wave thing.
-        const uint16_t x = (i >= pal_bg_count / 2) ? 2 * pal_bg_count - 2 * i : 2 * i;
+        const uint16_t x = (2 * i >= pal_full) ? 2 * pal_full - 2 * i : 2 * i;
 
         // Colour split.
         constexpr uint16_t base = 19;
@@ -194,9 +197,10 @@ void background_setup() {
         constexpr uint16_t g = 192;
         constexpr uint16_t b = 238;
 
-        const uint16_t rx = (base * r / 255) + bios_mathDivU16(x * (fade * r / 255), pal_bg_count);
-        const uint16_t gx = (base * g / 255) + bios_mathDivU16(x * (fade * g / 255), pal_bg_count);
-        const uint16_t bx = (base * b / 255) + bios_mathDivU16(x * (fade * b / 255), pal_bg_count);
+        // TODO: looks grey-ish due to quantizing
+        const uint16_t rx = (base * r / 255) + bios_mathDivU16(x * (fade * r / 255), pal_full);
+        const uint16_t gx = (base * g / 255) + bios_mathDivU16(x * (fade * g / 255), pal_full);
+        const uint16_t bx = (base * b / 255) + bios_mathDivU16(x * (fade * b / 255), pal_full);
 
         s_bg_pal[i] = RGB555(rx, gx, bx);
     }
