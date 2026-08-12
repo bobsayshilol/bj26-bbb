@@ -20,6 +20,13 @@ static const uint8_t data[8 * TileSize];
 static const uint16_t palette[16];
 };
 
+struct text_font {
+static constexpr uint8_t pal_offset = 128;
+// TODO: should compress this to bits, but there's tons of space in the ROM
+static const uint8_t data[40 * TileSize];
+static const uint16_t palette[16];
+};
+
 template <uint8_t PalStart, uint8_t PalCount, uint8_t TileStart, uint8_t TileCount, typename Tileset>
 inline void copy_tile_data() {
     // Set the palette.
