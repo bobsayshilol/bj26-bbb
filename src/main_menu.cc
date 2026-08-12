@@ -134,11 +134,13 @@ void bouncers_setup() {
 
 //
 
+constexpr uint8_t bg_tile_start = bouncer_tile_start + bouncer_count;
+constexpr uint8_t bg_tile_count = engine::graphics::bg_tilemap_size * 2 - 1;
 constexpr uint8_t bg_sprite_start = bouncer_sprite_start + bouncer_count;
-constexpr uint8_t bg_sprite_count = engine::graphics::bg_tilemap_size * 2 - 1;
+constexpr uint8_t bg_sprite_count = 0; // they're all BG sprites
 
 constexpr uint8_t pal_bg_start = pal_bouncer_start + pal_bouncer_count;
-constexpr uint8_t pal_bg_count = bg_sprite_count + 1;
+constexpr uint8_t pal_bg_count = bg_tile_count + 1; // dummy palette at the end for power-of-two
 static_assert((pal_bg_count & (pal_bg_count - 1)) == 0);
 
 uint16_t s_bg_pal_idx;
@@ -153,7 +155,7 @@ void background_update() {
 
     // Moving wave effect thing.
     uint16_t pal_idx = s_bg_pal_idx++ / bg_pal_extra;
-    for (uint32_t i = 0; i < bg_sprite_count; i++) {
+    for (uint32_t i = 0; i < bg_tile_count; i++) {
         pal_idx = (pal_idx + 1) % engine::utils::size(s_bg_pal);
         const uint16_t pal = s_bg_pal[pal_idx];
         set_palette_colour(pal_bg_start + i, pal);
@@ -169,14 +171,14 @@ void background_setup() {
     for (uint32_t y = 0; y < bg_tilemap_size; y++) {
         for (uint32_t x = 0; x < bg_tilemap_size; x++) {
             BGSprite sprite;
-            sprite.set_tile_index(bg_sprite_start + x + y);
+            sprite.set_tile_index(bg_tile_start + x + y);
             set_bg_sprite<0>(x, y, sprite);
         }
     }
 
     // Add colours.
-    for (uint32_t i = 0; i < bg_sprite_count; i++) {
-        Pixel2 * data16 = get_tile_data(bg_sprite_start + i);
+    for (uint32_t i = 0; i < bg_tile_count; i++) {
+        Pixel2 * data16 = get_tile_data(bg_tile_start + i);
         const Pixel2 v16 = pal_bg_start + i;
         engine::utils::fast_memset16(data16, v16, 8 * 8 / 2);
     }
@@ -236,7 +238,7 @@ void leave() {
     bios_vsync();
     engine::graphics::disable_sprites();
     engine::graphics::background_0.disable();
-    engine::graphics::reset_sprites(bouncer_sprite_start + bouncer_count);
+    engine::graphics::reset_sprites(bg_sprite_start + bg_sprite_count);
 }
 
 } // namespace
