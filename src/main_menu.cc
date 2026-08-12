@@ -1,12 +1,17 @@
+#include "aabb.h"
 #include "debug.h"
+#include "font.h"
 #include "game.h"
 #include "images.h"
 #include "input.h"
 #include "graphics.h"
 #include "maths.h"
 #include "memory.h"
+#include "music.h"
 #include "profiler.h"
 #include "fixed.h"
+#include "sound.h"
+#include "utils.h"
 
 namespace game {
 
@@ -17,18 +22,24 @@ PROFILE_STORAGE(b_sprt);
 PROFILE_STORAGE(b_tile);
 PROFILE_STORAGE(bg_set);
 PROFILE_STORAGE(bg_upd);
+PROFILE_STORAGE(men_up);
 PROFILE_STORAGE(vsync);
 
 constexpr uint8_t pal_white = 1;
 constexpr uint8_t pal_grey = 2;
-constexpr uint8_t pal_bouncer_start = 3;
+
+constexpr uint8_t mouse_pal_start = pal_grey + 1;
+constexpr uint8_t mouse_pal_count = 16;
+constexpr uint8_t mouse_sprite_start = 0;
+constexpr uint8_t mouse_sprite_count = 1;
+constexpr uint8_t mouse_tile_start = 0;
+constexpr uint8_t mouse_tile_count = 1;
+
+constexpr uint8_t pal_bouncer_start = mouse_pal_start + mouse_pal_count;
 constexpr uint8_t pal_bouncer_count = 16;
-
-constexpr uint8_t mouse_sprite_idx = 0;
-
-constexpr uint8_t bouncer_sprite_start = mouse_sprite_idx + 1;
+constexpr uint8_t bouncer_sprite_start = mouse_sprite_start + mouse_sprite_count;
 constexpr uint8_t bouncer_count = 24;
-constexpr uint8_t bouncer_tile_start = 0;
+constexpr uint8_t bouncer_tile_start = mouse_tile_start + mouse_tile_count;
 constexpr uint8_t bouncer_tile_count = 8;
 struct Bouncer {
     engine::utils::FixedS1616 x;
@@ -213,6 +224,236 @@ void background_setup() {
 
 //
 
+enum class MenuState {
+    Main,
+    LevelSelect,
+    Credits,
+};
+MenuState s_menu_state = MenuState::Main;
+
+struct MousePos {
+    int16_t x;
+    int16_t y;
+} s_mouse_pos;
+
+namespace buttons {
+
+enum class Action {
+    None,
+
+    // Menus.
+    MainMenu,
+    LevelSelect,
+    Credits,
+
+    // Game levels.
+    Start,
+    Breakout,
+    Driving,
+};
+
+struct Button {
+    engine::utils::AABB aabb;
+    const char * text;
+    Action action;
+
+    template <uint8_t N>
+    constexpr Button(const char (&str)[N], int16_t y, Action act) : aabb{}, text(str), action(act) {
+        const uint16_t x = engine::graphics::SCREEN_WIDTH / 2 - (N - 1) * font::CharWidth / 2;
+        aabb.x = x;
+        aabb.y = y;
+        aabb.w = (N - 1) * font::CharWidth;
+        aabb.h = font::CharHeight;
+    }
+
+    int16_t x() const { return aabb.x; }
+    int16_t y() const { return aabb.y; }
+};
+
+constexpr const Button main[] {
+    Button("Start Game", engine::graphics::SCREEN_HEIGHT / 2, Action::Start),
+    Button("Level Select", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 3, Action::LevelSelect),
+    Button("Credits", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 6, Action::Credits),
+};
+
+constexpr const Button level_select[] {
+    Button("Breakout", engine::graphics::SCREEN_HEIGHT / 2, Action::Breakout),
+    Button("Driving", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 3, Action::Driving),
+    Button("moar", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 6, Action::None),
+    Button("Back", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
+};
+
+constexpr const Button credits[] {
+    Button("yes", engine::graphics::SCREEN_HEIGHT / 2, Action::None),
+    Button("Back", engine::graphics::SCREEN_HEIGHT - font::CharWidth * 2, Action::MainMenu),
+};
+
+} // namespace buttons
+
+void menu_redraw() {
+    game::font::clear_text();
+
+    const buttons::Button * butts = nullptr;
+    uint32_t num_butts = 0;
+    switch (s_menu_state) {
+        case MenuState::Main:
+            game::font::write_centered("Big Bucko Breakout", engine::graphics::SCREEN_HEIGHT / 4);
+            butts = buttons::main;
+            num_butts = engine::utils::size(buttons::main);
+            break;
+        case MenuState::LevelSelect:
+            game::font::write_centered("Level Select", engine::graphics::SCREEN_HEIGHT / 4);
+            butts = buttons::level_select;
+            num_butts = engine::utils::size(buttons::level_select);
+            break;
+        case MenuState::Credits:
+            game::font::write_centered("Credits", engine::graphics::SCREEN_HEIGHT / 4);
+            butts = buttons::credits;
+            num_butts = engine::utils::size(buttons::credits);
+            break;
+    }
+    for (uint32_t i = 0; i < num_butts; i++) {
+        auto & button = butts[i];
+        game::font::write_text(button.text, button.x(), button.y());
+    }
+}
+
+void menu_setup() {
+    // Load font data.
+    constexpr uint8_t font_tile_start = bg_tile_start + bg_tile_count;
+    constexpr uint8_t font_sprite_start = bg_sprite_start + bg_sprite_count;
+    game::font::setup_tiles<font_tile_start, font_sprite_start>();
+
+    // Title screen.
+    s_menu_state = MenuState::Main;
+    menu_redraw();
+
+    // Mouse bits.
+    game::images::copy_tile_data<
+        mouse_pal_start, mouse_pal_count,
+        mouse_tile_start, mouse_tile_count,
+        game::images::mouse
+    >();
+    s_mouse_pos.x = engine::graphics::SCREEN_WIDTH / 4;
+    s_mouse_pos.y = engine::graphics::SCREEN_HEIGHT / 3;
+}
+
+Entry menu_update() {
+    PROFILE_SCOPE(men_up);
+
+    // Mouse input.
+    if (engine::input::g_mouse_plugged) {
+        s_mouse_pos.x += engine::input::g_mouse_dx;
+        s_mouse_pos.y += engine::input::g_mouse_dy;
+    } else {
+        const auto held = engine::input::g_buttons_held;
+        if (held & GAMEPAD_BTN_LEFT) {
+            s_mouse_pos.x -= 2;
+        } else if (held & GAMEPAD_BTN_RIGHT) {
+            s_mouse_pos.x += 2;
+        }
+        if (held & GAMEPAD_BTN_UP) {
+            s_mouse_pos.y -= 2;
+        } else if (held & GAMEPAD_BTN_DOWN) {
+            s_mouse_pos.y += 2;
+        }
+    }
+    constexpr uint8_t screen_padding = 3;
+    s_mouse_pos.x = engine::utils::clamp<int16_t>(
+        s_mouse_pos.x,
+        screen_padding,
+        engine::graphics::SCREEN_WIDTH - engine::graphics::bg_tile_size - screen_padding
+    );
+    s_mouse_pos.y = engine::utils::clamp<int16_t>(
+        s_mouse_pos.y,
+        screen_padding,
+        engine::graphics::SCREEN_HEIGHT - engine::graphics::bg_tile_size - screen_padding
+    );
+
+    // Update the mouse sprite.
+    engine::graphics::ObjSprite mouse;
+    mouse.set_x(s_mouse_pos.x);
+    mouse.set_y(s_mouse_pos.y);
+    mouse.set_tile_index(mouse_tile_start);
+    engine::graphics::set_sprite(mouse_sprite_start, mouse);
+
+    // Handle any button presses.
+    const auto pressed = engine::input::g_buttons_pressed;
+    if (pressed & GAMEPAD_BTN_A)
+    {
+        const engine::utils::AABB mouse_aabb{
+            s_mouse_pos.x, s_mouse_pos.y,
+            engine::graphics::bg_tile_size, engine::graphics::bg_tile_size
+        };
+
+        // See which buttons are active.
+        const buttons::Button * butts = nullptr;
+        uint32_t num_butts = 0;
+        switch (s_menu_state) {
+            case MenuState::Main:
+                butts = buttons::main;
+                num_butts = engine::utils::size(buttons::main);
+                break;
+            case MenuState::LevelSelect:
+                butts = buttons::level_select;
+                num_butts = engine::utils::size(buttons::level_select);
+                break;
+            case MenuState::Credits:
+                butts = buttons::credits;
+                num_butts = engine::utils::size(buttons::credits);
+                break;
+        }
+
+        // Check for button presses.
+        buttons::Action action = buttons::Action::None;
+        for (uint32_t i = 0; i < num_butts; i++) {
+            auto & button = butts[i];
+            if (mouse_aabb.intersects(button.aabb)) {
+                action = button.action;
+                break;
+            }
+        }
+
+        // Play a sound.
+        if (action == buttons::Action::None) {
+            engine::sound::play_effect(game::music::SoundEffect::SE_MM_Miss);
+        } else {
+            engine::sound::play_effect(game::music::SoundEffect::SE_MM_Click);
+        }
+
+        // Handle the action.
+        switch (action) {
+            using buttons::Action;
+                case Action::None:
+                    break;
+
+                case Action::MainMenu:
+                    s_menu_state = MenuState::Main;
+                    menu_redraw();
+                    break;
+                case Action::LevelSelect:
+                    s_menu_state = MenuState::LevelSelect;
+                    menu_redraw();
+                    break;
+                case Action::Credits:
+                    s_menu_state = MenuState::Credits;
+                    menu_redraw();
+                    break;
+
+                case Action::Start:
+                    return Entry::Breakout; // TODO: might need more states
+                case Action::Breakout:
+                    return Entry::Breakout;
+                case Action::Driving:
+                    return Entry::Driving;
+        }
+    }
+
+    return Entry::MainMenu;
+}
+
+//
+
 void enter() {
     // Setup colours.
     engine::graphics::set_backdrop_a(RGB555(0, 0, 0));
@@ -224,6 +465,9 @@ void enter() {
 
     // Setup the bouncers.
     bouncers_setup();
+
+    // UI bits.
+    menu_setup();
 
     // This screen uses sprites and has a background.
     bios_vsync();
@@ -239,6 +483,7 @@ void leave() {
     engine::graphics::disable_sprites();
     engine::graphics::background_0.disable();
     engine::graphics::reset_sprites(bg_sprite_start + bg_sprite_count);
+    game::font::clear_text();
 }
 
 } // namespace
@@ -257,11 +502,9 @@ Entry main_menu_loop() {
         // Update gamepad/mouse input.
         engine::input::update_inputs();
 
-        // Handle the input.
-        const auto pressed = engine::input::g_buttons_pressed;
-        if (pressed & GAMEPAD_BTN_A) {
-            // TODO
-            next = Entry::Breakout;
+        // Update text from menu.
+        next = menu_update();
+        if (next != Entry::MainMenu) {
             break;
         }
 

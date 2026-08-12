@@ -15,8 +15,14 @@ static const uint16_t palette[16];
 };
 
 struct mm_bouncer {
-static constexpr uint8_t pal_offset = 3;
+static constexpr uint8_t pal_offset = 19;
 static const uint8_t data[8 * TileSize];
+static const uint16_t palette[16];
+};
+
+struct mouse {
+static constexpr uint8_t pal_offset = 3;
+static const uint8_t data[1 * TileSize];
 static const uint16_t palette[16];
 };
 

@@ -47,6 +47,8 @@ static_assert(Bgm::Bgm_Count == engine::utils::size(bgm_list));
 
 const uint8_t * const sfx_list[] {
     [SoundEffect::SE_Test] = sfx_test,
+    [SoundEffect::SE_MM_Miss] = sfx_test,
+    [SoundEffect::SE_MM_Click] = sfx_test,
     [SoundEffect::SE_Breakout_Bounce] = sfx_bounce,
 };
 static_assert(SoundEffect::SE_Count == engine::utils::size(sfx_list));

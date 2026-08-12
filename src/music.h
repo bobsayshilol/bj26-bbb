@@ -12,6 +12,8 @@ enum Bgm : uint8_t {
 
 enum SoundEffect : uint8_t {
     SE_Test,
+    SE_MM_Miss,
+    SE_MM_Click,
     SE_Breakout_Bounce,
     SE_Count,
 };
