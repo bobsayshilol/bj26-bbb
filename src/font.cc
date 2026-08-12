@@ -43,14 +43,24 @@ uint16_t s_sprite_start;
 void write_text(const char *text, uint16_t x, uint16_t y) {
     const uint16_t sprite_start = detail::s_sprite_start;
     const uint16_t tile_start = detail::s_tile_start;
+    const uint16_t x0 = x;
     uint16_t used = s_sprites_used;
 
     // Add each character.
     engine::graphics::ObjSprite sprite;
     sprite.set_y(y);
     while (*text) {
-        // Lookup the tile.
         const char ch = *text++;
+
+        // Break on newlines.
+        if (ch == '\n') {
+            x = x0;
+            y += CharHeight;
+            sprite.set_y(y);
+            continue;
+        }
+
+        // Lookup the tile.
         const uint32_t tile_idx = tile_start + char_to_idx(ch);
         sprite.set_tile_index(tile_idx);
 
