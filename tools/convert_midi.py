@@ -48,11 +48,19 @@ class ResetEvent(Event):
 # Max event size when written out.
 max_event_size = 3
 
+# Some programs.
+program_piano = 0x00
+program_guitar = 0x03
+program_beep = 0x0A
+program_xylophone = 0x1E
+program_drums = 0x27
+
 
 class MIDIConverter:
 	def _reset(self):
 		self._midi :BufferedReader = None
 		self._bpm = 0
+		self._voices = {}
 
 
 	def _error(self, msg):
@@ -60,15 +68,32 @@ class MIDIConverter:
 		raise RuntimeError(f"Error at file position 0x{pos:x}: {msg}")
 
 
-	def _to_loopy_voice(self, voice :int):
+	def _set_loopy_voice(self, trk_chan :int, name :str):
+		if name == "000-piano":
+			self._voices[trk_chan] = program_piano
+		elif name == "030-dist":
+			self._voices[trk_chan] = program_guitar
+		elif name == "054-synvoice":
+			self._voices[trk_chan] = program_xylophone # TODO: better choice
+		elif name == "128-Drums":
+			self._voices[trk_chan] = program_drums
+		else:
+			self._error(f"Unknown voice mapping for {name}")
+
+
+	def _to_loopy_voice(self, trk_chan :int, voice :int):
+		# neocomposer seems to have a bug where the first track doesn't get
+		# the right voice, so use the instrument name instead.
+		if trk_chan in self._voices:
+			return self._voices[trk_chan]
+
 		voice_map = {
-			1 : 0x00, # piano
-			# ??? : 0x03, # guitar
-			# ??? : 0x0A, # beep
-			90 : 0x1E, # xylophone
-			64 : 0x27, # drums
+			1 : program_piano, # piano
+			# ??? : program_guitar, # guitar
+			# ??? : program_beep, # beep
+			90 : program_xylophone, # xylophone
+			64 : program_drums, # drums
 		}
-		print(voice)
 		if voice not in voice_map:
 			self._error(f"Voice {voice} didn't have a mapping set")
 		return voice_map[voice]
@@ -155,7 +180,7 @@ class MIDIConverter:
 		elif 0xC0 <= evt and evt <= 0xCF: # program change
 			chan = self._get_channel(evt)
 			voice = int.from_bytes(self._midi.read(1))
-			loopy_voice = self._to_loopy_voice(voice)
+			loopy_voice = self._to_loopy_voice(trk_chan, voice)
 			event = ProgramChangeEvent(dt, chan, loopy_voice)
 
 		elif 0xD0 <= evt and evt <= 0xDF: # pressure change
@@ -175,7 +200,7 @@ class MIDIConverter:
 			val = self._midi.read(size)
 			if typ == 0x04: # voice mappings
 				name = val.decode()
-				print(f"  Instrument voice: {name}")
+				self._set_loopy_voice(trk_chan, name)
 			else:
 				event = ResetEvent(dt)
 
