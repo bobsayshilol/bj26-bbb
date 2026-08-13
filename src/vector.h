@@ -28,6 +28,7 @@ public:
 
     constexpr T & push_back(T val) { ASSERT(m_size < Capacity); return m_data[m_size++] = MOVE(val); }
     constexpr void pop_back() { ASSERT(m_size > 0); m_size--; }
+    constexpr void clear() { m_size = 0; }
 
     // Doesn't maintain order.
     constexpr void remove_fast(uint8_t idx) {
