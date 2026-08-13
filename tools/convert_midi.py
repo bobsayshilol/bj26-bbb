@@ -11,6 +11,8 @@
 #
 # Only tested with: https://jakeonaut.itch.io/neocomposer and canyon.mid
 #
+# Note: canyon.mid no longer works because of the 2 voice limit.
+#
 # TODO: check https://yurisizov.itch.io/boscaceoil-blue
 #
 
@@ -56,6 +58,27 @@ class MIDIConverter:
 	def _error(self, msg):
 		pos = self._midi.tell()
 		raise RuntimeError(f"Error at file position 0x{pos:x}: {msg}")
+
+
+	def _to_loopy_voice(self, voice :int):
+		voice_map = {
+			1 : 0x00, # piano
+			# ??? : 0x03, # guitar
+			# ??? : 0x0A, # beep
+			90 : 0x1E, # xylophone
+			64 : 0x27, # drums
+		}
+		print(voice)
+		if voice not in voice_map:
+			self._error(f"Voice {voice} didn't have a mapping set")
+		return voice_map[voice]
+
+
+	def _get_channel(self, evt :int):
+		chan = evt & 0xF
+		if chan not in [0, 1]:
+			self._error(f"Too many channels in track: {chan}")
+		return chan
 
 
 	def _read_header(self):
@@ -106,50 +129,55 @@ class MIDIConverter:
 			unk = int.from_bytes(self._midi.read(1))
 
 		elif 0x80 <= evt and evt <= 0x8F: # note off
-			chan = evt & 0xF
+			chan = self._get_channel(evt)
 			key = int.from_bytes(self._midi.read(1))
 			vel = int.from_bytes(self._midi.read(1))
 			event = NoteOffEvent(dt, chan, key, vel)
 
 		elif 0x90 <= evt and evt <= 0x9F: # note on
-			chan = evt & 0xF
+			chan = self._get_channel(evt)
 			key = int.from_bytes(self._midi.read(1))
 			vel = int.from_bytes(self._midi.read(1))
 			event = NoteOnEvent(dt, chan, key, vel)
 
 		elif 0xA0 <= evt and evt <= 0xAF: # aftertouch
 			print(f"Ignored: 0x{evt:x}")
-			chan = evt & 0xF
+			chan = self._get_channel(evt)
 			key = int.from_bytes(self._midi.read(1))
 			tch = int.from_bytes(self._midi.read(1))
 
 		elif 0xB0 <= evt and evt <= 0xBF: # controller change
 			print(f"Ignored: 0x{evt:x}")
-			chan = evt & 0xF
+			chan = self._get_channel(evt)
 			cnt = int.from_bytes(self._midi.read(1))
 			val = int.from_bytes(self._midi.read(1))
 
 		elif 0xC0 <= evt and evt <= 0xCF: # program change
-			chan = evt & 0xF
+			chan = self._get_channel(evt)
 			voice = int.from_bytes(self._midi.read(1))
-			event = ProgramChangeEvent(dt, chan, voice)
+			loopy_voice = self._to_loopy_voice(voice)
+			event = ProgramChangeEvent(dt, chan, loopy_voice)
 
 		elif 0xD0 <= evt and evt <= 0xDF: # pressure change
 			print(f"Ignored: 0x{evt:x}")
-			chan = evt & 0xF
+			chan = self._get_channel(evt)
 			prs = int.from_bytes(self._midi.read(1))
 
 		elif 0xE0 <= evt and evt <= 0xEF: # pitch bend
 			print(f"Ignored: 0x{evt:x}")
-			chan = evt & 0xF
+			chan = self._get_channel(evt)
 			lsb = int.from_bytes(self._midi.read(1))
 			msb = int.from_bytes(self._midi.read(1))
 
 		elif evt == 0xFF: # system reset
-			self._midi.read(1) # ignore
+			typ = int.from_bytes(self._midi.read(1))
 			size = int.from_bytes(self._midi.read(1)) # size
-			self._midi.read(size) # ignore
-			event = ResetEvent(dt)
+			val = self._midi.read(size)
+			if typ == 0x04: # voice mappings
+				name = val.decode()
+				print(f"  Instrument voice: {name}")
+			else:
+				event = ResetEvent(dt)
 
 		else:
 			self._error(f"Unhandled event: 0x{evt:x}")
@@ -168,7 +196,6 @@ class MIDIConverter:
 			self._error("Bad chunk in MIDI file")
 		length = int.from_bytes(self._midi.read(4))
 		end = self._midi.tell() + length
-
 
 		# Read the events.
 		trk_events :list[Event] = []
@@ -217,7 +244,7 @@ class MIDIConverter:
 				self._error(f"Unhandled MIDI format: {fmt}")
 			if fmt == 0 and num_chunks > 1:
 				self._error("Too many track chunks in single track file")
-			if fmt == 1 and num_chunks > 15:
+			if fmt == 1 and num_chunks > 2: # we only support 2 because LoopyMSE does
 				self._error("Too many track chunks in multi track file")
 			self._bpm = bpm
 			self._fmt = fmt

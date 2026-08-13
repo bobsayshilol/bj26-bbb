@@ -1,6 +1,8 @@
 #include "music.h"
 #include "utils.h"
 
+namespace game::music {
+
 // Effects are manual.
 namespace {
 
@@ -14,20 +16,18 @@ namespace {
     }; \
     static_assert(sizeof(name) == (name)[1] + 2)
 
-MAKE_SFX(sfx_test,
-    0x90,0x3c,0x40, // note on
-    0x90,0x3d,0x40,
-    0x90,0x3f,0x40,
-    0x90,0x3c,0x00, // note off
-    0x90,0x3d,0x00,
-    0x90,0x3f,0x00,
+#define SFX_ON(note) MIDI_EVT_NOTE_ON(sfx_channel, note)
+#define SFX_OFF(note) MIDI_EVT_NOTE_OFF(sfx_channel, note)
+#define SFX_PROG(prog) MIDI_EVT_SET_PROG(sfx_channel, prog)
+
+MAKE_SFX(sfx_placeholder,
+    SFX_PROG(drums)
+    SFX_ON(crash)
 );
 
 MAKE_SFX(sfx_bounce,
-    0x90,0x3f,0x40, // note on
-    0x90,0x20,0x40,
-    0x90,0x3f,0x00, // note off
-    0x90,0x20,0x00,
+    SFX_PROG(beep)
+    SFX_ON(Ds4)
 );
 
 } // namespace
@@ -35,8 +35,6 @@ MAKE_SFX(sfx_bounce,
 
 
 // Exported symbols.
-
-namespace game::music {
 
 #pragma GCC diagnostic ignored "-Wpedantic" // silence warning about designated initialisers
 
@@ -46,9 +44,8 @@ const uint8_t * const bgm_list[] {
 static_assert(Bgm::Bgm_Count == engine::utils::size(bgm_list));
 
 const uint8_t * const sfx_list[] {
-    [SoundEffect::SE_Test] = sfx_test,
-    [SoundEffect::SE_MM_Miss] = sfx_test,
-    [SoundEffect::SE_MM_Click] = sfx_test,
+    [SoundEffect::SE_MM_Miss] = sfx_placeholder,
+    [SoundEffect::SE_MM_Click] = sfx_placeholder,
     [SoundEffect::SE_Breakout_Bounce] = sfx_bounce,
 };
 static_assert(SoundEffect::SE_Count == engine::utils::size(sfx_list));
