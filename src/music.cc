@@ -40,6 +40,7 @@ MAKE_SFX(sfx_bounce,
 
 const uint8_t * const bgm_list[] {
     [Bgm::Bgm_Test] = bgm_test_mid,
+    [Bgm::Bgm_Driving] = driving_bgm_mid,
 };
 static_assert(Bgm::Bgm_Count == engine::utils::size(bgm_list));
 

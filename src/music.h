@@ -7,6 +7,7 @@ namespace game::music {
 // Sounds + music.
 enum Bgm : uint8_t {
     Bgm_Test,
+    Bgm_Driving,
     Bgm_Count,
 };
 
@@ -91,6 +92,7 @@ constexpr uint8_t crash = 49; // 49 - Cs3 - Crash 1
 extern const uint8_t bgm_test_mid[];
 extern const uint8_t bgm_test2_mid[];
 extern const uint8_t main_menu_bgm_mid[];
+extern const uint8_t driving_bgm_mid[];
 extern const uint8_t canyon_mid[];
 
 } // namespace game::music

@@ -3,8 +3,10 @@
 #include "game.h"
 #include "graphics.h"
 #include "memory.h"
+#include "music.h"
 #include "profiler.h"
 #include "input.h"
+#include "sound.h"
 
 //
 // +--+--+
@@ -365,6 +367,9 @@ void enter() {
     engine::graphics::bitmap_2.enable();
     engine::graphics::enable_sprites();
 
+    // Kick off the bgm.
+    engine::sound::play_bgm(game::music::Bgm::Bgm_Driving);
+
     engine::profiler::print_timings();
 }
 
@@ -375,6 +380,9 @@ void leave() {
     engine::graphics::bitmap_0.disable();
     engine::graphics::bitmap_2.disable();
     engine::graphics::reset_sprites(transparent_sprite_start + transparent_sprite_count);
+
+    // Reset sound.
+    engine::sound::stop_bgm();
 }
 
 } // namespace

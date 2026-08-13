@@ -1,6 +1,7 @@
 #pragma once
 
 #include "loopy/bios.h"
+#include "loopy/extrafuncs.h"
 #include "debug.h"
 
 namespace engine::sound {
@@ -27,6 +28,9 @@ inline void play_bgm(uint8_t index) {
 inline void play_effect(uint8_t index) {
 	ASSERT(detail::s_sfx_tracks);
 	bios_playSfx(&detail::g_sound_state, 0x80, index, detail::s_sfx_tracks);
+}
+inline void stop_bgm() {
+	sys_stopBgm(&detail::g_sound_state);
 }
 
 } // namespace engine::sound
