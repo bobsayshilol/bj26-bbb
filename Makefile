@@ -103,14 +103,14 @@ MIDIS = $(wildcard $(DATADIR)/*.mid)
 MIDIS_C = $(patsubst $(DATADIR)/%.mid,$(SRCDIR)/data_%.mid.cc,$(MIDIS))
 music: $(MIDIS)
 	for f in $(MIDIS) ; do \
-		$(CONVMIDI) $${f} $(SRCDIR)/data_$$(basename $${f}).cc $$(basename $${f}); \
+		$(CONVMIDI) $${f} $(SRCDIR)/data_$$(basename $${f}).cc $$(basename $${f}) || exit 1; \
 	done
 
 TILES = $(wildcard $(DATADIR)/*.png)
 TILES_C = $(patsubst $(DATADIR)/%.png,$(SRCDIR)/data_%.png.cc,$(TILES))
 images: $(TILES)
 	for f in $(TILES) ; do \
-		$(CONVTILES) $${f} $(SRCDIR)/data_$$(basename $${f}).cc; \
+		$(CONVTILES) $${f} $(SRCDIR)/data_$$(basename $${f}).cc || exit 1; \
 	done
 
 data: music images
