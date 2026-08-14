@@ -7,9 +7,10 @@ namespace game::music {
 // Sounds + music.
 enum Bgm : uint8_t {
     Bgm_Test,
+    Bgm_Breakout,
     Bgm_Driving,
     Bgm_Tense,
-    Bgm_Tense2,
+    Bgm_Weird,
     Bgm_Count,
 };
 
@@ -19,6 +20,10 @@ enum SoundEffect : uint8_t {
     SE_MM_Miss,
     SE_MM_Click,
     SE_Breakout_Bounce,
+    SE_Breakout_Hit,
+    SE_Driving_Car,
+    SE_Driving_WeewooHi,
+    SE_Driving_WeewooLo,
     SE_Count,
 };
 
@@ -110,7 +115,7 @@ constexpr uint8_t midi_bgm_scale = 32; // TODO: would be nice to be per-BGM
 // MIDI events.
 // Cast to int is for the sizeof check.
 #define MIDI_EVT_SET_PROG(chan, voice) 0xC0 | (chan), int(voice | 0),
-#define MIDI_EVT_NOTE_ON(chan, note) 0x90 | (chan), int(note | 0), 0x40,
+#define MIDI_EVT_NOTE_ON(chan, note) 0x90 | (chan), int(note | 0), 0x7F,
 #define MIDI_EVT_NOTE_OFF(chan, note) 0x90 | (chan), int(note | 0), 0x00,
 #define MIDI_EVT_END() 0x00, 0xFE, 0xFF, 0xFF,
 #define MIDI_EVT_REPEAT() 0x00, 0xFF, MIDI_EVT_END() // playing it safe with the end event

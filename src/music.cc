@@ -25,9 +25,13 @@ MAKE_SFX(sfx_placeholder,
     SFX_ON(notes::crash)
 );
 
-MAKE_SFX(sfx_bounce,
-    SFX_PROG(voices::beep)
-    SFX_ON(notes::Ds4)
+MAKE_SFX(sfx_breakout_bounce,
+    SFX_PROG(0x62)
+    SFX_ON(0x3A)
+);
+MAKE_SFX(sfx_breakout_hit,
+    SFX_PROG(0x62)
+    SFX_ON(0x3C)
 );
 
 MAKE_SFX(sfx_misclick,
@@ -44,6 +48,19 @@ MAKE_SFX(sfx_tense,
     SFX_ON(notes::As4)
     SFX_OFF(notes::As4)
     SFX_ON(notes::A4)
+);
+
+MAKE_SFX(sfx_car_engine,
+    SFX_PROG(0x5F)
+    SFX_ON(0x3B)
+);
+MAKE_SFX(sfx_weewoo_hi,
+    SFX_PROG(0x5F)
+    SFX_ON(0x54)
+);
+MAKE_SFX(sfx_weewoo_low,
+    SFX_PROG(0x5F)
+    SFX_ON(0x3C)
 );
 
 uint8_t sfx_test[] = {
@@ -93,25 +110,34 @@ MIDI_MAKE_BGM(tense_bgm, 128,
     MIDI_EVT_REPEAT()
 );
 
-MIDI_MAKE_BGM(tense_bgm2, 60,
+MIDI_MAKE_BGM(weird_bgm, 60,
     MIDI_PLAY_AFTER(0, // t = 0
         MIDI_EVT_SET_PROG(0, 0x8)
+        MIDI_EVT_SET_PROG(1, 0x63)
         MIDI_EVT_NOTE_ON(0, 0x18)
+        MIDI_EVT_NOTE_ON(1, 0x18)
     )
     MIDI_PLAY_AFTER(7, // t = 1
         MIDI_EVT_NOTE_OFF(0, 0x18)
+        MIDI_EVT_NOTE_OFF(1, 0x18)
         MIDI_EVT_NOTE_ON(0, 0x19)
+        MIDI_EVT_NOTE_ON(1, 0x19)
     )
     MIDI_PLAY_AFTER(7, // t = 2
         MIDI_EVT_NOTE_OFF(0, 0x19)
+        MIDI_EVT_NOTE_OFF(1, 0x19)
         MIDI_EVT_NOTE_ON(0, 0x1A)
+        MIDI_EVT_NOTE_ON(1, 0x1A)
     )
     MIDI_PLAY_AFTER(7, // t = 3
         MIDI_EVT_NOTE_OFF(0, 0x1A)
+        MIDI_EVT_NOTE_OFF(1, 0x1A)
         MIDI_EVT_NOTE_ON(0, 0x1B)
+        MIDI_EVT_NOTE_ON(1, 0x1B)
     )
     MIDI_PLAY_AFTER(7, // t = 4/0
         MIDI_EVT_NOTE_OFF(0, 0x1B)
+        MIDI_EVT_NOTE_OFF(1, 0x1B)
     )
 
     MIDI_EVT_REPEAT()
@@ -134,9 +160,10 @@ void set_test_note(uint8_t i) {
 
 const uint8_t * const bgm_list[] {
     [Bgm::Bgm_Test] = bgm_test_mid,
+    [Bgm::Bgm_Breakout] = bgm_test_mid,
     [Bgm::Bgm_Driving] = driving_bgm_mid,
     [Bgm::Bgm_Tense] = tense_bgm,
-    [Bgm::Bgm_Tense2] = tense_bgm2,
+    [Bgm::Bgm_Weird] = weird_bgm,
 };
 static_assert(Bgm::Bgm_Count == engine::utils::size(bgm_list));
 
@@ -145,7 +172,11 @@ const uint8_t * const sfx_list[] {
     [SoundEffect::SE_Tense] = sfx_tense,
     [SoundEffect::SE_MM_Miss] = sfx_misclick,
     [SoundEffect::SE_MM_Click] = sfx_click,
-    [SoundEffect::SE_Breakout_Bounce] = sfx_bounce,
+    [SoundEffect::SE_Breakout_Bounce] = sfx_breakout_bounce,
+    [SoundEffect::SE_Breakout_Hit] = sfx_breakout_hit,
+    [SoundEffect::SE_Driving_Car] = sfx_car_engine,
+    [SoundEffect::SE_Driving_WeewooHi] = sfx_weewoo_hi,
+    [SoundEffect::SE_Driving_WeewooLo] = sfx_weewoo_low,
 };
 static_assert(SoundEffect::SE_Count == engine::utils::size(sfx_list));
 
