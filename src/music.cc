@@ -18,16 +18,38 @@ namespace {
 
 #define SFX_ON(note) MIDI_EVT_NOTE_ON(sfx_channel, note)
 #define SFX_OFF(note) MIDI_EVT_NOTE_OFF(sfx_channel, note)
-#define SFX_PROG(prog) MIDI_EVT_SET_PROG(sfx_channel, prog)
+#define SFX_PROG(voice) MIDI_EVT_SET_PROG(sfx_channel, voice)
 
 MAKE_SFX(sfx_placeholder,
-    SFX_PROG(drums)
-    SFX_ON(crash)
+    SFX_PROG(voices::drums)
+    SFX_ON(notes::crash)
 );
 
 MAKE_SFX(sfx_bounce,
-    SFX_PROG(beep)
-    SFX_ON(Ds4)
+    SFX_PROG(voices::beep)
+    SFX_ON(notes::Ds4)
+);
+
+MAKE_SFX(sfx_misclick,
+    SFX_PROG(voices::beep)
+    SFX_ON(notes::G3)
+);
+MAKE_SFX(sfx_click,
+    SFX_PROG(voices::beep)
+    SFX_ON(notes::C4)
+);
+
+MAKE_SFX(sfx_tense,
+    SFX_PROG(0x17)
+    SFX_ON(notes::As4)
+    SFX_OFF(notes::As4)
+    SFX_ON(notes::A4)
+);
+
+uint8_t sfx_test[] = {
+    0, 5,
+    SFX_PROG(voices::beep)
+    SFX_ON(notes::C4)
 );
 
 } // namespace
@@ -35,6 +57,13 @@ MAKE_SFX(sfx_bounce,
 
 
 // Exported symbols.
+
+void set_test_voice(uint8_t i) {
+    sfx_test[3] = i;
+}
+void set_test_note(uint8_t i) {
+    sfx_test[5] = i;
+}
 
 #pragma GCC diagnostic ignored "-Wpedantic" // silence warning about designated initialisers
 
@@ -45,8 +74,10 @@ const uint8_t * const bgm_list[] {
 static_assert(Bgm::Bgm_Count == engine::utils::size(bgm_list));
 
 const uint8_t * const sfx_list[] {
-    [SoundEffect::SE_MM_Miss] = sfx_placeholder,
-    [SoundEffect::SE_MM_Click] = sfx_placeholder,
+    [SoundEffect::SE_Test] = sfx_test,
+    [SoundEffect::SE_Tense] = sfx_tense,
+    [SoundEffect::SE_MM_Miss] = sfx_misclick,
+    [SoundEffect::SE_MM_Click] = sfx_click,
     [SoundEffect::SE_Breakout_Bounce] = sfx_bounce,
 };
 static_assert(SoundEffect::SE_Count == engine::utils::size(sfx_list));

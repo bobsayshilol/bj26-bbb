@@ -12,6 +12,8 @@ enum Bgm : uint8_t {
 };
 
 enum SoundEffect : uint8_t {
+    SE_Test,
+    SE_Tense,
     SE_MM_Miss,
     SE_MM_Click,
     SE_Breakout_Bounce,
@@ -29,13 +31,13 @@ extern const uint8_t * const sfx_list[];
 constexpr uint8_t sfx_channel = 2;
 
 // Randomly chosen programs.
-namespace programs {
+namespace voices {
 constexpr uint8_t piano = 0x00;
 constexpr uint8_t guitar = 0x03;
-constexpr uint8_t beep = 0x0A;
+constexpr uint8_t beep = 0x0A; // anything lower than G3 is a pow noise
 constexpr uint8_t xylophone = 0x1E;
 constexpr uint8_t drums = 0x27;
-} // namespace programs
+} // namespace voices
 
 // Notes.
 namespace notes {
@@ -84,9 +86,9 @@ constexpr uint8_t crash = 49; // 49 - Cs3 - Crash 1
 } // namespace note
 
 // Cast to int is for the sizeof check.
-#define MIDI_EVT_SET_PROG(chan, prog) 0xC0 | (chan), int(programs::prog),
-#define MIDI_EVT_NOTE_ON(chan, note) 0x90 | (chan), int(notes::note), 0x40,
-#define MIDI_EVT_NOTE_OFF(chan, note) 0x90 | (chan), int(notes::note), 0x00,
+#define MIDI_EVT_SET_PROG(chan, voice) 0xC0 | (chan), int(voice | 0),
+#define MIDI_EVT_NOTE_ON(chan, note) 0x90 | (chan), int(note | 0), 0x40,
+#define MIDI_EVT_NOTE_OFF(chan, note) 0x90 | (chan), int(note | 0), 0x00,
 
 // BGMs are generated from .mid files.
 extern const uint8_t bgm_test_mid[];
@@ -94,5 +96,9 @@ extern const uint8_t bgm_test2_mid[];
 extern const uint8_t main_menu_bgm_mid[];
 extern const uint8_t driving_bgm_mid[];
 extern const uint8_t canyon_mid[];
+
+// For testing.
+void set_test_voice(uint8_t i);
+void set_test_note(uint8_t i);
 
 } // namespace game::music

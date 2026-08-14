@@ -342,11 +342,11 @@ Entry menu_update() {
     PROFILE_SCOPE(men_up);
 
     // Mouse input.
+    const auto held = engine::input::g_buttons_held;
     if (engine::input::g_mouse_plugged) {
         s_mouse_pos.x += engine::input::g_mouse_dx;
         s_mouse_pos.y += engine::input::g_mouse_dy;
     } else {
-        const auto held = engine::input::g_buttons_held;
         if (held & GAMEPAD_BTN_LEFT) {
             s_mouse_pos.x -= 2;
         } else if (held & GAMEPAD_BTN_RIGHT) {
@@ -447,6 +447,38 @@ Entry menu_update() {
                 case Action::Driving:
                     return Entry::Driving;
         }
+    }
+
+    // Testing stuff on the credits menu.
+    if (s_menu_state == MenuState::Credits &&
+        (held & GAMEPAD_BTN_C) &&
+        (pressed & (GAMEPAD_BTN_UP | GAMEPAD_BTN_DOWN | GAMEPAD_BTN_RIGHT | GAMEPAD_BTN_LEFT)))
+    {
+        static uint8_t voice = music::voices::drums;
+        static uint8_t note = music::notes::snare;
+
+        // left/right for voice, up/down for note.
+        if (pressed & GAMEPAD_BTN_UP) note++;
+        else if (pressed & GAMEPAD_BTN_DOWN) note--;
+        else if (pressed & GAMEPAD_BTN_RIGHT) voice++;
+        else if (pressed & GAMEPAD_BTN_LEFT) voice--;
+        note &= 0x7F;
+        voice &= 0x7F;
+        music::set_test_voice(voice);
+        music::set_test_note(note);
+
+        // Stringify.
+        auto voice_str = engine::utils::to_hex(voice);
+        auto note_str = engine::utils::to_hex(note);
+        DEBUG_MSG("voice=", voice_str.data(), " note=", note_str.data());
+
+        // Redraw with the options.
+        menu_redraw();
+        font::write_text(voice_str.data(), 0, 0);
+        font::write_text(note_str.data(), 0, font::CharHeight);
+
+        // Make the noise.
+        engine::sound::play_effect(game::music::SoundEffect::SE_Test);
     }
 
     return Entry::MainMenu;
