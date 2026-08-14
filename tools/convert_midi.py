@@ -125,10 +125,10 @@ class MIDIConverter:
 		v = 0
 		while True:
 			b = int.from_bytes(self._midi.read(1))
-			if b <= 127:
+			if b < 0x80:
 				return v + b
-			v += b & 127
-			v *= 127
+			v += b & 0x7F
+			v *= 0x80
 
 
 	def _parse_event(self, cumdt :int, events :list[Event], trk_chan :int) -> int:
@@ -201,6 +201,10 @@ class MIDIConverter:
 			if typ == 0x04: # voice mappings
 				name = val.decode()
 				self._set_loopy_voice(trk_chan, name)
+			elif typ == 0x51: # bpm
+				assert size == 3
+				note_ns = int.from_bytes(val) # us per note
+				self._bpm = 60 / (1e-6 * note_ns)
 			else:
 				event = ResetEvent(dt)
 
@@ -285,7 +289,7 @@ class MIDIConverter:
 		output = bytearray()
 
 		# Write out the header.
-		output += (3333 // self._bpm).to_bytes(length=1) # magic number, might need tweaking
+		output += (int(3333 / self._bpm)).to_bytes(length=1) # magic number, might need tweaking
 		output += bytearray([0xA2, 0x08, 0xA0]) # ???
 
 		# TODO: merge the off-on notes together to shrink the file.
@@ -294,9 +298,10 @@ class MIDIConverter:
 		def emit(dt, blk, out):
 			blk_len = len(blk)
 			if blk_len > 0:
-				if dt > 255:
-					print(f"Warning: event delta too big: {dt}. Capping to 255")
-					dt = 255
+				# Emit some dummy events to pad the timings.
+				while dt > 0x7F:
+					out += bytearray([0x7F, 0])
+					dt -= 0x7F
 				out += bytearray([dt, blk_len])
 				out += blk
 				blk.resize(0)
