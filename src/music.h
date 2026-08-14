@@ -113,15 +113,17 @@ constexpr uint8_t midi_bgm_scale = 32; // TODO: would be nice to be per-BGM
 #define MIDI_EVT_NOTE_ON(chan, note) 0x90 | (chan), int(note | 0), 0x40,
 #define MIDI_EVT_NOTE_OFF(chan, note) 0x90 | (chan), int(note | 0), 0x00,
 #define MIDI_EVT_END() 0x00, 0xFE, 0xFF, 0xFF,
+#define MIDI_EVT_REPEAT() 0x00, 0xFF, MIDI_EVT_END() // playing it safe with the end event
 
 
 
 // BGMs are generated from .mid files.
 extern const uint8_t bgm_test_mid[];
-extern const uint8_t bgm_test2_mid[];
+#define bgm_test_mid_end_evt MIDI_EVT_REPEAT()
 extern const uint8_t main_menu_bgm_mid[];
+#define main_menu_bgm_mid_end_evt MIDI_EVT_REPEAT()
 extern const uint8_t driving_bgm_mid[];
-extern const uint8_t canyon_mid[];
+#define driving_bgm_mid_end_evt MIDI_EVT_REPEAT()
 
 // For testing.
 void set_test_voice(uint8_t i);

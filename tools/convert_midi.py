@@ -316,9 +316,6 @@ class MIDIConverter:
 		# Emit final one.
 		emit(last_dt, current_block, output)
 
-		# Write footer.
-		output += bytearray([0x00, 0xFE, 0xFF, 0xFF])
-
 		# Dump it to a file.
 		with open(filename, "w") as out:
 			out.write("#include <stdint.h>\n")
@@ -332,7 +329,8 @@ class MIDIConverter:
 				if i == 15:
 					out.write("\n")
 					i = 0
-			out.write("\n};\n")
+			out.write(f"\n{sym}_end_evt\n") # C declares the repeat mode
+			out.write("};\n")
 			out.write("} // namespace game::music")
 
 

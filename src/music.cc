@@ -91,7 +91,7 @@ MIDI_MAKE_BGM(tense_bgm, 128,
         //MIDI_EVT_NOTE_ON(0, notes::As4) // TODO: repeat instead
     )
 
-    MIDI_EVT_END()
+    MIDI_EVT_REPEAT()
 );
 
 MIDI_MAKE_BGM(tense_bgm2, 60,
@@ -116,7 +116,7 @@ MIDI_MAKE_BGM(tense_bgm2, 60,
         //MIDI_EVT_NOTE_ON(0, 0x18) // TODO: repeat instead
     )
 
-    MIDI_EVT_END()
+    MIDI_EVT_REPEAT()
 );
 
 } // namespace
