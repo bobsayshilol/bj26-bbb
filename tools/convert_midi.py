@@ -288,6 +288,9 @@ class MIDIConverter:
 	def _write_file(self, sym :str, filename, events :list[Event]):
 		output = bytearray()
 
+		# This seems to be what neocomposer uses.
+		tps_scale = 32
+
 		# Write out the header.
 		output += (int(3333 / self._bpm)).to_bytes(length=1) # magic number, might need tweaking
 		output += bytearray([0xA2, 0x08, 0xA0]) # ???
@@ -296,23 +299,32 @@ class MIDIConverter:
 
 		# Write out into blocks as we go.
 		def emit(dt, blk, out):
-			blk_len = len(blk)
-			if blk_len > 0:
-				# Emit some dummy events to pad the timings.
-				while dt > 0x7F:
-					out += bytearray([0x7F, 0])
-					dt -= 0x7F
-				out += bytearray([dt, blk_len])
-				out += blk
-				blk.resize(0)
+			if (dt % tps_scale) != 0:
+				self._error(f"Expected all notes to be at multiples of {tps_scale}: {dt} isn't")
+			# Emit some dummy events to pad the timings.
+			while dt > 0x7F:
+				out += bytearray([0x7F, 0])
+				dt -= 0x7F
+			out += bytearray([dt, len(blk)])
+			out += blk
+			blk.resize(0)
+
+		# Events seem to be 1-based in an odd way.
+		first = True
 
 		current_block = bytearray()
+		total_dt = -tps_scale # 1-based
 		last_dt = 0
 		for event in events:
 			# Emit the current block if it's at a new timestamp, or it's gotten too big.
 			max_block_size = 0xF0 # arbitrary, might need a proper cap
 			if event.dt != 0 or len(current_block) + max_event_size > max_block_size:
+				# First real event should be at 0 instead of 1.
+				if first and last_dt > 0:
+					last_dt -= tps_scale
+					first = False
 				emit(last_dt, current_block, output)
+				total_dt += last_dt
 				last_dt = event.dt
 
 			# Add the new event.
@@ -320,6 +332,13 @@ class MIDIConverter:
 
 		# Emit final one.
 		emit(last_dt, current_block, output)
+
+		# And then silence to pad to a multiple of 16 beats.
+		if total_dt & (tps_scale * 16):
+			rem = tps_scale * 16 - (total_dt % (tps_scale * 16))
+			while rem > 0x7F:
+				output += bytearray([0x7F, 0])
+				rem -= 0x7F
 
 		# Dump it to a file.
 		with open(filename, "w") as out:
