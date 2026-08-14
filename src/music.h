@@ -8,6 +8,8 @@ namespace game::music {
 enum Bgm : uint8_t {
     Bgm_Test,
     Bgm_Driving,
+    Bgm_Tense,
+    Bgm_Tense2,
     Bgm_Count,
 };
 
@@ -85,10 +87,34 @@ constexpr uint8_t hihat = 46; // 46 - As3 - Open Hi-Hat (but closed)
 constexpr uint8_t crash = 49; // 49 - Cs3 - Crash 1
 } // namespace note
 
+
+
+// Seems to be ~8000 ticks per second.
+constexpr uint16_t midi_bgm_tps = 8000;
+constexpr uint8_t midi_bgm_scale = 32; // TODO: would be nice to be per-BGM
+
+// Create a new BGM. BGMs are composed of blocks by of MIDI_PLAY_AFTER().
+#define MIDI_MAKE_BGM(name, bpm, ...) \
+    constexpr uint8_t name [] = { \
+        (midi_bgm_tps * 60) / (midi_bgm_scale * bpm), \
+        0xA2, 0x08, 0xA0, /* ??? */ \
+        __VA_ARGS__ \
+    }
+
+// Play some events (MIDI_EVT_*) after a dt ticks.
+#define MIDI_PLAY_AFTER(dt, ...) \
+    midi_bgm_scale * (dt), \
+    engine::utils::size({ __VA_ARGS__ }), \
+    __VA_ARGS__
+
+// MIDI events.
 // Cast to int is for the sizeof check.
 #define MIDI_EVT_SET_PROG(chan, voice) 0xC0 | (chan), int(voice | 0),
 #define MIDI_EVT_NOTE_ON(chan, note) 0x90 | (chan), int(note | 0), 0x40,
 #define MIDI_EVT_NOTE_OFF(chan, note) 0x90 | (chan), int(note | 0), 0x00,
+#define MIDI_EVT_END() 0x00, 0xFE, 0xFF, 0xFF,
+
+
 
 // BGMs are generated from .mid files.
 extern const uint8_t bgm_test_mid[];
