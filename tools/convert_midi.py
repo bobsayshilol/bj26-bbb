@@ -51,6 +51,7 @@ max_event_size = 3
 # Some programs.
 program_piano = 0x00
 program_guitar = 0x03
+program_strings = 0x09
 program_beep = 0x0A
 program_xylophone = 0x1E
 program_drums = 0x27
@@ -73,6 +74,8 @@ class MIDIConverter:
 			self._voices[trk_chan] = program_piano
 		elif name == "030-dist":
 			self._voices[trk_chan] = program_guitar
+		elif name == "048-strings":
+			self._voices[trk_chan] = program_strings
 		elif name == "054-synvoice":
 			self._voices[trk_chan] = program_xylophone # TODO: better choice
 		elif name == "128-Drums":

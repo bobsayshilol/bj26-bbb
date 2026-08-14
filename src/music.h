@@ -7,6 +7,7 @@ namespace game::music {
 // Sounds + music.
 enum Bgm : uint8_t {
     Bgm_Test,
+    Bgm_MM,
     Bgm_Breakout,
     Bgm_Driving,
     Bgm_Tense,
@@ -41,6 +42,7 @@ constexpr uint8_t sfx_channel = 2;
 namespace voices {
 constexpr uint8_t piano = 0x00;
 constexpr uint8_t guitar = 0x03;
+constexpr uint8_t strings = 0x09;
 constexpr uint8_t beep = 0x0A; // anything lower than G3 is a pow noise
 constexpr uint8_t xylophone = 0x1E;
 constexpr uint8_t drums = 0x27;

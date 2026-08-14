@@ -454,6 +454,11 @@ Entry menu_update() {
         (held & GAMEPAD_BTN_C) &&
         (pressed & (GAMEPAD_BTN_UP | GAMEPAD_BTN_DOWN | GAMEPAD_BTN_RIGHT | GAMEPAD_BTN_LEFT)))
     {
+        // Make it easier to hear the notes.
+        if (sys_bgmRunning()) {
+            engine::sound::stop_bgm();
+        }
+
         static uint8_t voice = music::voices::drums;
         static uint8_t note = music::notes::snare;
 
@@ -506,6 +511,9 @@ void enter() {
     engine::graphics::enable_sprites();
     engine::graphics::background_0.enable();
 
+    // Kick off the bgm.
+    engine::sound::play_bgm(game::music::Bgm::Bgm_MM);
+
     engine::profiler::print_timings();
 }
 
@@ -516,6 +524,9 @@ void leave() {
     engine::graphics::background_0.disable();
     engine::graphics::reset_sprites(bg_sprite_start + bg_sprite_count);
     game::font::clear_text();
+
+    // Reset sound.
+    engine::sound::stop_bgm();
 }
 
 } // namespace
