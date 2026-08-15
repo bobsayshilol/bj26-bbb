@@ -449,11 +449,9 @@ Entry breakout_loop() {
         // Update gamepad/mouse input.
         engine::input::update_inputs();
 
-        // Handle the input.
-        const auto pressed = engine::input::g_buttons_pressed;
-        if (pressed & GAMEPAD_BTN_A) {
-            // TODO
-            next = Entry::Driving;
+        // Return to the main menu if requested.
+        if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
+            next = Entry::MainMenu;
             break;
         }
 

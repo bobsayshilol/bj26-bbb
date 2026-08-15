@@ -401,9 +401,8 @@ Entry driving_loop() {
         // Update gamepad/mouse input.
         engine::input::update_inputs();
 
-        // TODO: just for testing atm
-        const auto pressed = engine::input::g_buttons_pressed;
-        if (pressed & GAMEPAD_BTN_A) {
+        // Return to the main menu if requested.
+        if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
             next = Entry::MainMenu;
             break;
         }
