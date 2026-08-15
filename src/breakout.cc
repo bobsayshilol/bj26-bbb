@@ -54,6 +54,23 @@ struct Ball {
     engine::utils::FixedS1616 vy;
     engine::utils::FixedU88 frame;
     int8_t rot_speed;
+
+    // with_left is whether or not the wall/block is on the left of the ball.
+    void bounce_x(bool with_left) {
+        // Increase/decrease if going same/opposite direction
+        const bool moving_up = vy.value() < 0;
+        if (with_left == moving_up) rot_speed++; else rot_speed--;
+        vx = -vx;
+        engine::sound::play_effect(game::music::SoundEffect::SE_Breakout_Bounce);
+    }
+    // with_top is whether or not the wall/block is on the top of the ball.
+    void bounce_y(bool with_top) {
+        // Increase/decrease if going same/opposite direction
+        const bool moving_left = vx.value() < 0;
+        if (with_top != moving_left) rot_speed++; else rot_speed--;
+        vy = -vy;
+        engine::sound::play_effect(game::music::SoundEffect::SE_Breakout_Bounce);
+    }
 };
 Ball s_ball;
 
@@ -89,24 +106,12 @@ void ball_update() {
     const uint16_t nx = (ball.x + ball.vx).value() - wall_padding; // unsigned to wrap
     const uint16_t ny = (ball.y + ball.vy).value() - wall_padding; // unsigned to wrap
     if (nx >= (engine::graphics::SCREEN_WIDTH - 2 * wall_padding - ball_width)) {
-        // Increase/decrease if going same/opposite direction
         const bool left_side = nx > engine::graphics::SCREEN_WIDTH * 2;
-        const bool moving_up = ball.vy.value() < 0;
-        if (left_side == moving_up) ball.rot_speed++; else ball.rot_speed--;
-
-        ball.vx = -ball.vx;
-
-        engine::sound::play_effect(game::music::SoundEffect::SE_Breakout_Bounce);
+        ball.bounce_x(left_side);
     }
     if (ny >= (engine::graphics::SCREEN_HEIGHT - 2 * wall_padding - ball_height)) {
-        // Increase/decrease if going same/opposite direction
         const bool top_side = ny > engine::graphics::SCREEN_WIDTH * 2;
-        const bool moving_left = ball.vx.value() < 0;
-        if (top_side != moving_left) ball.rot_speed++; else ball.rot_speed--;
-
-        ball.vy = -ball.vy;
-
-        engine::sound::play_effect(game::music::SoundEffect::SE_Breakout_Bounce);
+        ball.bounce_y(top_side);
     }
 
     // Apply movement.
