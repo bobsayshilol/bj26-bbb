@@ -254,24 +254,38 @@ void blocks_update() {
 
     // Check for collisions.
     // TODO: quadtree or something, but this performs well enough already
-    uint32_t num_blocks = s_blocks.size();
+    const uint32_t num_blocks = s_blocks.size();
     for (uint32_t idx = 0; idx < num_blocks;) {
         const auto & block = s_blocks[idx];
-        if (ball_aabb.intersects(block.aabb())) {
+        const auto block_aabb = block.aabb();
+        if (ball_aabb.intersects(block_aabb)) [[unlikely]] {
+            // Work out which side we bounce from.
+            const auto dx = ball_aabb.center_x() - block_aabb.center_x();
+            const auto dy = ball_aabb.center_y() - block_aabb.center_y();
+            if (engine::utils::abs(dx) > engine::utils::abs(dy)) {
+                s_ball.bounce_x(dx > 0);
+            } else {
+                s_ball.bounce_y(dy > 0);
+            }
+
             // Kill it.
             engine::graphics::ObjSprite sprite;
             engine::graphics::set_sprite(block.sprite_id, sprite);
 
             // Knock this one off.
-            num_blocks--;
             s_blocks.remove_fast(idx);
+
+            // Play a sound.
+            engine::sound::play_effect(music::SoundEffect::SE_Breakout_Hit);
+
+            break;
         } else {
             // No hit. Next one.
             idx++;
         }
     }
 
-    if (num_blocks == 0) {
+    if (s_blocks.empty()) {
         // TODO
     }
 }

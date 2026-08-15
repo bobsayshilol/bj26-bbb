@@ -10,6 +10,10 @@ struct AABB {
     int16_t w;
     int16_t h;
 
+    // Assuming that w and h are even (for perf)
+    constexpr int16_t center_x() const { return x + w / 2; }
+    constexpr int16_t center_y() const { return y + h / 2; }
+
     constexpr bool intersects(const AABB & o) const {
         // x axis.
         int16_t xa = o.x - (x + w); // -ve iff this.right > o.left

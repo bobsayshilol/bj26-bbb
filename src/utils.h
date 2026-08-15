@@ -104,6 +104,12 @@ constexpr inline uint32_t size(const T (&)[N]) {
     return N;
 }
 
+// std::abs()
+template <typename T>
+constexpr inline T abs(const T & x) {
+    return x < 0 ? -x : x;
+}
+
 // LFSR based.
 // https://www.analog.com/en/resources/design-notes/random-number-generation-using-lfsr.html
 class LFSR {
