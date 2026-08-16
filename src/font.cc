@@ -74,7 +74,7 @@ void write_text(const char *text, uint16_t x, uint16_t y) {
 
         // Assign the next sprite to it.
         const uint32_t sprite_idx = sprite_start + used;
-        ASSERT(sprite_idx < font_max_sprites);
+        ASSERT(used < font_max_sprites);
         engine::graphics::set_sprite(sprite_idx, sprite);
 
         // Advance to the next character.
@@ -91,6 +91,7 @@ void clear_text() {
     // Read and reset how many are used.
     const uint16_t used = s_sprites_used;
     s_sprites_used = 0;
+    DEBUG_MSG("Font sprites: ", AS_INT(used));
 
     // Reset any used sprites.
     engine::graphics::ObjSprite sprite;
