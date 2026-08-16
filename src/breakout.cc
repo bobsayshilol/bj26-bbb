@@ -188,6 +188,7 @@ enum class UIState {
     Win1_7,
     Win1_8,
     Win1_9,
+    Win1_10,
     Playing2,
 
     Win2_0,
@@ -727,18 +728,21 @@ void ui_redraw() {
             game::font::write_left("Oh", text_padding, SCREEN_HEIGHT / 2);
             break;
         case UIState::Win1_6:
-            game::font::write_left("I dunno", text_padding, SCREEN_HEIGHT / 2);
+            game::font::write_left("...", text_padding, SCREEN_HEIGHT / 2);
             break;
         case UIState::Win1_7:
+            game::font::write_left("I dunno", text_padding, SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Win1_8:
             game::font::write_left("But the timing", text_padding, SCREEN_HEIGHT / 2);
             game::font::write_left("matched my game", text_padding, SCREEN_HEIGHT / 2 + text_padding);
             break;
-        case UIState::Win1_8:
+        case UIState::Win1_9:
             game::font::write_left("It was pretty", text_padding, SCREEN_HEIGHT / 2);
             game::font::write_left("sick", text_padding, SCREEN_HEIGHT / 2 + text_padding);
             break;
-        case UIState::Win1_9:
-            game::font::write_right("Never mind", text_padding, SCREEN_HEIGHT / 2);
+        case UIState::Win1_10:
+            game::font::write_right("Sure", text_padding, SCREEN_HEIGHT / 2);
             break;
 
         case UIState::Win2_2:
@@ -753,18 +757,23 @@ void ui_redraw() {
 
         case UIState::Win3_2:
             game::font::write_right("Where did you", text_padding, SCREEN_HEIGHT / 2);
-            game::font::write_right("get that game?", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            game::font::write_right("get that game", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            game::font::write_right("anyway?", text_padding, SCREEN_HEIGHT / 2 + text_padding * 2);
             break;
         case UIState::Win3_3:
-            game::font::write_left("That cute 8 legged", text_padding, SCREEN_HEIGHT / 2);
-            game::font::write_left("bucko outside gave", text_padding, SCREEN_HEIGHT / 2 + text_padding);
-            game::font::write_left("it to me", text_padding, SCREEN_HEIGHT / 2 + text_padding * 2);
+            game::font::write_left("There was a cute 8", text_padding, SCREEN_HEIGHT / 2);
+            game::font::write_left("legged bucko outside", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            game::font::write_left("who gave it to me", text_padding, SCREEN_HEIGHT / 2 + text_padding * 2);
             break;
         case UIState::Win3_4:
             game::font::write_right("!", text_padding, SCREEN_HEIGHT / 2);
             break;
         case UIState::Win3_5:
-            game::font::write_right("8 legged bucko?!", text_padding, SCREEN_HEIGHT / 2);
+            game::font::write_right("an 8 legged", text_padding, SCREEN_HEIGHT / 2);
+            game::font::write_right("bucko?!", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            break;
+        case UIState::Win3_6:
+            game::font::write_right("give me that!", text_padding, SCREEN_HEIGHT / 2);
             break;
 
         case UIState::Playing1:
@@ -829,6 +838,7 @@ void ui_advance(UIState ui) {
         case UIState::Win1_7:
         case UIState::Win1_8:
         case UIState::Win1_9:
+        case UIState::Win1_10:
         case UIState::Win2_2:
         case UIState::Win2_3:
         case UIState::Win2_4:
@@ -836,6 +846,7 @@ void ui_advance(UIState ui) {
         case UIState::Win3_3:
         case UIState::Win3_4:
         case UIState::Win3_5:
+        case UIState::Win3_6:
             s_level_state = LevelState::Text;
             break;
 
@@ -875,7 +886,8 @@ Entry ui_update() {
             case UIState::Win1_6: ui_advance(UIState::Win1_7); break;
             case UIState::Win1_7: ui_advance(UIState::Win1_8); break;
             case UIState::Win1_8: ui_advance(UIState::Win1_9); break;
-            case UIState::Win1_9: ui_advance(UIState::Playing2); break;
+            case UIState::Win1_9: ui_advance(UIState::Win1_10); break;
+            case UIState::Win1_10: ui_advance(UIState::Playing2); break;
 
             case UIState::Win2_0: break; // timed below
             case UIState::Win2_1: break; // timed below
@@ -888,7 +900,8 @@ Entry ui_update() {
             case UIState::Win3_2: ui_advance(UIState::Win3_3); break;
             case UIState::Win3_3: ui_advance(UIState::Win3_4); break;
             case UIState::Win3_4: ui_advance(UIState::Win3_5); break;
-            case UIState::Win3_5: return Entry::Driving;
+            case UIState::Win3_5: ui_advance(UIState::Win3_6); break;
+            case UIState::Win3_6: return Entry::Driving;
 
             case UIState::Playing1:
             case UIState::Playing2:
