@@ -59,6 +59,7 @@ constexpr uint8_t bg_tile_start = block_tile_start + block_tile_count;
 constexpr uint8_t bg_tile_inner = bg_tile_start + 0;
 constexpr uint8_t bg_tile_border = bg_tile_start + 1;
 constexpr uint8_t bg_tile_outer = bg_tile_start + 2;
+constexpr uint8_t bg_pal_outer = bg_pal_start + (bg_tile_outer - bg_tile_start);
 constexpr uint8_t bg_tile_count = 3;
 static_assert(bg_pal_count == bg_tile_count);
 
@@ -169,9 +170,37 @@ enum class LevelState {
     Text,
 } s_level_state;
 
+// Got the names of these wrong - UI now controls what's going on...
 enum class UIState {
-    Playing,
     Intro,
+    Playing1,
+
+    Win1_0,
+    Win1_1,
+    Win1_2,
+    Win1_3,
+    Win1_4,
+    Win1_5,
+    Win1_6,
+    Win1_7,
+    Win1_8,
+    Win1_9,
+    Playing2,
+
+    Win2_0,
+    Win2_1,
+    Win2_2,
+    Win2_3,
+    Win2_4,
+    Playing3,
+
+    Win3_0,
+    Win3_1,
+    Win3_2,
+    Win3_3,
+    Win3_4,
+    Win3_5,
+
     GameOver,
 } s_ui_state;
 
@@ -180,7 +209,28 @@ int16_t s_lives = 0;
 
 //
 
+struct Lightning {
+    uint16_t counter;
+    uint16_t end;
+    UIState next;
+    static constexpr uint16_t rate = 3;
+
+    void reset(UIState ui, uint16_t frames) {
+        counter = 0;
+        end = frames * rate;
+        next = ui;
+    }
+
+    bool tick() {
+        counter += rate;
+        const uint8_t g = engine::utils::max(31 - counter, 0);
+        engine::graphics::set_palette_colour(bg_pal_outer, RGB555(g, g, g));
+        return counter >= end;
+    }
+} s_lightning;
+
 void ui_redraw();
+void ui_advance(UIState ui);
 
 //
 
@@ -203,12 +253,11 @@ void ball_update() {
         } else {
             // We hit the floor, lose a life.
             if (s_lives-- == 0) {
-                s_ui_state = UIState::GameOver;
-                s_level_state = LevelState::Text;
+                ui_advance(UIState::GameOver);
             } else {
                 s_level_state = LevelState::Holding;
+                ui_redraw();
             }
-            ui_redraw();
         }
     }
 
@@ -297,8 +346,6 @@ static_assert(engine::utils::size(block_palette) == block_pal_count);
 void blocks_setup() {
     PROFILE_SCOPE(bk_set);
 
-    s_blocks.clear();
-
     // Clear out the tile.
     uint8_t tile_data[images::TileSize];
     engine::utils::fast_memset8(tile_data, engine::graphics::pal_transparent, sizeof(tile_data));
@@ -321,9 +368,16 @@ void blocks_setup() {
         auto * dst = engine::graphics::get_tile_data(block_tile_start + idx);
         engine::utils::fast_memcpy(dst, tile_data, sizeof(tile_data));
     }
+}
+
+void blocks_create() {
+    PROFILE_SCOPE(bk_rec);
+
+    s_blocks.clear();
+
+    // TODO: change layout based on s_ui_state
 
     // Setup block locations.
-    // TODO: different layouts
     uint8_t sprite_id = 0;
     for (uint8_t y = 0; y < block_pal_count; y++) { // one row per colour
         constexpr uint8_t block_x_spacing = 2;
@@ -399,6 +453,21 @@ void blocks_update() {
 
         if (s_blocks.empty()) {
             // Cleared the level.
+            switch (s_ui_state) {
+                case UIState::Playing1:
+                    ui_advance(UIState::Win1_0);
+                    break;
+                case UIState::Playing2:
+                    ui_advance(UIState::Win2_0);
+                    break;
+                case UIState::Playing3:
+                    ui_advance(UIState::Win3_0);
+                    break;
+
+                default:
+                    ASSERT(false);
+                    break;
+            }
         }
     }
 }
@@ -495,41 +564,225 @@ void paddle_update() {
 
 static char s_lives_text[] = "Buckos 0";
 void ui_redraw() {
+    using namespace engine::graphics;
+
     game::font::clear_text();
 
     // Always draw the lives counter.
     s_lives_text[7] = '0' + engine::utils::max<int16_t>(s_lives, 0);
-    game::font::write_text(s_lives_text, 0, 0);
+    game::font::write_text(s_lives_text, 1, 1);
+
+    constexpr uint8_t text_padding = 10;
 
     switch (s_ui_state) {
         case UIState::Intro:
-            game::font::write_centered("Press A to launch the bucko", engine::graphics::SCREEN_HEIGHT * 2 / 3);
+            game::font::write_centered("Press A to launch the bucko", SCREEN_HEIGHT * 2 / 3);
             break;
 
-        case UIState::Playing:
+        case UIState::Win1_0:
+        case UIState::Win1_1:
+        case UIState::Win2_0:
+        case UIState::Win2_1:
+        case UIState::Win3_0:
+        case UIState::Win3_1:
+            // Timed
+            break;
+
+        case UIState::Win1_2:
+            game::font::write_right("What was that?", text_padding, SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Win1_3:
+            game::font::write_left("What was what?", text_padding, SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Win1_4:
+            game::font::write_right("That flash", text_padding, SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Win1_5:
+            game::font::write_left("Oh", text_padding, SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Win1_6:
+            game::font::write_left("I dunno", text_padding, SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Win1_7:
+            game::font::write_left("But the timing", text_padding, SCREEN_HEIGHT / 2);
+            game::font::write_left("matched my game", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            break;
+        case UIState::Win1_8:
+            game::font::write_left("It was pretty", text_padding, SCREEN_HEIGHT / 2);
+            game::font::write_left("sick", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            break;
+        case UIState::Win1_9:
+            game::font::write_right("Never mind", text_padding, SCREEN_HEIGHT / 2);
+            break;
+
+        case UIState::Win2_2:
+            game::font::write_right("Again?", text_padding, SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Win2_3:
+            game::font::write_left("...", text_padding, SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Win2_4:
+            game::font::write_right("Hmm", text_padding, SCREEN_HEIGHT / 2);
+            break;
+
+        case UIState::Win3_2:
+            game::font::write_right("Where did you", text_padding, SCREEN_HEIGHT / 2);
+            game::font::write_right("get that game?", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            break;
+        case UIState::Win3_3:
+            game::font::write_left("That cute 8 legged", text_padding, SCREEN_HEIGHT / 2);
+            game::font::write_left("bucko outside gave", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            game::font::write_left("it to me", text_padding, SCREEN_HEIGHT / 2 + text_padding * 2);
+            break;
+        case UIState::Win3_4:
+            game::font::write_right("!", text_padding, SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Win3_5:
+            game::font::write_right("8 legged bucko?!", text_padding, SCREEN_HEIGHT / 2);
+            break;
+
+        case UIState::Playing1:
+        case UIState::Playing2:
+        case UIState::Playing3:
+            break;
+        case UIState::GameOver:
+            game::font::write_centered("No buckos left!", SCREEN_HEIGHT * 2 / 3);
+            break;
+    }
+}
+
+void ui_advance(UIState ui) {
+    s_ui_state = ui;
+    switch (ui) {
+        case UIState::Intro:
+            s_level_state = LevelState::Text;
+            s_lives = max_lives;
+            blocks_create();
+            break;
+
+        case UIState::Playing1:
+            s_level_state = LevelState::Playing; // straight into play
+            ball_launch();
+            break;
+
+        case UIState::Win1_0:
+            s_level_state = LevelState::Text;
+            s_lightning.reset(UIState::Win1_1, 10);
+            break;
+        case UIState::Win1_1:
+            s_level_state = LevelState::Text;
+            s_lightning.reset(UIState::Win1_2, 60);
+            break;
+
+        case UIState::Win2_0:
+            s_level_state = LevelState::Text;
+            s_lightning.reset(UIState::Win2_1, 10);
+            break;
+        case UIState::Win2_1:
+            s_level_state = LevelState::Text;
+            s_lightning.reset(UIState::Win2_2, 60);
+            break;
+
+        case UIState::Win3_0:
+            s_level_state = LevelState::Text;
+            s_lightning.reset(UIState::Win3_1, 10);
+            break;
+        case UIState::Win3_1:
+            s_level_state = LevelState::Text;
+            s_lightning.reset(UIState::Win3_2, 60);
+            break;
+
+        case UIState::Win1_2:
+        case UIState::Win1_3:
+        case UIState::Win1_4:
+        case UIState::Win1_5:
+        case UIState::Win1_6:
+        case UIState::Win1_7:
+        case UIState::Win1_8:
+        case UIState::Win1_9:
+        case UIState::Win2_2:
+        case UIState::Win2_3:
+        case UIState::Win2_4:
+        case UIState::Win3_2:
+        case UIState::Win3_3:
+        case UIState::Win3_4:
+        case UIState::Win3_5:
+            s_level_state = LevelState::Text;
+            break;
+
+        case UIState::Playing2:
+            s_level_state = LevelState::Holding;
+            s_lives = max_lives;
+            blocks_create();
+            break;
+
+        case UIState::Playing3:
+            s_level_state = LevelState::Holding;
+            s_lives = max_lives;
+            blocks_create();
             break;
 
         case UIState::GameOver:
-            game::font::write_centered("No buckos left!", engine::graphics::SCREEN_HEIGHT * 2 / 3);
+            s_level_state = LevelState::Text;
             break;
     }
+    ui_redraw();
 }
 
 Entry ui_update() {
     const uint16_t pressed = engine::input::g_buttons_pressed;
     if (pressed & GAMEPAD_BTN_A) {
         switch (s_ui_state) {
-            case UIState::Intro:
-                s_ui_state = UIState::Playing;
-                s_level_state = LevelState::Playing;
-                ball_launch();
-                ui_redraw();
+            case UIState::Intro: ui_advance(UIState::Playing1); break;
+
+            case UIState::Win1_0: break; // timed below
+            case UIState::Win1_1: break; // timed below
+            case UIState::Win1_2: ui_advance(UIState::Win1_3); break;
+            case UIState::Win1_3: ui_advance(UIState::Win1_4); break;
+            case UIState::Win1_4: ui_advance(UIState::Win1_5); break;
+            case UIState::Win1_5: ui_advance(UIState::Win1_6); break;
+            case UIState::Win1_6: ui_advance(UIState::Win1_7); break;
+            case UIState::Win1_7: ui_advance(UIState::Win1_8); break;
+            case UIState::Win1_8: ui_advance(UIState::Win1_9); break;
+            case UIState::Win1_9: ui_advance(UIState::Playing2); break;
+
+            case UIState::Win2_0: break; // timed below
+            case UIState::Win2_1: break; // timed below
+            case UIState::Win2_2: ui_advance(UIState::Win2_3); break;
+            case UIState::Win2_3: ui_advance(UIState::Win2_4); break;
+            case UIState::Win2_4: ui_advance(UIState::Playing3); break;
+
+            case UIState::Win3_0: break; // timed below
+            case UIState::Win3_1: break; // timed below
+            case UIState::Win3_2: ui_advance(UIState::Win3_3); break;
+            case UIState::Win3_3: ui_advance(UIState::Win3_4); break;
+            case UIState::Win3_4: ui_advance(UIState::Win3_5); break;
+            case UIState::Win3_5: return Entry::Driving;
+
+            case UIState::Playing1:
+            case UIState::Playing2:
+            case UIState::Playing3:
+                ASSERT(false);
                 break;
-            case UIState::Playing:
-                break;
-            case UIState::GameOver:
-                return Entry::MainMenu;
+
+            case UIState::GameOver: return Entry::MainMenu;
         }
+    }
+
+    // Lightning effect.
+    switch (s_ui_state) {
+        case UIState::Win1_0:
+        case UIState::Win1_1:
+        case UIState::Win2_0:
+        case UIState::Win2_1:
+        case UIState::Win3_0:
+        case UIState::Win3_1:
+            if (s_lightning.tick()) {
+                ui_advance(s_lightning.next);
+            }
+            break;
+        default:
+            break;
     }
 
     return Entry::Breakout;
@@ -612,13 +865,10 @@ void enter() {
     paddle_setup();
     blocks_setup();
     ball_setup();
-    s_level_state = LevelState::Text;
-    s_lives = max_lives;
-
-    // Any UI.
-    s_ui_state = UIState::Intro;
     game::font::setup_tiles<font_tile_start, font_sprite_start>();
-    ui_redraw();
+
+    // Kick off the UI state machine.
+    ui_advance(UIState::Intro);
 
     // This screen uses sprites and has a background.
     bios_vsync();

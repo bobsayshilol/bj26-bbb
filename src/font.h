@@ -40,6 +40,15 @@ inline void write_centered(const char (&text)[N], uint16_t y) {
     const uint16_t x = engine::graphics::SCREEN_WIDTH / 2 - (N - 1) * CharWidth / 2;
     write_text(text, x, y);
 }
+template <uint16_t N>
+inline void write_left(const char (&text)[N], uint8_t padding, uint16_t y) {
+    write_text(text, padding, y);
+}
+template <uint16_t N>
+inline void write_right(const char (&text)[N], uint8_t padding, uint16_t y) {
+    const uint16_t x = engine::graphics::SCREEN_WIDTH - (N - 1) * CharWidth - padding;
+    write_text(text, x, y);
+}
 
 // Clear any existing text.
 void clear_text();
