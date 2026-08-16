@@ -58,6 +58,10 @@ void write_text(const char *text, uint16_t x, uint16_t y) {
             y += CharHeight;
             sprite.set_y(y);
             continue;
+        } else if (ch == ' ') {
+            // No need to use a sprite for a space.
+            x += CharWidth;
+            continue;
         }
 
         // Lookup the tile.
