@@ -1,5 +1,6 @@
 #include "aabb.h"
 #include "fixed.h"
+#include "font.h"
 #include "game.h"
 #include "images.h"
 #include "input.h"
@@ -30,15 +31,21 @@ constexpr uint8_t pal_grey = 2;
 constexpr uint8_t pal_ball_start = 3;
 constexpr uint8_t pal_ball_count = 16; // TODO: less colours
 
-constexpr uint8_t ball_sprite_start = 0;
+// font has highest prio.
+constexpr uint8_t font_sprite_start = 0;
+constexpr uint8_t font_sprite_count = font::font_max_sprites;
+constexpr uint8_t font_tile_start = 0;
+constexpr uint8_t font_tile_count = font::font_tile_count;
+
+constexpr uint8_t ball_sprite_start = font_sprite_start + font_sprite_count;
 constexpr uint8_t ball_sprite_count = 4; // big quad - TODO: look into 32x32 tile instead
-constexpr uint8_t ball_tile_start = 0;
+constexpr uint8_t ball_tile_start = font_tile_start + font_tile_count;
 constexpr uint8_t ball_tile_count = ball_sprite_count * 8; // animation frames
 
 constexpr uint8_t block_pal_start = pal_ball_start + pal_ball_count;
 constexpr uint8_t block_pal_count = 6; // num colours
 constexpr uint8_t block_sprite_start = ball_sprite_start + ball_sprite_count;
-constexpr uint8_t block_sprite_count = block_pal_count * 12; // # of each colour
+constexpr uint8_t block_sprite_count = block_pal_count * 8; // # of each colour
 constexpr uint8_t block_tile_start = ball_tile_start + ball_tile_count;
 constexpr uint8_t block_tile_count = block_pal_count;
 
@@ -151,6 +158,19 @@ enum class LevelState {
     Text,
 } s_level_state;
 
+enum class UIState {
+    Playing,
+    Intro,
+    GameOver,
+} s_ui_state;
+
+constexpr int16_t max_lives = 3;
+int16_t s_lives = 0;
+
+//
+
+void ui_redraw();
+
 //
 
 void ball_update() {
@@ -170,9 +190,14 @@ void ball_update() {
         if (top_side) {
             ball.bounce_y(top_side);
         } else {
-            // We hit the floor, game over.
-            // TODO: lose a life
-            s_level_state = LevelState::Holding;
+            // We hit the floor, lose a life.
+            if (s_lives-- == 0) {
+                s_ui_state = UIState::GameOver;
+                s_level_state = LevelState::Text;
+            } else {
+                s_level_state = LevelState::Holding;
+            }
+            ui_redraw();
         }
     }
 
@@ -193,7 +218,7 @@ void ball_draw() {
     static_assert(ball_tile_count % ball_sprite_count == 0, "Each part needs a tile");
     static_assert((ball_tile_count & (ball_tile_count - 1)) == 0, "Power of 2");
 
-    uint8_t rot_frame = ball_tile_start + s_ball.frame.value();
+    uint8_t rot_frame = s_ball.frame.value();
     // Round down to multiple of sprite count since data is stored a full quad at a time.
     rot_frame &= ~(ball_sprite_count - 1);
     const uint16_t x = s_ball.x.value();
@@ -208,7 +233,7 @@ void ball_draw() {
         const uint16_t dy = (i & 2) ? engine::graphics::bg_tile_size : 0;
         sprite.set_x(x + dx);
         sprite.set_y(y + dy);
-        sprite.set_tile_index((rot_frame + i) % ball_tile_count);
+        sprite.set_tile_index(ball_tile_start + ((rot_frame + i) % ball_tile_count));
         set_sprite(ball_sprite_start + i, sprite);
     }
 }
@@ -290,13 +315,15 @@ void blocks_setup() {
     // TODO: different layouts
     uint8_t sprite_id = 0;
     for (uint8_t y = 0; y < block_pal_count; y++) { // one row per colour
+        constexpr uint8_t block_x_spacing = 2;
+        constexpr uint8_t block_y_spacing = 2;
         constexpr uint8_t row_len = block_sprite_count / block_pal_count;
-        constexpr uint8_t mid_x = engine::graphics::SCREEN_WIDTH / 2 - row_len * engine::graphics::bg_tile_size / 2;
-        constexpr uint8_t mid_y = engine::graphics::SCREEN_HEIGHT / 2 - block_pal_count * engine::graphics::bg_tile_size / 2;
+        constexpr uint8_t mid_x = engine::graphics::SCREEN_WIDTH / 2 - row_len * (block_width + block_x_spacing) / 2;
+        constexpr uint8_t mid_y = engine::graphics::SCREEN_HEIGHT / 2 - block_pal_count * (block_height + block_y_spacing) / 2;
         for (uint8_t x = 0; x < row_len; x++) {
             Block & block = s_blocks.push_back({});
-            block.x = mid_x + x * engine::graphics::bg_tile_size;
-            block.y = mid_y + y * engine::graphics::bg_tile_size;
+            block.x = mid_x + x * (block_width + block_x_spacing);
+            block.y = mid_y + y * (block_height * block_y_spacing);
             block.sprite_id = block_sprite_start + sprite_id++;
 
             // Draw it now. We'll erase it when it's destroyed.
@@ -455,6 +482,50 @@ void paddle_update() {
 
 //
 
+static char s_lives_text[] = "Buckos 0";
+void ui_redraw() {
+    game::font::clear_text();
+
+    // Always draw the lives counter.
+    s_lives_text[7] = '0' + s_lives;
+    game::font::write_text(s_lives_text, 0, 0);
+
+    switch (s_ui_state) {
+        case UIState::Intro:
+            game::font::write_centered("Press A to launch the bucko", engine::graphics::SCREEN_HEIGHT * 2 / 3);
+            break;
+
+        case UIState::Playing:
+            break;
+
+        case UIState::GameOver:
+            game::font::write_centered("No buckos left", engine::graphics::SCREEN_HEIGHT * 2 / 3);
+            break;
+    }
+}
+
+Entry ui_update() {
+    const uint16_t pressed = engine::input::g_buttons_pressed;
+    if (pressed & GAMEPAD_BTN_A) {
+        switch (s_ui_state) {
+            case UIState::Intro:
+                s_ui_state = UIState::Playing;
+                s_level_state = LevelState::Playing;
+                ball_launch();
+                ui_redraw();
+                break;
+            case UIState::Playing:
+                break;
+            case UIState::GameOver:
+                return Entry::MainMenu;
+        }
+    }
+
+    return Entry::Breakout;
+}
+
+//
+
 void enter() {
     // Setup colours.
     engine::graphics::set_backdrop_a(RGB555(0, 0, 0));
@@ -468,7 +539,13 @@ void enter() {
     paddle_setup();
     blocks_setup();
     ball_setup();
-    s_level_state = LevelState::Holding;
+    s_level_state = LevelState::Text;
+    s_lives = max_lives;
+
+    // Any UI.
+    s_ui_state = UIState::Intro;
+    game::font::setup_tiles<font_tile_start, font_sprite_start>();
+    ui_redraw();
 
     // This screen uses sprites and has a background.
     bios_vsync();
@@ -489,6 +566,7 @@ void leave() {
     //engine::graphics::background_0.disable();
     engine::graphics::bitmap_0.disable();
     engine::graphics::reset_sprites<block_sprite_start + block_sprite_count>();
+    font::clear_text();
 
     // Reset sound.
     engine::sound::stop_bgm();
@@ -499,8 +577,8 @@ void leave() {
 Entry breakout_loop() {
     enter();
 
-    Entry next = Entry::MainMenu;
-    while (true) {
+    Entry next = Entry::Breakout;
+    while (next == Entry::Breakout) {
         // Wait for vsync.
         {
             PROFILE_SCOPE(vsync);
@@ -516,12 +594,16 @@ Entry breakout_loop() {
             break;
         }
 
-        // Paddle is controllable.
-        paddle_update();
+        if (s_level_state == LevelState::Text) {
+            next = ui_update();
+        } else {
+            // Paddle is controllable.
+            paddle_update();
 
-        // Update ball.
-        ball_update();
-        blocks_update();
+            // Update ball.
+            ball_update();
+            blocks_update();
+        }
         ball_draw();
 
         engine::profiler::print_timings();
