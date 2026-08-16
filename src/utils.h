@@ -21,6 +21,8 @@ struct Array {
 
     constexpr T * begin() { return raw; }
     constexpr T * end() { return raw + Size; }
+    constexpr const T * begin() const { return raw; }
+    constexpr const T * end() const { return raw + Size; }
 
     constexpr T & operator[](uint8_t i) { ASSERT(i < Size); return raw[i]; }
     constexpr const T & operator[](uint8_t i) const { ASSERT(i < Size); return raw[i]; }

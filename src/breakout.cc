@@ -43,9 +43,12 @@ constexpr uint8_t ball_sprite_count = 4; // big quad - TODO: look into 32x32 til
 constexpr uint8_t ball_tile_start = font_tile_start + font_tile_count;
 constexpr uint8_t ball_tile_count = ball_sprite_count * 8; // animation frames
 
+constexpr uint8_t trapped_sprite_start = ball_sprite_start + ball_sprite_count;
+constexpr uint8_t trapped_sprite_count = ball_sprite_count;
+
 constexpr uint8_t block_pal_start = pal_ball_start + pal_ball_count;
 constexpr uint8_t block_pal_count = 6; // num colours
-constexpr uint8_t block_sprite_start = ball_sprite_start + ball_sprite_count;
+constexpr uint8_t block_sprite_start = trapped_sprite_start + trapped_sprite_count;
 constexpr uint8_t block_sprite_count = block_pal_count * 8; // # of each colour
 constexpr uint8_t block_tile_start = ball_tile_start + ball_tile_count;
 constexpr uint8_t block_tile_count = block_pal_count;
@@ -370,37 +373,144 @@ void blocks_setup() {
     }
 }
 
+constexpr uint8_t grid_start_y = wall_padding_y * 2;
+
+struct BlockDef { uint8_t x, y, tile; };
+constexpr auto make_grid_1() {
+    engine::utils::Array<BlockDef, block_sprite_count> grid{};
+    uint8_t sprite_id = 0;
+    for (uint8_t j = 0; j < block_pal_count; j++) { // one row per colour
+        constexpr uint8_t block_x_spacing = 2;
+        constexpr uint8_t block_y_spacing = 2;
+        constexpr uint8_t row_len = block_sprite_count / block_pal_count;
+        constexpr uint8_t start_x = engine::graphics::SCREEN_WIDTH / 2 - row_len * (block_width + block_x_spacing) / 2;
+        for (uint8_t i = 0; i < row_len; i++) {
+            const uint8_t x = start_x + i * (block_width + block_x_spacing);
+            const uint8_t y = grid_start_y + j * (block_height + block_y_spacing);
+            static_assert(block_tile_count == block_pal_count);
+            const uint8_t tile_id = block_tile_start + j;
+            grid[sprite_id++] = {x, y, tile_id};
+        }
+    }
+    ASSERT(sprite_id == grid.size());
+    return grid;
+}
+constexpr auto grid_layout_1 = make_grid_1();
+
+constexpr auto make_grid_2() {
+    const uint8_t widths[] = { 3, 5, 7, 7, 7, 5, 3 };
+    constexpr uint8_t total = 37;
+    static_assert(block_sprite_count >= total, "Need to redesign widths");
+
+    engine::utils::Array<BlockDef, total> grid{};
+
+    uint8_t sprite_id = 0;
+    for (uint8_t j = 0; j < engine::utils::size(widths); j++) {
+        constexpr uint8_t block_x_spacing = 4;
+        constexpr uint8_t block_y_spacing = 4;
+        const uint8_t row_len = widths[j];
+        const uint8_t start_x = engine::graphics::SCREEN_WIDTH / 2 - row_len * (block_width + block_x_spacing) / 2;
+        for (uint8_t i = 0; i < row_len; i++) {
+            const uint8_t x = start_x + i * (block_width + block_x_spacing);
+            const uint8_t y = grid_start_y + j * (block_height + block_y_spacing);
+            const uint8_t ii = (i >= row_len / 2) ? row_len - i - 1: i;
+            const uint8_t jj = (j >= 3) ? 6 - j : j;
+            uint8_t tile_id = engine::utils::min(ii, jj);
+            tile_id += block_tile_start + 2;
+            grid[sprite_id++] = {x, y, tile_id};
+        }
+    }
+    ASSERT(sprite_id == grid.size());
+    return grid;
+}
+constexpr auto grid_layout_2 = make_grid_2();
+
+constexpr uint8_t grid_3_y_spacing = 4;
+constexpr uint16_t grid_3_trapped_x_start = engine::graphics::SCREEN_WIDTH / 2 - engine::graphics::bg_tile_size;
+constexpr uint16_t grid_3_trapped_y_start = grid_start_y + (block_height + grid_3_y_spacing) * 2;
+constexpr auto make_grid_3() {
+    const uint8_t widths[] = { 6, 6, 2, 2, 2, 2 };
+    constexpr uint8_t total = 40;
+    static_assert(block_sprite_count >= total, "Need to redesign shape");
+
+    engine::utils::Array<BlockDef, 40> grid{};
+
+    uint8_t sprite_id = 0;
+    for (uint8_t j = 0; j < engine::utils::size(widths); j++) {
+        constexpr uint8_t block_x_spacing = 4;
+        constexpr uint8_t block_y_spacing = grid_3_y_spacing;
+        const uint8_t row_len = widths[j];
+        const uint8_t start_x = engine::graphics::SCREEN_WIDTH / 2 - widths[0] * (block_width + block_x_spacing) / 2;
+        const uint8_t end_x = start_x + (widths[0] - 1) * (block_width + block_x_spacing);
+        constexpr uint8_t end_y = grid_start_y + 7 * (block_height + block_y_spacing);
+        for (uint8_t i = 0; i < row_len; i++) {
+            const uint8_t x = start_x + i * (block_width + block_x_spacing);
+            const uint8_t y = grid_start_y + j * (block_height + block_y_spacing);
+            const uint8_t rx = end_x - i * (block_width + block_x_spacing);
+            const uint8_t ry = end_y - j * (block_height + block_y_spacing);
+            const uint8_t tile_id = block_tile_start;
+            grid[sprite_id++] = {x, y, tile_id};
+            grid[sprite_id++] = {rx, ry, tile_id}; // rotated version
+        }
+    }
+    ASSERT(sprite_id == grid.size());
+    return grid;
+}
+constexpr auto grid_layout_3 = make_grid_3();
+
 void blocks_create() {
     PROFILE_SCOPE(bk_rec);
 
     s_blocks.clear();
 
-    // TODO: change layout based on s_ui_state
-
     // Setup block locations.
     uint8_t sprite_id = 0;
-    for (uint8_t y = 0; y < block_pal_count; y++) { // one row per colour
-        constexpr uint8_t block_x_spacing = 2;
-        constexpr uint8_t block_y_spacing = 2;
-        constexpr uint8_t row_len = block_sprite_count / block_pal_count;
-        constexpr uint8_t mid_x = engine::graphics::SCREEN_WIDTH / 2 - row_len * (block_width + block_x_spacing) / 2;
-        constexpr uint8_t mid_y = engine::graphics::SCREEN_HEIGHT / 2 - block_pal_count * (block_height + block_y_spacing) / 2;
-        for (uint8_t x = 0; x < row_len; x++) {
-            Block & block = s_blocks.push_back({});
-            block.x = mid_x + x * (block_width + block_x_spacing);
-            block.y = mid_y + y * (block_height * block_y_spacing);
-            block.sprite_id = block_sprite_start + sprite_id++;
+    auto add_block = [&](const BlockDef & def) {
+        // Add the block to the active set.
+        Block & block = s_blocks.push_back({});
+        block.x = def.x;
+        block.y = def.y;
+        block.sprite_id = block_sprite_start + sprite_id++;
 
-            // Draw it now. We'll erase it when it's destroyed.
-            static_assert(block_tile_count == block_pal_count);
-            const uint8_t tile_id = block_tile_start + y;
-            engine::graphics::ObjSprite sprite;
-            sprite.set_size(engine::graphics::SpriteSize::Size8x8);
-            sprite.set_tile_index(tile_id);
-            sprite.set_x(block.x);
-            sprite.set_y(block.y);
-            engine::graphics::set_sprite(block.sprite_id, sprite);
-        }
+        // Draw it now. We'll erase it when it's destroyed.
+        engine::graphics::ObjSprite sprite;
+        sprite.set_size(engine::graphics::SpriteSize::Size8x8);
+        sprite.set_tile_index(def.tile);
+        sprite.set_x(block.x);
+        sprite.set_y(block.y);
+        engine::graphics::set_sprite(block.sprite_id, sprite);
+    };
+
+    switch (s_ui_state) {
+        case UIState::Intro:
+            for (const auto & pos : grid_layout_1) {
+                add_block(pos);
+            }
+            break;
+        case UIState::Playing2:
+            for (const auto & pos : grid_layout_2) {
+                add_block(pos);
+            }
+            break;
+        case UIState::Playing3:
+            for (const auto & pos : grid_layout_3) {
+                add_block(pos);
+            }
+            // Add the trapped bucko too.
+            for (uint8_t i = 0; i < trapped_sprite_count; i++) {
+                engine::graphics::ObjSprite sprite;
+                const uint16_t dx = (i & 1) ? engine::graphics::bg_tile_size : 0;
+                const uint16_t dy = (i & 2) ? engine::graphics::bg_tile_size : 0;
+                sprite.set_x(grid_3_trapped_x_start + dx);
+                sprite.set_y(grid_3_trapped_y_start + dy);
+                sprite.set_tile_index(ball_tile_start + i);
+                set_sprite(trapped_sprite_start + i, sprite);
+            }
+            break;
+
+        default:
+            ASSERT(false);
+            break;
     }
 }
 
@@ -461,13 +571,24 @@ void blocks_update() {
                     ui_advance(UIState::Win2_0);
                     break;
                 case UIState::Playing3:
-                    ui_advance(UIState::Win3_0);
+                    // Have to hit the trapped bucko instead, see below.
+                    //ui_advance(UIState::Win3_0);
                     break;
 
                 default:
                     ASSERT(false);
                     break;
             }
+        }
+    }
+
+    if (s_ui_state == UIState::Playing3) {
+        constexpr engine::utils::AABB trapped_aabb{
+            grid_3_trapped_x_start, grid_3_trapped_y_start,
+            ball_width, ball_height,
+        };
+        if (ball_aabb.intersects(trapped_aabb)) {
+            ui_advance(UIState::Win3_0);
         }
     }
 }
