@@ -25,6 +25,7 @@ PROFILE_STORAGE(bk_upd);
 PROFILE_STORAGE(pd_set);
 PROFILE_STORAGE(pd_upd);
 PROFILE_STORAGE(bg_set);
+PROFILE_STORAGE(bk_rec);
 PROFILE_STORAGE(vsync);
 
 constexpr uint8_t pal_white = 1;
