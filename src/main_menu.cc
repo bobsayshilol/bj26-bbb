@@ -227,6 +227,7 @@ void background_setup() {
 enum class MenuState {
     Main,
     LevelSelect,
+    Options,
     Credits,
 };
 MenuState s_menu_state = MenuState::Main;
@@ -240,10 +241,13 @@ namespace buttons {
 
 enum class Action {
     None,
+    VolUp,
+    VolDown,
 
     // Menus.
     MainMenu,
     LevelSelect,
+    Options,
     Credits,
 
     // Game levels.
@@ -273,13 +277,22 @@ struct Button {
 constexpr const Button main[] {
     Button("Start Game", engine::graphics::SCREEN_HEIGHT / 2, Action::Start),
     Button("Level Select", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 3, Action::LevelSelect),
-    Button("Credits", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 6, Action::Credits),
+    Button("Options", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 6, Action::Options),
+    Button("Credits", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 9, Action::Credits),
 };
 
 constexpr const Button level_select[] {
     Button("Breakout", engine::graphics::SCREEN_HEIGHT / 2, Action::Breakout),
     Button("Driving", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 3, Action::Driving),
     Button("moar", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 6, Action::None),
+    Button("Back", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
+};
+
+constexpr const Button options[] {
+#if 0 // doesn't work and causes lag...
+    Button("Volume up", engine::graphics::SCREEN_HEIGHT / 2, Action::VolUp),
+    Button("Volume Down", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 3, Action::VolDown),
+#endif
     Button("Back", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
 };
 
@@ -305,6 +318,11 @@ void menu_redraw() {
             game::font::write_centered("Level Select", engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::level_select;
             num_butts = engine::utils::size(buttons::level_select);
+            break;
+        case MenuState::Options:
+            game::font::write_centered("Options", engine::graphics::SCREEN_HEIGHT / 4);
+            butts = buttons::options;
+            num_butts = engine::utils::size(buttons::options);
             break;
         case MenuState::Credits:
             game::font::write_centered("Credits", engine::graphics::SCREEN_HEIGHT / 4);
@@ -398,6 +416,10 @@ Entry menu_update() {
                 butts = buttons::level_select;
                 num_butts = engine::utils::size(buttons::level_select);
                 break;
+            case MenuState::Options:
+                butts = buttons::options;
+                num_butts = engine::utils::size(buttons::options);
+                break;
             case MenuState::Credits:
                 butts = buttons::credits;
                 num_butts = engine::utils::size(buttons::credits);
@@ -427,12 +449,26 @@ Entry menu_update() {
                 case Action::None:
                     break;
 
+                case Action::VolUp:
+                    static int s_volume = SOUND_VOL_100;
+                    s_volume += 2;
+                    [[fallthrough]];
+                case Action::VolDown:
+                    s_volume -= 1;
+                    s_volume = engine::utils::clamp(s_volume, 0, SOUND_VOL_100);
+                    engine::sound::set_volume(s_volume);
+                    break;
+
                 case Action::MainMenu:
                     s_menu_state = MenuState::Main;
                     menu_redraw();
                     break;
                 case Action::LevelSelect:
                     s_menu_state = MenuState::LevelSelect;
+                    menu_redraw();
+                    break;
+                case Action::Options:
+                    s_menu_state = MenuState::Options;
                     menu_redraw();
                     break;
                 case Action::Credits:

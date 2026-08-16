@@ -33,4 +33,10 @@ inline void stop_bgm() {
 	sys_stopBgm(&detail::g_sound_state);
 }
 
+// |level| must be one of the SOUND_VOL_* macros.
+inline void set_volume(int level) {
+	bios_soundVolume(SOUND_VOL_CH2_3, level);
+	bios_soundVolume(SOUND_VOL_CH4,   level);
+}
+
 } // namespace engine::sound
