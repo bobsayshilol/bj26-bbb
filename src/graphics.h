@@ -151,7 +151,7 @@ private:
     } parts;
 
 public:
-    // Value must be read/written as u16x2 or u32x1 (according to MAME).
+    // Value must be read/written as u16 (according to MAME).
     uint16_t raw = {};
 
     // Note: we have an extra 3 bits here, so BG tiles should be larger if possible!

@@ -24,6 +24,7 @@ PROFILE_STORAGE(bk_set);
 PROFILE_STORAGE(bk_upd);
 PROFILE_STORAGE(pd_set);
 PROFILE_STORAGE(pd_upd);
+PROFILE_STORAGE(bg_set);
 PROFILE_STORAGE(vsync);
 
 constexpr uint8_t pal_white = 1;
@@ -52,9 +53,19 @@ constexpr uint8_t block_tile_count = block_pal_count;
 constexpr uint8_t paddle_pal_start = block_pal_start + block_pal_count;
 constexpr uint8_t paddle_pal_count = 1;
 
+constexpr uint8_t bg_pal_start = paddle_pal_start + paddle_pal_count;
+constexpr uint8_t bg_pal_count = 3;
+constexpr uint8_t bg_tile_start = block_tile_start + block_tile_count;
+constexpr uint8_t bg_tile_inner = bg_tile_start + 0;
+constexpr uint8_t bg_tile_border = bg_tile_start + 1;
+constexpr uint8_t bg_tile_outer = bg_tile_start + 2;
+constexpr uint8_t bg_tile_count = 3;
+static_assert(bg_pal_count == bg_tile_count);
+
 //
 
-constexpr uint32_t wall_padding = 2 * engine::graphics::bg_tile_size;
+constexpr uint32_t wall_padding_x = 6 * engine::graphics::bg_tile_size;
+constexpr uint32_t wall_padding_y = 4 * engine::graphics::bg_tile_size;
 constexpr uint32_t block_width = 8;
 constexpr uint32_t block_height = 2;
 
@@ -110,7 +121,7 @@ constexpr engine::utils::FixedU88 s_ball_speeds[] = {
 constexpr uint32_t paddle_speed = 1;
 constexpr uint32_t paddle_width = 32;
 constexpr uint32_t paddle_height = 8;
-constexpr uint8_t paddle_y = engine::graphics::SCREEN_HEIGHT - wall_padding - paddle_height;
+constexpr uint8_t paddle_y = engine::graphics::SCREEN_HEIGHT - wall_padding_y - 4; // - paddle_height;
 constexpr auto paddle_hit_boost = engine::utils::FixedS1616::div(1, 3);
 
 struct Paddle {
@@ -179,13 +190,13 @@ void ball_update() {
     auto & ball = s_ball;
 
     // Bounds check walls.
-    const uint16_t nx = (ball.x + ball.vx).value() - wall_padding; // unsigned to wrap
-    const uint16_t ny = (ball.y + ball.vy).value() - wall_padding; // unsigned to wrap
-    if (nx >= (engine::graphics::SCREEN_WIDTH - 2 * wall_padding - ball_width)) {
+    const uint16_t nx = (ball.x + ball.vx).value() - wall_padding_x; // unsigned to wrap
+    const uint16_t ny = (ball.y + ball.vy).value() - wall_padding_y; // unsigned to wrap
+    if (nx >= (engine::graphics::SCREEN_WIDTH - 2 * wall_padding_x - ball_width)) {
         const bool left_side = nx > engine::graphics::SCREEN_WIDTH * 2;
         ball.bounce_x(left_side);
     }
-    if (ny >= (engine::graphics::SCREEN_HEIGHT - 2 * wall_padding - ball_height)) {
+    if (ny >= (engine::graphics::SCREEN_HEIGHT - 2 * wall_padding_y - ball_height)) {
         const bool top_side = ny > engine::graphics::SCREEN_WIDTH * 2;
         if (top_side) {
             ball.bounce_y(top_side);
@@ -432,19 +443,19 @@ void paddle_update() {
     if (held & GAMEPAD_BTN_LEFT) {
         s_paddle.x = engine::utils::clamp<uint8_t>(
             s_paddle.x - paddle_speed,
-            wall_padding,
-            engine::graphics::SCREEN_WIDTH - wall_padding - paddle_width
+            wall_padding_x,
+            engine::graphics::SCREEN_WIDTH - wall_padding_x - paddle_width
         );
     } else if (held & GAMEPAD_BTN_RIGHT) {
         s_paddle.x = engine::utils::clamp<uint8_t>(
             s_paddle.x + paddle_speed,
-            wall_padding,
-            engine::graphics::SCREEN_WIDTH - wall_padding - paddle_width
+            wall_padding_x,
+            engine::graphics::SCREEN_WIDTH - wall_padding_x - paddle_width
         );
     }
 
     // Move the paddle.
-    engine::graphics::bitmap_0.position_x() = s_paddle.x;
+    s_paddle.bitmap().position_x() = s_paddle.x;
 
     // per-state functionality.
     switch (s_level_state) {
@@ -499,7 +510,7 @@ void ui_redraw() {
             break;
 
         case UIState::GameOver:
-            game::font::write_centered("No buckos left", engine::graphics::SCREEN_HEIGHT * 2 / 3);
+            game::font::write_centered("No buckos left!", engine::graphics::SCREEN_HEIGHT * 2 / 3);
             break;
     }
 }
@@ -526,6 +537,68 @@ Entry ui_update() {
 
 //
 
+void background_setup() {
+    using namespace engine::graphics;
+    PROFILE_SCOPE(bg_set);
+
+    auto & bg0 = background_0;
+
+    // TODO: proper tile data
+    auto set_tile = [](int idx, uint16_t rgb) {
+        const uint8_t pal = idx - bg_tile_start + bg_pal_start;
+        set_palette_colour(pal, rgb);
+        auto * dst = get_tile_data(idx);
+        engine::utils::fast_memset8(dst, pal, bg_tile_size * bg_tile_size);
+    };
+    set_tile(bg_tile_inner, RGB555(5, 5, 5));
+    set_tile(bg_tile_border, RGB555(17, 6, 22));
+    set_tile(bg_tile_outer, RGB555(0, 0, 0));
+
+    constexpr uint8_t border_x = wall_padding_x / bg_tile_size - 1;
+    constexpr uint8_t border_y = wall_padding_y / bg_tile_size - 1;
+
+    // Above and below play area.
+    BGSprite sprite;
+    sprite.set_tile_index(bg_tile_outer);
+    for (uint32_t y = 0; y < border_y; y++) {
+        for (uint32_t x = 0; x < bg_tilemap_size; x++) {
+            bg0.set_sprite(x, y, sprite);
+            bg0.set_sprite(x, bg_tilemap_size - y - 1, sprite);
+        }
+    }
+    sprite.set_tile_index(bg_tile_border);
+    for (uint32_t x = border_x; x < bg_tilemap_size - border_x - 1; x++) {
+        constexpr uint32_t y = border_y;
+        bg0.set_sprite(x, y, sprite);
+        bg0.set_sprite(x, bg_tilemap_size - y - 1, sprite);
+    }
+
+    // Left and right.
+    sprite.set_tile_index(bg_tile_outer);
+    for (uint32_t y = border_y; y < bg_tilemap_size - border_y - 1; y++) {
+        for (uint32_t x = 0; x < border_x; x++) {
+            bg0.set_sprite(x, y, sprite);
+            bg0.set_sprite(bg_tilemap_size - x - 1, y, sprite);
+        }
+    }
+    sprite.set_tile_index(bg_tile_border);
+    for (uint32_t y = border_y; y < bg_tilemap_size - border_y - 1; y++) {
+        constexpr uint32_t x = border_x;
+        bg0.set_sprite(x, y, sprite);
+        bg0.set_sprite(bg_tilemap_size - x - 1, y, sprite);
+    }
+
+    // Center.
+    sprite.set_tile_index(bg_tile_inner);
+    for (uint32_t y = border_y + 1; y < bg_tilemap_size - border_y - 1; y++) {
+        for (uint32_t x = border_x + 1; x < bg_tilemap_size - border_x - 1; x++) {
+            bg0.set_sprite(x, y, sprite);
+        }
+    }
+}
+
+//
+
 void enter() {
     // Setup colours.
     engine::graphics::set_backdrop_a(RGB555(0, 0, 0));
@@ -533,7 +606,7 @@ void enter() {
     engine::graphics::set_palette_colour(pal_grey, RGB555(15, 15, 15));
 
     // Draw a background.
-    //background_setup(); // TODO
+    background_setup();
 
     // Setup the parts.
     paddle_setup();
@@ -550,8 +623,8 @@ void enter() {
     // This screen uses sprites and has a background.
     bios_vsync();
     engine::graphics::enable_sprites();
-    //engine::graphics::background_0.enable();
     engine::graphics::bitmap_0.enable();
+    engine::graphics::background_0.enable();
 
     // Kick off the bgm.
     engine::sound::play_bgm(game::music::Bgm::Bgm_Breakout);
@@ -563,8 +636,8 @@ void leave() {
     // Reset graphics state.
     bios_vsync();
     engine::graphics::disable_sprites();
-    //engine::graphics::background_0.disable();
     engine::graphics::bitmap_0.disable();
+    engine::graphics::background_0.disable();
     engine::graphics::reset_sprites<block_sprite_start + block_sprite_count>();
     font::clear_text();
 
