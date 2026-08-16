@@ -379,7 +379,7 @@ void leave() {
     engine::graphics::disable_sprites();
     engine::graphics::bitmap_0.disable();
     engine::graphics::bitmap_2.disable();
-    engine::graphics::reset_sprites(transparent_sprite_start + transparent_sprite_count);
+    engine::graphics::reset_sprites<transparent_sprite_start + transparent_sprite_count>();
 
     // Reset sound.
     engine::sound::stop_bgm();

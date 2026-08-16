@@ -488,7 +488,7 @@ void leave() {
     engine::graphics::disable_sprites();
     //engine::graphics::background_0.disable();
     engine::graphics::bitmap_0.disable();
-    engine::graphics::reset_sprites(block_sprite_start + block_sprite_count);
+    engine::graphics::reset_sprites<block_sprite_start + block_sprite_count>();
 
     // Reset sound.
     engine::sound::stop_bgm();
