@@ -498,7 +498,7 @@ void ui_redraw() {
     game::font::clear_text();
 
     // Always draw the lives counter.
-    s_lives_text[7] = '0' + s_lives;
+    s_lives_text[7] = '0' + engine::utils::max<int16_t>(s_lives, 0);
     game::font::write_text(s_lives_text, 0, 0);
 
     switch (s_ui_state) {
