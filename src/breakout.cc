@@ -203,12 +203,14 @@ enum class UIState {
     Win3_3,
     Win3_4,
     Win3_5,
+    Win3_6,
 
     GameOver,
 } s_ui_state;
 
 constexpr int16_t max_lives = 3;
 int16_t s_lives = 0;
+char s_level_char;
 
 //
 
@@ -684,6 +686,7 @@ void paddle_update() {
 //
 
 static char s_lives_text[] = "Buckos 0";
+static char s_level_text[] = "Level 0";
 void ui_redraw() {
     using namespace engine::graphics;
 
@@ -691,13 +694,15 @@ void ui_redraw() {
 
     // Always draw the lives counter.
     s_lives_text[7] = '0' + engine::utils::max<int16_t>(s_lives, 0);
-    game::font::write_text(s_lives_text, 1, 1);
+    s_level_text[6] = s_level_char;
+    game::font::write_left(s_lives_text, 1, 1);
+    game::font::write_right(s_level_text, 1, 1);
 
     constexpr uint8_t text_padding = 10;
 
     switch (s_ui_state) {
         case UIState::Intro:
-            game::font::write_centered("Press A to launch the bucko", SCREEN_HEIGHT * 2 / 3);
+            game::font::write_centered("Press A to launch a bucko", SCREEN_HEIGHT / 2);
             break;
 
         case UIState::Win1_0:
@@ -778,11 +783,14 @@ void ui_advance(UIState ui) {
         case UIState::Intro:
             s_level_state = LevelState::Text;
             s_lives = max_lives;
+            s_level_char = '0';
             blocks_create();
             break;
 
         case UIState::Playing1:
             s_level_state = LevelState::Playing; // straight into play
+            s_lives = max_lives;
+            s_level_char = '1';
             ball_launch();
             break;
 
@@ -834,12 +842,14 @@ void ui_advance(UIState ui) {
         case UIState::Playing2:
             s_level_state = LevelState::Holding;
             s_lives = max_lives;
+            s_level_char = '2';
             blocks_create();
             break;
 
         case UIState::Playing3:
             s_level_state = LevelState::Holding;
             s_lives = max_lives;
+            s_level_char = 'X';
             blocks_create();
             break;
 
