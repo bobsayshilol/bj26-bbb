@@ -464,6 +464,9 @@ void enter() {
     //engine::graphics::background_0.enable();
     engine::graphics::bitmap_0.enable();
 
+    // Kick off the bgm.
+    engine::sound::play_bgm(game::music::Bgm::Bgm_Breakout);
+
     engine::profiler::print_timings();
 }
 
@@ -474,6 +477,9 @@ void leave() {
     //engine::graphics::background_0.disable();
     engine::graphics::bitmap_0.disable();
     engine::graphics::reset_sprites(block_sprite_start + block_sprite_count);
+
+    // Reset sound.
+    engine::sound::stop_bgm();
 }
 
 } // namespace
