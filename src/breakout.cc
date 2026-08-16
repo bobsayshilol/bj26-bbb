@@ -4,6 +4,7 @@
 #include "images.h"
 #include "input.h"
 #include "graphics.h"
+#include "maths.h"
 #include "memory.h"
 #include "music.h"
 #include "profiler.h"
@@ -101,7 +102,7 @@ constexpr uint32_t paddle_speed = 1;
 constexpr uint32_t paddle_width = 32;
 constexpr uint32_t paddle_height = 8;
 constexpr uint8_t paddle_y = engine::graphics::SCREEN_HEIGHT - wall_padding - paddle_height;
-constexpr auto paddle_hit_boost = engine::utils::FixedS1616::div(1, 4);
+constexpr auto paddle_hit_boost = engine::utils::FixedS1616::div(1, 3);
 
 struct Paddle {
     uint8_t x;
@@ -142,6 +143,14 @@ engine::utils::Vector<Block, block_sprite_count> s_blocks;
 
 //
 
+enum class LevelState {
+    Holding,
+    Playing,
+    Text,
+} s_level_state;
+
+//
+
 void ball_update() {
     PROFILE_SCOPE(bl_phy);
 
@@ -156,7 +165,13 @@ void ball_update() {
     }
     if (ny >= (engine::graphics::SCREEN_HEIGHT - 2 * wall_padding - ball_height)) {
         const bool top_side = ny > engine::graphics::SCREEN_WIDTH * 2;
-        ball.bounce_y(top_side);
+        if (top_side) {
+            ball.bounce_y(top_side);
+        } else {
+            // We hit the floor, game over.
+            // TODO: lose a life
+            s_level_state = LevelState::Holding;
+        }
     }
 
     // Apply movement.
@@ -196,20 +211,27 @@ void ball_draw() {
     }
 }
 
-void ball_reset() {
-    s_ball.x = engine::utils::FixedS1616::from(engine::graphics::SCREEN_WIDTH / 2 - ball_width / 2);
-    s_ball.y = engine::utils::FixedS1616::from(engine::graphics::SCREEN_HEIGHT - (wall_padding + ball_height + engine::graphics::bg_tile_size));
-    s_ball.vx = engine::utils::FixedS1616::div(3, 2);
-    s_ball.vy = engine::utils::FixedS1616::div(-1, 2);
+void ball_reset_to_paddle() {
+    s_ball.x = engine::utils::FixedS1616::from(s_paddle.x + paddle_width / 2 - ball_width / 2);
+    s_ball.y = engine::utils::FixedS1616::from(paddle_y - ball_height);
+    s_ball.vx = engine::utils::FixedS1616::from(0);
+    s_ball.vy = engine::utils::FixedS1616::from(0);
     s_ball.frame = engine::utils::FixedU88::from(0);
     s_ball.rot_speed = engine::utils::size(s_ball_speeds) / 2;
+}
+
+void ball_launch() {
+    int16_t angle = engine::utils::g_rng() & 0x3F; // 1 quadrant
+    angle -= 0x20; // rotate to point up
+    s_ball.vx = engine::utils::FixedS1616::div(engine::maths::sin(angle), 128);
+    s_ball.vy = engine::utils::FixedS1616::div(engine::maths::cos(angle), 128);
 }
 
 void ball_setup() {
     PROFILE_SCOPE(bl_set);
 
     // Reset the ball.
-    ball_reset();
+    ball_reset_to_paddle();
 
     // Copy the tile data for the ball.
     game::images::copy_tile_data<
@@ -367,6 +389,7 @@ void paddle_update() {
 
     // React to inputs.
     const uint16_t held = engine::input::g_buttons_held;
+    const uint16_t pressed = engine::input::g_buttons_pressed;
     if (held & GAMEPAD_BTN_LEFT) {
         s_paddle.x = engine::utils::clamp<uint8_t>(
             s_paddle.x - paddle_speed,
@@ -384,18 +407,37 @@ void paddle_update() {
     // Move the paddle.
     engine::graphics::bitmap_0.position_x() = s_paddle.x;
 
-    // Bounce the ball.
-    const auto ball_aabb = s_ball.aabb();
-    const auto paddle_aabb = s_paddle.aabb();
-    if (ball_aabb.intersects(paddle_aabb)) {
-        s_ball.bounce_y(false);
+    // per-state functionality.
+    switch (s_level_state) {
+        case LevelState::Holding: {
+            // Keep the ball up with the paddle.
+            ball_reset_to_paddle();
 
-        // Add some speed to the ball.
-        if (held & GAMEPAD_BTN_LEFT) {
-            s_ball.vx -= paddle_hit_boost;
-        } else if (held & GAMEPAD_BTN_RIGHT) {
-            s_ball.vx += paddle_hit_boost;
-        }
+            // Trigger the launch.
+            if (pressed & GAMEPAD_BTN_A) {
+                ball_launch();
+                s_level_state = LevelState::Playing;
+            }
+        } break;
+
+        case LevelState::Playing: {
+            // Bounce the ball.
+            const auto ball_aabb = s_ball.aabb();
+            const auto paddle_aabb = s_paddle.aabb();
+            if (ball_aabb.intersects(paddle_aabb)) {
+                s_ball.bounce_y(false);
+
+                // Add some speed to the ball.
+                if (held & GAMEPAD_BTN_LEFT) {
+                    s_ball.vx -= paddle_hit_boost;
+                } else if (held & GAMEPAD_BTN_RIGHT) {
+                    s_ball.vx += paddle_hit_boost;
+                }
+            }
+        } break;
+
+        case LevelState::Text:
+            break;
     }
 }
 
@@ -411,9 +453,10 @@ void enter() {
     //background_setup(); // TODO
 
     // Setup the parts.
-    ball_setup();
-    blocks_setup();
     paddle_setup();
+    blocks_setup();
+    ball_setup();
+    s_level_state = LevelState::Holding;
 
     // This screen uses sprites and has a background.
     bios_vsync();
