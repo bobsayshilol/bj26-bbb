@@ -76,6 +76,7 @@ struct Ball {
         const bool moving_up = vy.value() < 0;
         if (with_left == moving_up) rot_speed++; else rot_speed--;
         vx = -vx;
+        x += vx; // move back since we might still be overlapping
         engine::sound::play_effect(game::music::SoundEffect::SE_Breakout_Bounce);
     }
     // with_top is whether or not the wall/block is on the top of the ball.
@@ -84,6 +85,7 @@ struct Ball {
         const bool moving_left = vx.value() < 0;
         if (with_top != moving_left) rot_speed++; else rot_speed--;
         vy = -vy;
+        y += vy; // move back since we might still be overlapping
         engine::sound::play_effect(game::music::SoundEffect::SE_Breakout_Bounce);
     }
 };
@@ -317,39 +319,49 @@ void blocks_update() {
 
     // Check for collisions.
     // TODO: quadtree or something, but this performs well enough already
+    int16_t hit_idx = -1;
+    uint32_t min_dist2 = (ball_width + block_width) * (ball_width + block_width) / 4; // for a circle
     const uint32_t num_blocks = s_blocks.size();
-    for (uint32_t idx = 0; idx < num_blocks;) {
+    for (uint16_t idx = 0; idx < num_blocks; idx++) {
         const auto & block = s_blocks[idx];
         const auto block_aabb = block.aabb();
-        if (ball_aabb.intersects(block_aabb)) [[unlikely]] {
-            // Work out which side we bounce from.
-            const auto dx = ball_aabb.center_x() - block_aabb.center_x();
-            const auto dy = ball_aabb.center_y() - block_aabb.center_y();
-            if (engine::utils::abs(dx) > engine::utils::abs(dy)) {
-                s_ball.bounce_x(dx > 0);
-            } else {
-                s_ball.bounce_y(dy > 0);
+        if (ball_aabb.intersects(block_aabb)) {
+            const int16_t dx = ball_aabb.center_x() - block_aabb.center_x();
+            const int16_t dy = ball_aabb.center_y() - block_aabb.center_y();
+            const uint32_t dist2 = bios_mathMulS16(dx, dx) + bios_mathMulS16(dy, dy);
+            if (dist2 <= min_dist2) {
+                hit_idx = idx;
+                min_dist2 = dist2;
             }
-
-            // Kill it.
-            engine::graphics::ObjSprite sprite;
-            engine::graphics::set_sprite(block.sprite_id, sprite);
-
-            // Knock this one off.
-            s_blocks.remove_fast(idx);
-
-            // Play a sound.
-            engine::sound::play_effect(music::SoundEffect::SE_Breakout_Hit);
-
-            break;
-        } else {
-            // No hit. Next one.
-            idx++;
         }
     }
 
-    if (s_blocks.empty()) {
-        // TODO
+    // Handle the collision with the closest.
+    if (hit_idx != -1) {
+        // Work out which side we bounce from.
+        const auto block = s_blocks[hit_idx];
+        const auto block_aabb = block.aabb();
+        const auto dx = ball_aabb.center_x() - block_aabb.center_x();
+        const auto dy = ball_aabb.center_y() - block_aabb.center_y();
+        if (engine::utils::abs(dx) * (block_height + ball_height) > engine::utils::abs(dy) * (block_width + ball_width)) {
+            s_ball.bounce_x(dx > 0);
+        } else {
+            s_ball.bounce_y(dy > 0);
+        }
+
+        // Kill it.
+        engine::graphics::ObjSprite sprite;
+        engine::graphics::set_sprite(block.sprite_id, sprite);
+
+        // Knock this one off.
+        s_blocks.remove_fast(hit_idx);
+
+        // Play a sound.
+        engine::sound::play_effect(music::SoundEffect::SE_Breakout_Hit);
+
+        if (s_blocks.empty()) {
+            // Cleared the level.
+        }
     }
 }
 
