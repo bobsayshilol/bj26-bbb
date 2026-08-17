@@ -114,6 +114,7 @@ int main() {
 			case game::Entry::MainMenu: game::main_menu::enter(); break;
 			case game::Entry::Breakout: game::breakout::enter(); break;
 			case game::Entry::Driving: game::driving::enter(); break;
+			case game::Entry::Intertitle: game::intertile::enter(); break;
 		}
 
 		// Run main loop.
@@ -124,6 +125,7 @@ int main() {
 				case game::Entry::MainMenu: next = game::main_menu::loop(); break;
 				case game::Entry::Breakout: next = game::breakout::loop(); break;
 				case game::Entry::Driving: next = game::driving::loop(); break;
+				case game::Entry::Intertitle: next = game::intertile::loop(); break;
 			}
 		}
 
@@ -133,6 +135,7 @@ int main() {
 			case game::Entry::MainMenu: game::main_menu::leave(); break;
 			case game::Entry::Breakout: game::breakout::leave(); break;
 			case game::Entry::Driving: game::driving::leave(); break;
+			case game::Entry::Intertitle: game::intertile::leave(); break;
 		}
 
 		// Update state.

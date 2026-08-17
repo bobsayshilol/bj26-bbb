@@ -902,7 +902,9 @@ Entry ui_update() {
             case UIState::Win3_3: ui_advance(UIState::Win3_4); break;
             case UIState::Win3_4: ui_advance(UIState::Win3_5); break;
             case UIState::Win3_5: ui_advance(UIState::Win3_6); break;
-            case UIState::Win3_6: return Entry::Driving;
+            case UIState::Win3_6:
+                intertile::setup(intertile::Text::Meanwhile, Entry::Driving);
+                return Entry::Intertitle;
 
             case UIState::Playing1:
             case UIState::Playing2:
@@ -910,7 +912,9 @@ Entry ui_update() {
                 ASSERT(false);
                 break;
 
-            case UIState::GameOver: return Entry::MainMenu;
+            case UIState::GameOver:
+                intertile::setup(intertile::Text::GameOver, Entry::MainMenu);
+                return Entry::Intertitle;
         }
     }
 

@@ -13,6 +13,7 @@ enum class Entry : uint8_t {
     MainMenu,
     Breakout,
     Driving,
+    Intertitle,
     //Cyber,
 };
 
@@ -35,6 +36,14 @@ void leave();
 } // namespace breakout
 
 namespace driving {
+void enter();
+Entry loop();
+void leave();
+} // namespace driving
+
+namespace intertile {
+enum class Text { Intro, Meanwhile, GameOver, };
+void setup(Text text, Entry next);
 void enter();
 Entry loop();
 void leave();

@@ -477,7 +477,8 @@ Entry menu_update() {
                     break;
 
                 case Action::Start:
-                    return Entry::Breakout; // TODO: might need more states
+                    intertile::setup(intertile::Text::Intro, Entry::Breakout);
+                    return Entry::Intertitle;
                 case Action::Breakout:
                     return Entry::Breakout;
                 case Action::Driving:
