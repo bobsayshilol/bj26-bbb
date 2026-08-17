@@ -6,6 +6,10 @@
 #include "game.h"
 #include "profiler.h"
 
+namespace game {
+bool g_won = false;
+} // namespace game
+
 namespace {
 
 PROFILE_STORAGE(vsync); // bios_vsync takes ~266426 cycles, which matches the expected 266666.

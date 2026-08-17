@@ -54,7 +54,10 @@ program_guitar = 0x03
 program_strings = 0x09
 program_beep = 0x0A
 program_xylophone = 0x1E
+program_musicbox = 0x21
 program_drums = 0x27
+#program_clavi = 0x28 # probably better
+program_clavi = 0x35
 
 
 class MIDIConverter:
@@ -74,6 +77,10 @@ class MIDIConverter:
 			self._voices[trk_chan] = program_piano
 		elif name == "030-dist":
 			self._voices[trk_chan] = program_guitar
+		elif name == "007-clavinet":
+			self._voices[trk_chan] = program_clavi
+		elif name == "010-musicbox":
+			self._voices[trk_chan] = program_musicbox
 		elif name == "048-strings":
 			self._voices[trk_chan] = program_strings
 		elif name == "054-synvoice":

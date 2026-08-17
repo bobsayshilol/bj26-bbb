@@ -160,7 +160,8 @@ void set_test_note(uint8_t i) {
 
 const uint8_t * const bgm_list[] {
     [Bgm::Bgm_Test] = bgm_test_mid,
-    [Bgm::Bgm_MM] = main_menu_bgm_mid,
+    [Bgm::Bgm_MM_good] = main_menu_bgm_mid,
+    [Bgm::Bgm_MM_bad] = main_menu_bgm2_mid,
     [Bgm::Bgm_Breakout] = bgm_test_mid,
     [Bgm::Bgm_Driving] = driving_bgm_mid,
     [Bgm::Bgm_Tense] = tense_bgm,

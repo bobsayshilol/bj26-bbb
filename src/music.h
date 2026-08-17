@@ -7,7 +7,8 @@ namespace game::music {
 // Sounds + music.
 enum Bgm : uint8_t {
     Bgm_Test,
-    Bgm_MM,
+    Bgm_MM_good,
+    Bgm_MM_bad,
     Bgm_Breakout,
     Bgm_Driving,
     Bgm_Tense,
@@ -129,6 +130,8 @@ extern const uint8_t bgm_test_mid[];
 #define bgm_test_mid_end_evt MIDI_EVT_REPEAT()
 extern const uint8_t main_menu_bgm_mid[];
 #define main_menu_bgm_mid_end_evt MIDI_EVT_REPEAT()
+extern const uint8_t main_menu_bgm2_mid[];
+#define main_menu_bgm2_mid_end_evt MIDI_EVT_REPEAT()
 extern const uint8_t driving_bgm_mid[];
 #define driving_bgm_mid_end_evt MIDI_EVT_REPEAT()
 

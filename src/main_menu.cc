@@ -548,7 +548,7 @@ void enter() {
     engine::graphics::background_0.enable();
 
     // Kick off the bgm.
-    engine::sound::play_bgm(game::music::Bgm::Bgm_MM);
+    engine::sound::play_bgm(g_won ? game::music::Bgm::Bgm_MM_good : game::music::Bgm::Bgm_MM_bad);
 
     engine::profiler::print_timings();
 }

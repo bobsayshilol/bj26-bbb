@@ -6,6 +6,8 @@
 
 namespace game {
 
+extern bool g_won;
+
 enum class Entry : uint8_t {
     Attract,
     MainMenu,
