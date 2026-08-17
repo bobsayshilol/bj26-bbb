@@ -13,7 +13,7 @@
 #include "sound.h"
 #include "utils.h"
 
-namespace game {
+namespace game::main_menu {
 
 namespace {
 
@@ -525,6 +525,8 @@ Entry menu_update() {
     return Entry::MainMenu;
 }
 
+} // namespace
+
 //
 
 void enter() {
@@ -565,38 +567,31 @@ void leave() {
     engine::sound::stop_bgm();
 }
 
-} // namespace
-
-Entry main_menu_loop() {
-    enter();
-
+Entry loop() {
     Entry next = Entry::MainMenu;
-    while (true) {
-        // Wait for vsync.
-        {
-            PROFILE_SCOPE(vsync);
-            bios_vsync();
-        }
-
-        // Update gamepad/mouse input.
-        engine::input::update_inputs();
-
-        // Update text from menu.
-        next = menu_update();
-        if (next != Entry::MainMenu) {
-            break;
-        }
-
-        // Update bouncers.
-        bouncers_update();
-
-        // Update background.
-        background_update();
-
-        engine::profiler::print_timings();
+    // Wait for vsync.
+    {
+        PROFILE_SCOPE(vsync);
+        bios_vsync();
     }
 
-    leave();
+    // Update gamepad/mouse input.
+    engine::input::update_inputs();
+
+    // Update text from menu.
+    next = menu_update();
+    if (next != Entry::MainMenu) {
+        return next;
+    }
+
+    // Update bouncers.
+    bouncers_update();
+
+    // Update background.
+    background_update();
+
+    engine::profiler::print_timings();
+
     return next;
 }
 

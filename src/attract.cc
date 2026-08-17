@@ -1,8 +1,14 @@
 #include "game.h"
 
-namespace game {
+namespace game::attract {
 
-Entry attract_loop() {
+void enter() {
+}
+
+void leave() {
+}
+
+Entry loop() {
     DEBUG_MSG("TODO: ", __func__);
     return Entry::MainMenu;
 }

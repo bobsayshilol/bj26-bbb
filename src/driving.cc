@@ -19,7 +19,7 @@
 #define PRINT_PROFILING 0 // This causes UI corruption when enabled
 #define SPRITES_FOR_ROAD 0 // This seems like it'd be more hassle to shift and requires lots of sprites if not multiplexing
 
-namespace game {
+namespace game::driving {
 
 namespace {
 
@@ -351,6 +351,8 @@ void draw_road() {
     bitmap_0.scroll_x() = 0;
 }
 
+} // namespace
+
 //
 
 void enter() {
@@ -385,48 +387,38 @@ void leave() {
     engine::sound::stop_bgm();
 }
 
-} // namespace
+Entry loop() {
+    Entry next = Entry::Driving;
 
-Entry driving_loop() {
-    enter();
-
-    Entry next = Entry::MainMenu;
-    while (true) {
-        // Wait for vblank to end.
-        {
-            PROFILE_SCOPE(rd_vsy);
-            wait_until_line0();
-        }
-
-        // Update gamepad/mouse input.
-        engine::input::update_inputs();
-
-        // Return to the main menu if requested.
-        if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
-            next = Entry::MainMenu;
-            break;
-        }
-
-        // Print the last frame's timings before updating logic since we don't seem to have enough time after.
-#if PRINT_PROFILING
-        engine::profiler::print_timings();
-#endif
-
-        // We have a bit of breathing room before we need to draw the road.
-        update_logic();
-        draw_sprites();
-
-        // Draw the road.
-        draw_road();
-
-        // TODO: there should be breathing room after too, ie during vblank?
+    // Wait for vblank to end.
+    {
+        PROFILE_SCOPE(rd_vsy);
+        wait_until_line0();
     }
 
-    // Reset timings for the next entry.
-    engine::profiler::print_timings();
+    // Update gamepad/mouse input.
+    engine::input::update_inputs();
 
-    leave();
+    // Return to the main menu if requested.
+    if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
+        return Entry::MainMenu;
+    }
+
+    // Print the last frame's timings before updating logic since we don't seem to have enough time after.
+#if PRINT_PROFILING
+    engine::profiler::print_timings();
+#endif
+
+    // We have a bit of breathing room before we need to draw the road.
+    update_logic();
+    draw_sprites();
+
+    // Draw the road.
+    draw_road();
+
+    // TODO: there should be breathing room after too, ie during vblank?
+
     return next;
 }
 
-} // namespace game
+} // namespace game::driving

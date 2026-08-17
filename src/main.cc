@@ -106,25 +106,37 @@ int main() {
 	splash();
 
 	// Basic state machine.
-	game::Entry entry = game::Entry::Attract;
+	game::Entry state = game::Entry::Attract;
 	while (true) {
-		switch (entry) {
-			case game::Entry::Attract:
-				entry = game::attract_loop();
-				break;
-			case game::Entry::MainMenu:
-				entry = game::main_menu_loop();
-				break;
-			case game::Entry::Breakout:
-				entry = game::breakout_loop();
-				break;
-			case game::Entry::Driving:
-				entry = game::driving_loop();
-				break;
-			//case game::Entry::Cyber:
-			//	entry = game::cyber_loop();
-			//	break;
+		// Enter new state.
+		switch (state) {
+			case game::Entry::Attract: game::attract::enter(); break;
+			case game::Entry::MainMenu: game::main_menu::enter(); break;
+			case game::Entry::Breakout: game::breakout::enter(); break;
+			case game::Entry::Driving: game::driving::enter(); break;
 		}
+
+		// Run main loop.
+		game::Entry next = state;
+		while (next == state) {
+			switch (state) {
+				case game::Entry::Attract: next = game::attract::loop(); break;
+				case game::Entry::MainMenu: next = game::main_menu::loop(); break;
+				case game::Entry::Breakout: next = game::breakout::loop(); break;
+				case game::Entry::Driving: next = game::driving::loop(); break;
+			}
+		}
+
+		// Leave the old state.
+		switch (state) {
+			case game::Entry::Attract: game::attract::leave(); break;
+			case game::Entry::MainMenu: game::main_menu::leave(); break;
+			case game::Entry::Breakout: game::breakout::leave(); break;
+			case game::Entry::Driving: game::driving::leave(); break;
+		}
+
+		// Update state.
+		state = next;
 	}
 
 	return 0;

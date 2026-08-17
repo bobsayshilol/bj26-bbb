@@ -13,7 +13,7 @@
 #include "utils.h"
 #include "vector.h"
 
-namespace game {
+namespace game::breakout {
 
 namespace {
 
@@ -995,6 +995,8 @@ void background_setup() {
     }
 }
 
+} // namespace
+
 //
 
 void enter() {
@@ -1040,45 +1042,37 @@ void leave() {
     engine::sound::stop_bgm();
 }
 
-} // namespace
-
-Entry breakout_loop() {
-    enter();
-
+Entry loop() {
     Entry next = Entry::Breakout;
-    while (next == Entry::Breakout) {
-        // Wait for vsync.
-        {
-            PROFILE_SCOPE(vsync);
-            bios_vsync();
-        }
 
-        // Update gamepad/mouse input.
-        engine::input::update_inputs();
-
-        // Return to the main menu if requested.
-        if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
-            next = Entry::MainMenu;
-            break;
-        }
-
-        if (s_level_state == LevelState::Text) {
-            next = ui_update();
-        } else {
-            // Paddle is controllable.
-            paddle_update();
-
-            // Update ball.
-            ball_update();
-            blocks_update();
-        }
-        ball_draw();
-
-        engine::profiler::print_timings();
+    // Wait for vsync.
+    {
+        PROFILE_SCOPE(vsync);
+        bios_vsync();
     }
 
-    leave();
+    // Update gamepad/mouse input.
+    engine::input::update_inputs();
+
+    // Return to the main menu if requested.
+    if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
+        return Entry::MainMenu;
+    }
+
+    if (s_level_state == LevelState::Text) {
+        next = ui_update();
+    } else {
+        // Paddle is controllable.
+        paddle_update();
+
+        // Update ball.
+        ball_update();
+        blocks_update();
+    }
+    ball_draw();
+
+    engine::profiler::print_timings();
     return next;
 }
 
-} // namespace game
+} // namespace game::breakout

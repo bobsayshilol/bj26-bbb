@@ -16,10 +16,34 @@ enum class Entry : uint8_t {
     //Cyber,
 };
 
-Entry attract_loop();
-Entry main_menu_loop();
-Entry breakout_loop();
-Entry driving_loop();
-//Entry cyber_loop();
+namespace attract {
+void enter();
+Entry loop();
+void leave();
+} // namespace attract
+
+namespace main_menu {
+void enter();
+Entry loop();
+void leave();
+} // namespace main_menu
+
+namespace breakout {
+void enter();
+Entry loop();
+void leave();
+} // namespace breakout
+
+namespace driving {
+void enter();
+Entry loop();
+void leave();
+} // namespace driving
+
+namespace cyber {
+void enter();
+Entry loop();
+void leave();
+} // namespace cyber
 
 } // namespace game
