@@ -67,6 +67,17 @@ constexpr uint8_t bg_pal_outer = bg_pal_start + (bg_tile_outer - bg_tile_start);
 constexpr uint8_t bg_tile_count = 3;
 static_assert(bg_pal_count == bg_tile_count);
 
+constexpr uint8_t voice_char_width = 3;
+constexpr uint8_t voice_char_height = 4;
+constexpr uint8_t left_char_tile_start = bg_tile_start + bg_tile_count;
+constexpr uint8_t left_char_tile_count = voice_char_width * voice_char_height;
+constexpr uint8_t left_char_pal_start = bg_pal_start + bg_pal_count;
+constexpr uint8_t left_char_pal_count = 16;
+constexpr uint8_t right_char_tile_start = left_char_tile_start + left_char_tile_count;
+constexpr uint8_t right_char_tile_count = voice_char_width * voice_char_height;
+constexpr uint8_t right_char_pal_start = left_char_pal_start + left_char_pal_count;
+constexpr uint8_t right_char_pal_count = 16;
+
 //
 
 constexpr uint32_t wall_padding_x = 6 * engine::graphics::bg_tile_size;
@@ -696,6 +707,32 @@ void paddle_update() {
 
 //
 
+enum class UIC { Left, Right, None };
+void ui_character(UIC voice) {
+    using namespace engine::graphics;
+
+    auto & bg0 = background_0;
+    constexpr uint8_t y0 = 24;
+
+    auto draw = [&](uint8_t x0, uint8_t tile, bool visible) {
+        uint8_t tile_idx = visible ? tile : bg_tile_outer;
+        BGSprite sprite;
+        for (int y = 0; y < voice_char_height; y++) {
+            for (int x = 0; x < voice_char_width; x++) {
+                sprite.set_tile_index(tile_idx);
+                bg0.set_sprite(x0 + x, y0 + y, sprite);
+                if (visible) tile_idx++;
+            }
+        }
+    };
+
+    // Bucko.
+    draw(0, left_char_tile_start, voice == UIC::Left);
+
+    // Robucko.
+    draw(bg_tilemap_size - voice_char_width, right_char_tile_start, voice == UIC::Right);
+}
+
 static char s_lives_text[] = "Buckos 0";
 static char s_level_text[] = "Level 0";
 void ui_redraw() {
@@ -710,6 +747,7 @@ void ui_redraw() {
     game::font::write_right(s_level_text, 1, 1);
 
     constexpr uint8_t text_padding = 10;
+    UIC voice = UIC::None;
 
     switch (s_ui_state) {
         case UIState::Intro_0:
@@ -731,63 +769,80 @@ void ui_redraw() {
 
         case UIState::Win1_2:
             game::font::write_right("What was that?", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Right;
             break;
         case UIState::Win1_3:
             game::font::write_left("What was what?", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Left;
             break;
         case UIState::Win1_4:
             game::font::write_right("That flash", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Right;
             break;
         case UIState::Win1_5:
             game::font::write_left("Oh", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Left;
             break;
         case UIState::Win1_6:
             game::font::write_left("...", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Left;
             break;
         case UIState::Win1_7:
             game::font::write_left("I dunno", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Left;
             break;
         case UIState::Win1_8:
             game::font::write_left("But the timing", text_padding, SCREEN_HEIGHT / 2);
             game::font::write_left("matched my game", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            voice = UIC::Left;
             break;
         case UIState::Win1_9:
             game::font::write_left("It was pretty", text_padding, SCREEN_HEIGHT / 2);
             game::font::write_left("sick", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            voice = UIC::Left;
             break;
         case UIState::Win1_10:
             game::font::write_right("Sure", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Right;
             break;
 
         case UIState::Win2_2:
             game::font::write_right("Again?", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Right;
             break;
         case UIState::Win2_3:
             game::font::write_left("...", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Left;
             break;
         case UIState::Win2_4:
             game::font::write_right("Hmm", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Right;
             break;
 
         case UIState::Win3_2:
             game::font::write_right("Where did you", text_padding, SCREEN_HEIGHT / 2);
             game::font::write_right("get that game", text_padding, SCREEN_HEIGHT / 2 + text_padding);
             game::font::write_right("anyway?", text_padding, SCREEN_HEIGHT / 2 + text_padding * 2);
+            voice = UIC::Right;
             break;
         case UIState::Win3_3:
             game::font::write_left("There was a cute 8", text_padding, SCREEN_HEIGHT / 2);
             game::font::write_left("legged bucko outside", text_padding, SCREEN_HEIGHT / 2 + text_padding);
             game::font::write_left("who gave it to me", text_padding, SCREEN_HEIGHT / 2 + text_padding * 2);
+            voice = UIC::Left;
             break;
         case UIState::Win3_4:
             game::font::write_right("!", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Right;
             break;
         case UIState::Win3_5:
             game::font::write_right("an 8 legged", text_padding, SCREEN_HEIGHT / 2);
             game::font::write_right("bucko?!", text_padding, SCREEN_HEIGHT / 2 + text_padding);
+            voice = UIC::Right;
             break;
         case UIState::Win3_6:
             game::font::write_right("give me that!", text_padding, SCREEN_HEIGHT / 2);
+            voice = UIC::Right;
             break;
 
         case UIState::Playing1:
@@ -798,6 +853,8 @@ void ui_redraw() {
             game::font::write_centered("No buckos left!", SCREEN_HEIGHT * 2 / 3);
             break;
     }
+
+    ui_character(voice);
 }
 
 void ui_advance(UIState ui) {
@@ -946,6 +1003,20 @@ Entry ui_update() {
     return Entry::Breakout;
 }
 
+void ui_setup() {
+    // Copy the tile data for the characters.
+    game::images::copy_tile_data<
+        left_char_pal_start, left_char_pal_count,
+        left_char_tile_start, left_char_tile_count,
+        game::images::bucko_left
+    >();
+    game::images::copy_tile_data<
+        right_char_pal_start, right_char_pal_count,
+        right_char_tile_start, right_char_tile_count,
+        game::images::robucko_right
+    >();
+}
+
 //
 
 void background_setup() {
@@ -1025,6 +1096,7 @@ void enter() {
     paddle_setup();
     blocks_setup();
     ball_setup();
+    ui_setup();
     game::font::setup_tiles<font_tile_start, font_sprite_start>();
 
     // Kick off the UI state machine.

@@ -14,6 +14,18 @@ static const uint8_t data[32 * TileSize];
 static const uint16_t palette[16];
 };
 
+struct bucko_left {
+static constexpr uint8_t pal_offset = 29;
+static const uint8_t data[12 * TileSize];
+static const uint16_t palette[16];
+};
+
+struct robucko_right {
+static constexpr uint8_t pal_offset = 45;
+static const uint8_t data[12 * TileSize];
+static const uint16_t palette[16];
+};
+
 struct mm_bouncer {
 static constexpr uint8_t pal_offset = 19;
 static const uint8_t data[8 * TileSize];
