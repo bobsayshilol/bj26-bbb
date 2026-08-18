@@ -112,6 +112,23 @@ constexpr inline T abs(const T & x) {
     return x < 0 ? -x : x;
 }
 
+// std::strlen()
+constexpr inline uint32_t strlen(const char *str) {
+    const char *p = str;
+    while (*p) p++;
+    return p - str;
+}
+
+// std::strchr()
+constexpr inline const char * strchr(const char *str, char ch) {
+    while (true) {
+        const char s = *str;
+        if (s == '\0') return nullptr;
+        if (s == ch) return str;
+        str++;
+    }
+}
+
 // LFSR based.
 // https://www.analog.com/en/resources/design-notes/random-number-generation-using-lfsr.html
 class LFSR {
