@@ -176,7 +176,8 @@ enum class LevelState {
 
 // Got the names of these wrong - UI now controls what's going on...
 enum class UIState {
-    Intro,
+    Intro_0,
+    Intro_1,
     Playing1,
 
     Win1_0,
@@ -241,6 +242,15 @@ void ui_advance(UIState ui);
 
 //
 
+void ball_reset() {
+    if (s_lives-- == 0) {
+        ui_advance(UIState::GameOver);
+    } else {
+        s_level_state = LevelState::Holding;
+        ui_redraw();
+    }
+}
+
 void ball_update() {
     PROFILE_SCOPE(bl_phy);
 
@@ -259,12 +269,7 @@ void ball_update() {
             ball.bounce_y(top_side);
         } else {
             // We hit the floor, lose a life.
-            if (s_lives-- == 0) {
-                ui_advance(UIState::GameOver);
-            } else {
-                s_level_state = LevelState::Holding;
-                ui_redraw();
-            }
+            ball_reset();
         }
     }
 
@@ -486,7 +491,7 @@ void blocks_create() {
     };
 
     switch (s_ui_state) {
-        case UIState::Intro:
+        case UIState::Playing1:
             for (const auto & pos : grid_layout_1) {
                 add_block(pos);
             }
@@ -678,6 +683,10 @@ void paddle_update() {
                     s_ball.vx += paddle_hit_boost;
                 }
             }
+
+            if (pressed & GAMEPAD_BTN_D) {
+                ball_reset();
+            }
         } break;
 
         case LevelState::Text:
@@ -703,8 +712,12 @@ void ui_redraw() {
     constexpr uint8_t text_padding = 10;
 
     switch (s_ui_state) {
-        case UIState::Intro:
+        case UIState::Intro_0:
             game::font::write_centered("Press A to launch a bucko", SCREEN_HEIGHT / 2);
+            break;
+        case UIState::Intro_1:
+            game::font::write_centered("Press D to reset in", SCREEN_HEIGHT / 2);
+            game::font::write_centered("case anything breaks", SCREEN_HEIGHT / 2 + text_padding);
             break;
 
         case UIState::Win1_0:
@@ -790,20 +803,6 @@ void ui_redraw() {
 void ui_advance(UIState ui) {
     s_ui_state = ui;
     switch (ui) {
-        case UIState::Intro:
-            s_level_state = LevelState::Text;
-            s_lives = max_lives;
-            s_level_char = '0';
-            blocks_create();
-            break;
-
-        case UIState::Playing1:
-            s_level_state = LevelState::Playing; // straight into play
-            s_lives = max_lives;
-            s_level_char = '1';
-            ball_launch();
-            break;
-
         case UIState::Win1_0:
             s_level_state = LevelState::Text;
             s_lightning.reset(UIState::Win1_1, 10);
@@ -831,6 +830,8 @@ void ui_advance(UIState ui) {
             s_lightning.reset(UIState::Win3_2, 60);
             break;
 
+        case UIState::Intro_0:
+        case UIState::Intro_1:
         case UIState::Win1_2:
         case UIState::Win1_3:
         case UIState::Win1_4:
@@ -849,6 +850,13 @@ void ui_advance(UIState ui) {
         case UIState::Win3_5:
         case UIState::Win3_6:
             s_level_state = LevelState::Text;
+            break;
+
+        case UIState::Playing1:
+            s_level_state = LevelState::Holding;
+            s_lives = max_lives;
+            s_level_char = '1';
+            blocks_create();
             break;
 
         case UIState::Playing2:
@@ -876,7 +884,8 @@ Entry ui_update() {
     const uint16_t pressed = engine::input::g_buttons_pressed;
     if (pressed & GAMEPAD_BTN_A) {
         switch (s_ui_state) {
-            case UIState::Intro: ui_advance(UIState::Playing1); break;
+            case UIState::Intro_0: ui_advance(UIState::Intro_1); break;
+            case UIState::Intro_1: ui_advance(UIState::Playing1); break;
 
             case UIState::Win1_0: break; // timed below
             case UIState::Win1_1: break; // timed below
@@ -1019,7 +1028,7 @@ void enter() {
     game::font::setup_tiles<font_tile_start, font_sprite_start>();
 
     // Kick off the UI state machine.
-    ui_advance(UIState::Intro);
+    ui_advance(UIState::Intro_0);
 
     // This screen uses sprites and has a background.
     bios_vsync();
