@@ -23,7 +23,7 @@ void init();
 #define DEBUG_MSG(...) engine::debug::internal::print(__VA_ARGS__)
 
 // Converting to int is much slower than hex, so default to hex.
-#define AS_INT(x) engine::debug::internal::as_int{.v = (int32_t)x}
+#define AS_INT(x) engine::debug::internal::as_int{.v = (int32_t)(x)}
 
 #define ASSERT(x) if (!(x)) { DEBUG_MSG(__FILE__, ":", AS_INT(__LINE__), ": assert failed: ", #x); while(true); }
 
