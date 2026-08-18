@@ -6,7 +6,7 @@ namespace game::music {
 
 // Sounds + music.
 enum Bgm : uint8_t {
-    Bgm_Test,
+    Bgm_Startup,
     Bgm_MM_good,
     Bgm_MM_bad,
     Bgm_Breakout,
@@ -126,8 +126,6 @@ constexpr uint8_t midi_bgm_scale = 32; // TODO: would be nice to be per-BGM
 
 
 // BGMs are generated from .mid files.
-extern const uint8_t bgm_test_mid[];
-#define bgm_test_mid_end_evt MIDI_EVT_REPEAT()
 extern const uint8_t main_menu_bgm_mid[];
 #define main_menu_bgm_mid_end_evt MIDI_EVT_REPEAT()
 extern const uint8_t main_menu_bgm2_mid[];
