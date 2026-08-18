@@ -15,7 +15,7 @@ uint32_t char_to_idx(uint8_t ch) {
     }
     constexpr uint32_t punc = 'z' - 'a' + 1;
 
-    if (ch == ' ') {
+    if (ch == '\'') {
         return punc + 0;
     } else if (ch == '!') {
         return punc + 1;
