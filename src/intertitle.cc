@@ -1,7 +1,10 @@
+#include "debug.h"
 #include "game.h"
 #include "graphics.h"
 #include "font.h"
 #include "input.h"
+#include "utils.h"
+#include "vector.h"
 
 namespace game::intertile {
 
@@ -11,37 +14,94 @@ constexpr uint8_t font_sprite_start = 0;
 constexpr uint8_t font_sprite_count = font::font_max_sprites;
 constexpr uint8_t font_tile_start = 0;
 constexpr uint8_t font_tile_count = font::font_tile_count;
+constexpr uint8_t font_pal_start = font::font_palette_start;
+constexpr uint8_t font_pal_count = font::font_palette_count;
 
-const char * const s_intro[] = {
-    "These",
-    "Are",
-    "Words",
+
+constexpr uint8_t max_splits = 3;
+struct Lines {
+    uint8_t count;
+    const char *text;
+    template <uint8_t N>
+    constexpr Lines(const char (&str)[N]) : count(0), text(str) {
+        for (char ch : str) {
+            if (ch == '\0') count++;
+        }
+        ASSERT(count <= max_splits);
+    }
+    constexpr Lines(decltype(nullptr)) : count(0), text() {}
+};
+
+constexpr Lines s_intro[] = {
+    "Years in the future",
+    "But not that many",
+    "Things have happened",
+    "Lots of things",
+    "Like so many things",
+    "It would take hours to\0explain them all",
+    "Maybe even days",
+    "A week if you took\0breaks",
+    "Not more than a\0month though",
+    "A year is right out",
+    "...",
+    "Anyway",
+    "The year is 20XX",
+    "The buckos have been\0left unattended\0for too long",
+    //"In that time they somehow\0invented robobuckos",
+    "Now Buckopia has been\0overtaken by\0evil robobuckos!",
+    "But enough backstory",
+    "Here is a breakout clone",
     nullptr,
 };
-const char * const s_meanwhile[] = {
+constexpr Lines s_meanwhile[] = {
     "Meanwhile...",
     nullptr,
 };
-const char * const s_game_over[] = {
+constexpr Lines s_game_over[] = {
     "Game over",
     nullptr,
 };
 
-const char *const * s_text;
+const Lines * s_text;
 uint16_t s_line;
 Entry s_next;
 
 //
 
+// TODO: move to font.cc
+void write_centered_runtime(const Lines & lines) {
+    // Split into lines.
+    struct Span { const char *data; uint8_t size; };
+    engine::utils::Vector<Span, max_splits> spans;
+    const char *text = lines.text;
+    for (int i = 0; i < lines.count; i++) {
+        auto &span = spans.push_back({});
+        span.data = text;
+        span.size = engine::utils::strlen(text);
+        text += span.size + 1;
+    }
+
+    // Work out where it'll go.
+    const uint16_t y_spacing = font::CharHeight * 2;
+    uint16_t y = (engine::graphics::SCREEN_HEIGHT - y_spacing * spans.size()) / 2;
+
+    // Draw it.
+    for (const Span & span : spans) {
+        const uint16_t x0 = (engine::graphics::SCREEN_WIDTH - font::CharWidth * span.size) / 2;
+        font::write_text(span.data, x0, y);
+        y += y_spacing;
+    }
+}
+
 bool next_line() {
-    const char * str = s_text[s_line];
-    if (str == nullptr) {
+    const Lines & lines = s_text[s_line];
+    if (lines.count == 0) {
         return true;
     }
 
-    // TODO: draw it
     // TODO: fade in/out?
-    DEBUG_MSG(str);
+    font::clear_text();
+    write_centered_runtime(lines);
 
     s_line++;
     return false;
