@@ -49,8 +49,8 @@ constexpr Lines s_intro[] = {
     "The buckos have been\0left unattended\0for too long",
     //"In that time they somehow\0invented robobuckos",
     "Now Buckopia has been\0overtaken by\0evil robobuckos!",
-    "But enough backstory",
-    "Here is a breakout clone",
+    "But enough exposition",
+    "Here's a breakout clone",
     nullptr,
 };
 constexpr Lines s_meanwhile[] = {
@@ -65,6 +65,13 @@ constexpr Lines s_game_over[] = {
 const Lines * s_text;
 uint16_t s_line;
 Entry s_next;
+Entry s_current;
+
+//
+
+constexpr uint16_t fade_in_frames = 80;
+constexpr uint16_t fade_display_frames = 120;
+uint16_t s_fade_tick;
 
 //
 
@@ -93,18 +100,55 @@ void write_centered_runtime(const Lines & lines) {
     }
 }
 
-bool next_line() {
-    const Lines & lines = s_text[s_line];
-    if (lines.count == 0) {
-        return true;
-    }
-
-    // TODO: fade in/out?
+void next_line() {
     font::clear_text();
-    write_centered_runtime(lines);
 
-    s_line++;
-    return false;
+    const Lines & lines = s_text[s_line];
+    if (lines.count > 0) {
+        write_centered_runtime(lines);
+        s_line++;
+        s_fade_tick = 0;
+    } else {
+        s_current = s_next;
+    }
+}
+
+//
+
+void fade_palette(uint16_t tick) {
+    for (uint8_t pal_idx = 0; pal_idx < font_pal_count; pal_idx++) {
+        // Decompose palette.
+        uint16_t rgb = game::images::text_font::palette[pal_idx];
+        uint8_t r = (rgb >> 10) & 31;
+        uint8_t g = (rgb >>  5) & 31;
+        uint8_t b = (rgb >>  0) & 31;
+
+        // Fade them.
+        r = bios_mathDivU16(bios_mathMulU16(tick, r), fade_in_frames);
+        g = bios_mathDivU16(bios_mathMulU16(tick, g), fade_in_frames);
+        b = bios_mathDivU16(bios_mathMulU16(tick, b), fade_in_frames);
+
+        // Store it back.
+        rgb = RGB555(r, g, b);
+        engine::graphics::set_palette_colour(font_pal_start + pal_idx, rgb);
+    }
+}
+
+void fade_tick() {
+    constexpr uint16_t display_until = fade_in_frames + fade_display_frames;
+    constexpr uint16_t fade_out_until = display_until + fade_in_frames;
+
+    const uint16_t tick = s_fade_tick++;
+    if (tick <= fade_in_frames) {
+        fade_palette(tick);
+    } else if (tick <= display_until) {
+        // Nothing to do.
+    } else if (tick <= fade_out_until) {
+        fade_palette(fade_out_until - tick);
+    } else {
+        // Advance to the next line anyway.
+        next_line();
+    }
 }
 
 } // namespace
@@ -122,6 +166,10 @@ void setup(Text text, Entry next) {
 void enter() {
     // Load the sprites.
     font::setup_tiles<font_tile_start, font_sprite_start>();
+
+    // Reset stuff.
+    s_current = Entry::Intertitle;
+    fade_palette(0);
 
     // Draw the first line.
     next_line();
@@ -146,12 +194,11 @@ Entry loop() {
     engine::input::update_inputs();
     const uint16_t pressed = engine::input::g_buttons_pressed;
     if (pressed & GAMEPAD_BTN_A) {
-        if (next_line()) {
-            return s_next;
-        }
+        next_line();
     }
 
-    return Entry::Intertitle;
+    fade_tick();
+    return s_current;
 }
 
 } // namespace game::intertile
