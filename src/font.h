@@ -5,6 +5,7 @@
 namespace game::font {
 
 constexpr uint8_t font_palette_start = 128;
+constexpr uint8_t font_palette_count = 16;
 constexpr uint8_t font_tile_count = 40;
 constexpr uint8_t font_max_sprites = 64; // max chars on screen too
 
@@ -20,7 +21,7 @@ extern uint16_t s_sprite_start;
 template <uint8_t TileStart, uint8_t SpriteStart>
 inline void setup_tiles() {
     game::images::copy_tile_data<
-        font_palette_start, 16,
+        font_palette_start, font_palette_count,
         TileStart, font_tile_count,
         game::images::text_font
     >();
