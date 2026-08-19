@@ -7,12 +7,16 @@
 #include "profiler.h"
 #include "input.h"
 #include "sound.h"
+#include "images.h"
+#include "font.h"
 
 //
 // +--+--+
-// |  |  | < bitmap1+bitmap2 for skyline
+// |  |  | < bitmap_1+bitmap_2 for skyline
 // +--+--+
-// |     | < bitmap0 for road bending
+// |     | < bitmap_3 slowly comes up for the dome
+// +--+--+
+// |     | < bitmap_0 for road bending
 // +-----+
 //
 
@@ -33,23 +37,66 @@ PROFILE_STORAGE(rd_log);
 constexpr uint8_t pal_black = 1;
 constexpr uint8_t pal_white = 2;
 constexpr uint8_t pal_grey = 3;
-constexpr uint8_t pal_car_start = 4; // shared with trees
-constexpr uint8_t pal_car_count = 16;
 
-constexpr uint8_t car_sprite_start = 0;
-constexpr uint8_t car_sprite_count = 1;
-constexpr uint8_t car_tile_start = 0;
-constexpr uint8_t car_tile_count = 1; // TODO: more for turning
+// font has highest prio.
+constexpr uint8_t font_sprite_start = 0;
+constexpr uint8_t font_sprite_count = font::font_max_sprites;
+constexpr uint8_t font_tile_start = 0;
+constexpr uint8_t font_tile_count = font::font_tile_count;
 
-constexpr uint8_t tree_sprite_start = car_sprite_start + car_sprite_count;
+constexpr uint8_t car_pal_start = 4;
+constexpr uint8_t car_pal_count = 16;
+constexpr uint8_t car_sprite_start = font_sprite_start + font_sprite_count;
+constexpr uint8_t car_sprite_count = 4;
+constexpr uint8_t car_tile_start = font_tile_start + font_tile_count;
+constexpr uint8_t car_tile_count = car_sprite_count * 2; // one for forwards, one for left/right (flip)
+
+// There's free palette space here (20-29).
+
+// Bit awkward, but bucko_left must be at a fixed offset (from breakout).
+static_assert(car_pal_start + car_pal_count <= images::bucko_left::pal_offset);
+constexpr uint8_t voice_char_width = 3;
+constexpr uint8_t voice_char_height = 4;
+constexpr uint8_t bucko_left_pal_start = images::bucko_left::pal_offset;
+constexpr uint8_t bucko_left_pal_count = 16;
+constexpr uint8_t bucko_left_sprite_start = car_sprite_start + car_sprite_count;
+constexpr uint8_t bucko_left_sprite_count = voice_char_width * voice_char_height; 
+constexpr uint8_t bucko_left_tile_start = car_tile_start + car_tile_count;
+constexpr uint8_t bucko_left_tile_count = bucko_left_sprite_count;
+
+constexpr uint8_t ami_left_pal_start = bucko_left_pal_start + bucko_left_pal_count;
+constexpr uint8_t ami_left_pal_count = 16;
+constexpr uint8_t ami_left_sprite_start = bucko_left_sprite_start + bucko_left_sprite_count;
+constexpr uint8_t ami_left_sprite_count = voice_char_width * voice_char_height; 
+constexpr uint8_t ami_left_tile_start = bucko_left_tile_start + bucko_left_tile_count;
+constexpr uint8_t ami_left_tile_count = ami_left_sprite_count;
+
+constexpr uint8_t tree_pal_start = ami_left_pal_start + ami_left_pal_count;
+constexpr uint8_t tree_pal_count = 16;
+constexpr uint8_t tree_sprite_start = ami_left_sprite_start + ami_left_sprite_count;
 constexpr uint8_t tree_sprite_count = 2; // one on each side
-constexpr uint8_t tree_tile_start = car_tile_start + car_tile_count;
+constexpr uint8_t tree_tile_start = ami_left_tile_start + ami_left_tile_count;
 constexpr uint8_t tree_tile_count = 3; // far/med/close -> tiny/small/big
 
-constexpr uint8_t transparent_sprite_start = tree_sprite_start + tree_sprite_count;
-constexpr uint8_t transparent_sprite_count = 3; // max 3 road splits
-constexpr uint8_t transparent_tile_start = tree_tile_start + tree_tile_count;
-constexpr uint8_t transparent_tile_count = 1;
+constexpr uint8_t ufo_pal_start = tree_pal_start + tree_pal_count;
+constexpr uint8_t ufo_pal_count = 16;
+constexpr uint8_t ufo_sprite_start = tree_sprite_start + tree_sprite_count;
+constexpr uint8_t ufo_sprite_count = 4;
+constexpr uint8_t ufo_tile_start = tree_tile_start + tree_tile_count;
+constexpr uint8_t ufo_tile_count = 4;
+
+// Reuses the basic palette above.
+constexpr uint8_t transparent_sprite_start = ufo_sprite_start + ufo_sprite_count;
+constexpr uint8_t transparent_sprite_count = SPRITES_FOR_ROAD ? 3 : 0; // max 3 road splits
+constexpr uint8_t transparent_tile_start = ufo_tile_start + ufo_tile_count;
+constexpr uint8_t transparent_tile_count = SPRITES_FOR_ROAD ? 1 : 0;
+
+constexpr uint8_t pal_skyline1_start = tree_pal_start + tree_pal_count;
+constexpr uint8_t pal_skyline1_count = 16;
+constexpr uint8_t pal_skyline2_start = pal_skyline1_start + pal_skyline1_count;
+constexpr uint8_t pal_skyline2_count = 16;
+constexpr uint8_t pal_dome_start = pal_skyline2_start + pal_skyline2_count;
+constexpr uint8_t pal_dome_count = 16;
 
 //
 
@@ -135,21 +182,37 @@ void setup_tiles() {
     using namespace engine::graphics;
 
     // Car tiles.
-    // TODO: replace with real tiles
-    static_assert(pal_car_count >= car_tile_count);
-    for (int idx = 0; idx < car_tile_count; idx++) {
-        engine::graphics::set_palette_colour(pal_car_start + idx, RGB555(31, idx+2, idx+2));
-        engine::utils::fast_memset8(get_tile_data(car_tile_start + idx), pal_car_start + idx, bg_tile_size * bg_tile_size);
-    }
+    images::copy_tile_data<
+        car_pal_start, car_pal_count,
+        car_tile_start, car_tile_count,
+        images::car
+    >();
 
     // Tree tiles.
-    // TODO: replace with real tiles
-    static_assert(pal_car_count >= car_tile_count + tree_tile_count);
-    for (int idx = 0; idx < tree_tile_count; idx++) {
-        const auto pal_idx = car_tile_count + idx + 1;
-        engine::graphics::set_palette_colour(pal_car_start + pal_idx, RGB555(pal_idx+2, 31, pal_idx+2));
-        engine::utils::fast_memset8(get_tile_data(tree_tile_start + idx), pal_car_start + pal_idx, bg_tile_size * bg_tile_size);
-    }
+    images::copy_tile_data<
+        tree_pal_start, tree_pal_count,
+        tree_tile_start, tree_tile_count,
+        images::tree
+    >();
+
+    // UFO tiles.
+    images::copy_tile_data<
+        ufo_pal_start, ufo_pal_count,
+        ufo_tile_start, ufo_tile_count,
+        images::ufo
+    >();
+
+    // Characters.
+    images::copy_tile_data<
+        bucko_left_pal_start, bucko_left_pal_count,
+        bucko_left_tile_start, bucko_left_tile_count,
+        images::bucko_left
+    >();
+    images::copy_tile_data<
+        ami_left_pal_start, ami_left_pal_count,
+        ami_left_tile_start, ami_left_tile_count,
+        images::ami_left
+    >();
 
 #if SPRITES_FOR_ROAD
     // Transparent line split tiles.
