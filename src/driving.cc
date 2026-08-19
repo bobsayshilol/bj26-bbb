@@ -272,9 +272,11 @@ void setup_bitmaps() {
 void update_logic() {
     PROFILE_SCOPE(rd_log);
 
+    const uint16_t held = engine::input::g_buttons_held;
+
     // Handle input.
-    if (engine::input::g_buttons_held & GAMEPAD_BTN_LEFT) { s_xpos -= dx_per_frame; }
-    else if (engine::input::g_buttons_held & GAMEPAD_BTN_RIGHT) { s_xpos += dx_per_frame; }
+    if (held & GAMEPAD_BTN_LEFT) { s_xpos -= dx_per_frame; }
+    else if (held & GAMEPAD_BTN_RIGHT) { s_xpos += dx_per_frame; }
 
     // Clamp position.
     if (s_xpos.value() >= 1) {
@@ -287,8 +289,8 @@ void update_logic() {
 
     // Speed.
     const uint16_t max_road_speed = get_current_max_speed();
-    if ((engine::input::g_buttons_held & GAMEPAD_BTN_UP) && s_road_speed.value() < max_road_speed) { s_road_speed += accel_per_frame; }
-    else if ((engine::input::g_buttons_held & GAMEPAD_BTN_DOWN)) { s_road_speed -= accel_per_frame; } // clamp happens after drag
+    if ((held & GAMEPAD_BTN_UP) && s_road_speed.value() < max_road_speed) { s_road_speed += accel_per_frame; }
+    else if ((held & GAMEPAD_BTN_DOWN)) { s_road_speed -= accel_per_frame; } // clamp happens after drag
 
     // Apply drag.
     s_road_speed -= drag_per_frame;
@@ -313,17 +315,28 @@ void draw_sprites() {
 
     PROFILE_SCOPE(rd_til);
 
-    constexpr uint16_t car_x_scale = 32;
-    constexpr uint16_t car_y_offset = 40;
+    {
+        static_assert(car_sprite_count == 4);
 
-    // Car sprite.
-    ObjSprite sprite;
-    const auto car_x = s_xpos * car_x_scale;
-    sprite.set_y(SCREEN_HEIGHT - car_y_offset);
-    for (int idx = 0; idx < car_sprite_count; idx++) {
-        sprite.set_x(SCREEN_WIDTH / 2 + car_x.value());
-        sprite.set_tile_index(car_tile_start + idx);
-        set_sprite(car_sprite_start + idx, sprite);
+        constexpr uint16_t car_x_scale = 32;
+        constexpr uint16_t car_y = SCREEN_HEIGHT - engine::graphics::bg_tile_size - 40;
+
+        const uint16_t held = engine::input::g_buttons_held;
+        const uint8_t is_turning = (held & (GAMEPAD_BTN_LEFT | GAMEPAD_BTN_RIGHT)) ? 4 : 0;
+        const bool x_flipped = held & GAMEPAD_BTN_LEFT;
+
+        // Car sprite.
+        const auto car_x = (s_xpos * car_x_scale).value() + SCREEN_WIDTH / 2 - engine::graphics::bg_tile_size;
+        for (uint8_t idx = 0; idx < car_sprite_count; idx++) {
+            ObjSprite sprite;
+            const uint16_t dx = ((idx & 1) ^ x_flipped) ? engine::graphics::bg_tile_size : 0;
+            const uint16_t dy = (idx & 2) ? engine::graphics::bg_tile_size : 0;
+            sprite.set_x(car_x + dx);
+            sprite.set_y(car_y + dy);
+            sprite.set_tile_index(car_tile_start + idx + is_turning);
+            sprite.set_x_flip(x_flipped);
+            set_sprite(car_sprite_start + idx, sprite);
+        }
     }
 
     // Tree sprites.
