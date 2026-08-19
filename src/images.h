@@ -26,6 +26,12 @@ static const uint8_t data[12 * TileSize];
 static const uint16_t palette[16];
 };
 
+struct ami_left {
+static constexpr uint8_t pal_offset = 45;
+static const uint8_t data[12 * TileSize];
+static const uint16_t palette[16];
+};
+
 struct mm_bouncer {
 static constexpr uint8_t pal_offset = 19;
 static const uint8_t data[8 * TileSize];
@@ -35,6 +41,24 @@ static const uint16_t palette[16];
 struct mouse {
 static constexpr uint8_t pal_offset = 3;
 static const uint8_t data[1 * TileSize];
+static const uint16_t palette[16];
+};
+
+struct car {
+static constexpr uint8_t pal_offset = 4;
+static const uint8_t data[8 * TileSize];
+static const uint16_t palette[16];
+};
+
+struct tree {
+static constexpr uint8_t pal_offset = 61;
+static const uint8_t data[3 * TileSize];
+static const uint16_t palette[16];
+};
+
+struct ufo {
+static constexpr uint8_t pal_offset = 77;
+static const uint8_t data[4 * TileSize];
 static const uint16_t palette[16];
 };
 
