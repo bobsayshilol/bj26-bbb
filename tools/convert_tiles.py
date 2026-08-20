@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 #
-# Converter to convert and extract the palette from a set of tiles.
+# Converter to convert and extract the palette from a set of tiles or image files.
+#
+# Files names with "_raw." in (ie "test_raw.png") are untiled and copied directly.
 #
 # Order of tiles is x then y, where each tile is 8x8, ie 24x24 would become:
 #   | 1 | 2 | 3 |
@@ -60,6 +62,15 @@ def _get_idx(pal, px):
 
 
 def _extract(file :Path):
+	# Untiled images are plain copies.
+	global tile_size, palette_size
+	if "_raw." in file.name:
+		tile_size = 1
+		palette_size = 16
+	else:
+		tile_size = 8
+		palette_size = 16 # TODO: reduce this?
+
 	with Image.open(file) as img:
 		if (img.width % tile_size) != 0:
 			raise RuntimeError(f"Tiles height must be a multiple of {tile_size}: {img.width}")
@@ -88,12 +99,12 @@ def _extract(file :Path):
 	return data, pal
 
 
-def _write_tile(offset :str, tile :list[int], file :TextIOWrapper):
+def _write_tile(tile :list[int], file :TextIOWrapper):
 	for i, b in enumerate(tile):
 		if b == pal_transparent:
 			file.write("engine::graphics::pal_transparent,")
 		else:
-			file.write(f"{offset} + 0x{b:x},")
+			file.write(f"pal_offset + 0x{b:x},")
 		if (i % 15) == 15:
 			file.write("\n")
 
@@ -111,9 +122,9 @@ def convert(filename :Path, out :Path):
 		output.write("namespace game::images {\n")
 
 		# Tile data.
-		output.write(f"alignas(uint16_t) constexpr uint8_t {filename.stem}::data[{len(tiles)} * TileSize] = {{\n")
+		output.write(f"alignas(uint16_t) constexpr uint8_t {filename.stem}::data[{len(tiles)} * {tile_size} * {tile_size}] = {{\n")
 		for tile in tiles:
-			_write_tile("pal_offset", tile, output)
+			_write_tile(tile, output)
 			output.write("\n")
 		output.write("};\n")
 
