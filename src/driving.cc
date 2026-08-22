@@ -170,6 +170,19 @@ static const uint8_t s_turning_offset[road_sections] = {
     98,93,87,82,78,73,69,65,61,58,54,51,48,45,43,40,38,36,33,31,30,28,26,25,23,22,20,19,18,17,16,15,14,13,12,11,11,10,9,9,8,8,7,7,6,6,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0
 };
 
+__attribute__((always_inline))
+inline int8_t road_curvature_at_section(engine::utils::FixedS1616 const & road_rot, engine::utils::FixedS1616 const & xpos, uint8_t road_section) {
+    auto dx = engine::utils::FixedS1616::from(0);
+
+    // Road curvature.
+    dx += road_rot * s_turning_offset[road_section];
+
+    // Translation of car.
+    dx += xpos * road_section;
+
+    return dx.value();
+}
+
 //
 
 enum class LevelState {
@@ -406,30 +419,30 @@ void draw_sprites() {
         if (road_pos > road_start) {
             // Work out how far down the road we are.
             const uint8_t road_y = road_pos - road_start;
-            // TODO: need to account for road curvature
-            const int16_t left_x = s_pavement_line_start[road_y] - 4; // magic number
+            const int16_t left_x = s_pavement_line_start[road_y] - bg_tile_size * 2;
+            const int16_t curvature = road_curvature_at_section(s_road_rotation, s_xpos, road_y / scanlines_per_section);
 
             if (left_x >= 0) {
                 // Map that to the size to use.
                 static_assert(tree_tile_count == 3);
                 uint8_t size_idx = 0;
-                if (road_y > road_length / 2) {
+                if (road_y > road_length / 3) {
                     size_idx = 2;
-                } else if (road_y > road_length / 6) {
+                } else if (road_y > road_length / 8) {
                     size_idx = 1;
                 }
 
                 // Draw one on each side.
                 static_assert(tree_sprite_count == 2);
                 ObjSprite sprite;
-                sprite.set_x(SCREEN_WIDTH - left_x);
+                sprite.set_x(SCREEN_WIDTH - bg_tile_size - left_x - curvature);
                 sprite.set_y(road_pos);
                 sprite.set_tile_index(tree_tile_start + size_idx);
                 sprite.set_x_flip(false);
                 set_sprite(tree_sprite_start + 0, sprite);
 
                 sprite.set_x_flip(true);
-                sprite.set_x(left_x);
+                sprite.set_x(left_x - curvature);
                 set_sprite(tree_sprite_start + 1, sprite);
 
                 hide_trees = false;
@@ -495,14 +508,7 @@ void draw_road() {
     for (uint16_t line = road_start; line < SCREEN_HEIGHT; line += scanlines_per_section, road_pos++, road_section++) {
         wait_until_line(line);
 
-        int8_t dx = 0;
-
-        // Road curvature.
-        dx += (road_rot * s_turning_offset[road_section]).value();
-
-        // Translation of car.
-        dx += (xpos * road_section).value();
-
+        const int8_t dx = road_curvature_at_section(road_rot, xpos, road_section);
         bitmap_0.scroll_x() = dx;
 
 #if !SPRITES_FOR_ROAD
