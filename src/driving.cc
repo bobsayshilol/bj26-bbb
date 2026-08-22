@@ -32,6 +32,7 @@ PROFILE_STORAGE(rd_upd);
 PROFILE_STORAGE(rd_til);
 PROFILE_STORAGE(rd_log);
 PROFILE_STORAGE(ui_upd);
+PROFILE_STORAGE(bg_upd);
 
 //
 
@@ -473,6 +474,15 @@ void draw_sprites() {
 #endif
 }
 
+void draw_bg() {
+    using namespace engine::graphics;
+    PROFILE_SCOPE(bg_upd);
+
+    // Scroll the skyline.
+    const auto scroll = (s_road_rotation * 128).value() / 16;
+    engine::graphics::bitmap_2.scroll_x() -= scroll;
+}
+
 void draw_road() {
     using namespace engine::graphics;
 
@@ -766,6 +776,7 @@ Entry loop() {
     // We have a bit of breathing room before we need to draw the road.
     update_logic();
     draw_sprites();
+    draw_bg();
     ui_update();
 
     // Draw the road.
