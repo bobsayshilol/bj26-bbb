@@ -31,6 +31,7 @@ PROFILE_STORAGE(rd_vsy);
 PROFILE_STORAGE(rd_upd);
 PROFILE_STORAGE(rd_til);
 PROFILE_STORAGE(rd_log);
+PROFILE_STORAGE(ui_upd);
 
 //
 
@@ -60,14 +61,14 @@ constexpr uint8_t voice_char_height = 4;
 constexpr uint8_t bucko_left_pal_start = images::bucko_left::pal_offset;
 constexpr uint8_t bucko_left_pal_count = 16;
 constexpr uint8_t bucko_left_sprite_start = car_sprite_start + car_sprite_count;
-constexpr uint8_t bucko_left_sprite_count = voice_char_width * voice_char_height; 
+constexpr uint8_t bucko_left_sprite_count = voice_char_width * voice_char_height;
 constexpr uint8_t bucko_left_tile_start = car_tile_start + car_tile_count;
 constexpr uint8_t bucko_left_tile_count = bucko_left_sprite_count;
 
 constexpr uint8_t ami_left_pal_start = bucko_left_pal_start + bucko_left_pal_count;
 constexpr uint8_t ami_left_pal_count = 16;
-constexpr uint8_t ami_left_sprite_start = bucko_left_sprite_start + bucko_left_sprite_count;
-constexpr uint8_t ami_left_sprite_count = voice_char_width * voice_char_height; 
+constexpr uint8_t ami_left_sprite_start = bucko_left_sprite_start; // reuse the bucko sprites
+constexpr uint8_t ami_left_sprite_count = bucko_left_sprite_count;
 constexpr uint8_t ami_left_tile_start = bucko_left_tile_start + bucko_left_tile_count;
 constexpr uint8_t ami_left_tile_count = ami_left_sprite_count;
 
@@ -168,6 +169,16 @@ static constexpr engine::utils::FixedS1616 s_road_offsets[256] = {
 static const uint8_t s_turning_offset[road_sections] = {
     98,93,87,82,78,73,69,65,61,58,54,51,48,45,43,40,38,36,33,31,30,28,26,25,23,22,20,19,18,17,16,15,14,13,12,11,11,10,9,9,8,8,7,7,6,6,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0
 };
+
+//
+
+enum class LevelState {
+    Intro,
+    Bombs,
+    GameOver,
+} s_level_state;
+
+void level_advance(LevelState state);
 
 //
 
@@ -519,6 +530,169 @@ void draw_road() {
     bitmap_0.scroll_x() = 0;
 }
 
+//
+
+enum class UIC : uint8_t { None, Ami, Bucko, Robucko, };
+void ui_character(UIC voice) {
+    using namespace engine::graphics;
+
+    // All characters have the same sprites.
+    static_assert(ami_left_sprite_start == bucko_left_sprite_start);
+    constexpr uint8_t sprite_start = ami_left_sprite_start;
+
+    constexpr uint8_t left_start_x = 0;
+    constexpr uint8_t left_start_y = SCREEN_HEIGHT - bg_tile_size * voice_char_height;
+    constexpr uint8_t right_start_x = SCREEN_WIDTH - bg_tile_size * voice_char_width;
+    constexpr uint8_t right_start_y = left_start_y;
+
+    ObjSprite sprite;
+    uint8_t sprite_idx = 0;
+    switch (voice) {
+        case UIC::None:
+        case UIC::Robucko:
+            // No voice.
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = 0; x < voice_char_width; x++) {
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+        case UIC::Ami:
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = 0; x < voice_char_width; x++) {
+                    sprite.set_x(left_start_x + x * bg_tile_size);
+                    sprite.set_y(left_start_y + y * bg_tile_size);
+                    sprite.set_tile_index(ami_left_tile_start + sprite_idx);
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+        case UIC::Bucko:
+            // Tiles need a flip, and the x co-ord too.
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = voice_char_width - 1; x >= 0; x--) {
+                    sprite.set_x(right_start_x + x * bg_tile_size);
+                    sprite.set_y(right_start_y + y * bg_tile_size);
+                    sprite.set_tile_index(bucko_left_tile_start + sprite_idx);
+                    sprite.set_x_flip(true);
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+    }
+}
+
+struct Speech {
+    UIC uic;
+    uint8_t len;
+    const char * text;
+
+    template <uint8_t N>
+    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) {}
+    constexpr Speech(decltype(nullptr)) : uic(UIC::None), len(0), text(nullptr) {}
+};
+
+constexpr Speech intro_text[] {
+    { UIC::Bucko, "test" },
+    { UIC::Bucko, "test2" },
+    { UIC::Ami, "words" },
+    { UIC::Robucko, "sky" },
+    nullptr
+};
+
+const Speech * s_current_speech;
+LevelState s_next_state;
+
+void ui_redraw() {
+    // Empty it out.
+    font::clear_text();
+
+    constexpr uint8_t speech_y = engine::graphics::SCREEN_HEIGHT * 2 / 3;
+    constexpr uint8_t speech_sky_y = engine::graphics::SCREEN_HEIGHT / 3;
+
+    // Show any speech if it's active.
+    const auto & speech = *s_current_speech;
+    ui_character(speech.uic);
+    if (speech.text) {
+        switch (speech.uic) {
+            case UIC::None:
+                break;
+            case UIC::Ami:
+                font::write_left(speech.text, speech.len, 0, speech_y);
+                break;
+            case UIC::Bucko:
+                font::write_right(speech.text, speech.len, 0, speech_y);
+                break;
+            case UIC::Robucko:
+                font::write_centered(speech.text, speech.len, speech_sky_y);
+                break;
+        }
+    }
+}
+
+void ui_update() {
+    PROFILE_SCOPE(ui_upd);
+
+    // Do nothing if we're not in a UI state.
+    bool is_ui = false;
+    switch (s_level_state) {
+        case LevelState::Intro:
+        case LevelState::GameOver:
+            is_ui = true;
+            break;
+        case LevelState::Bombs:
+            break;
+    }
+    if (!is_ui) return;
+
+    if (engine::input::g_buttons_pressed & GAMEPAD_BTN_A) {
+        // Advance to next line.
+        auto *speech = ++s_current_speech;
+        if (speech->text == nullptr) {
+            // We're finished, change state.
+            level_advance(s_next_state);
+        } else {
+            ui_redraw();
+        }
+    }
+}
+
+void ui_setup() {
+    game::font::setup_tiles<font_tile_start, font_sprite_start>();
+
+    // Copy the tile data for the characters.
+    game::images::copy_tile_data<
+        ami_left_pal_start, ami_left_pal_count,
+        ami_left_tile_start, ami_left_tile_count,
+        game::images::ami_left
+    >();
+    game::images::copy_tile_data<
+        bucko_left_pal_start, bucko_left_pal_count,
+        bucko_left_tile_start, bucko_left_tile_count,
+        game::images::bucko_left
+    >();
+}
+
+//
+
+void level_advance(LevelState state) {
+    s_level_state = state;
+    switch (state) {
+        case LevelState::Intro:
+            s_current_speech = intro_text;
+            s_next_state = LevelState::Bombs;
+            break;
+        case LevelState::Bombs:
+            break;
+        case LevelState::GameOver:
+            break;
+    }
+    ui_redraw();
+}
+
 } // namespace
 
 //
@@ -530,6 +704,10 @@ void enter() {
     // Draw the parts of the screen.
     setup_tiles();
     setup_bitmaps();
+    ui_setup();
+
+    // Initial game state.
+    level_advance(LevelState::Intro);
 
     // Show everything now that it's drawn.
     bios_vsync();
@@ -582,6 +760,7 @@ Entry loop() {
     // We have a bit of breathing room before we need to draw the road.
     update_logic();
     draw_sprites();
+    ui_update();
 
     // Draw the road.
     draw_road();

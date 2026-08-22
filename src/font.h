@@ -36,19 +36,29 @@ inline void setup_tiles() {
 void write_text(const char *text, uint16_t x, uint16_t y);
 
 // Note: doesn't work with newlines.
-template <uint16_t N>
-inline void write_centered(const char (&text)[N], uint16_t y) {
+inline void write_centered(const char *text, uint16_t N, uint16_t y) {
     const uint16_t x = engine::graphics::SCREEN_WIDTH / 2 - (N - 1) * CharWidth / 2;
     write_text(text, x, y);
 }
+inline void write_left(const char *text, uint16_t N, uint8_t padding, uint16_t y) {
+    (void)N;
+    write_text(text, padding, y);
+}
+inline void write_right(const char *text, uint8_t N, uint8_t padding, uint16_t y) {
+    const uint16_t x = engine::graphics::SCREEN_WIDTH - (N - 1) * CharWidth - padding;
+    write_text(text, x, y);
+}
+template <uint16_t N>
+inline void write_centered(const char (&text)[N], uint16_t y) {
+    write_centered(text, N, y);
+}
 template <uint16_t N>
 inline void write_left(const char (&text)[N], uint8_t padding, uint16_t y) {
-    write_text(text, padding, y);
+    write_left(text, N, padding, y);
 }
 template <uint16_t N>
 inline void write_right(const char (&text)[N], uint8_t padding, uint16_t y) {
-    const uint16_t x = engine::graphics::SCREEN_WIDTH - (N - 1) * CharWidth - padding;
-    write_text(text, x, y);
+    write_right(text, N, padding, y);
 }
 
 // Clear any existing text.
