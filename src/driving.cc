@@ -9,6 +9,7 @@
 #include "sound.h"
 #include "images.h"
 #include "font.h"
+#include "utils.h"
 
 //
 // +--+--+
@@ -31,6 +32,7 @@ PROFILE_STORAGE(rd_vsy);
 PROFILE_STORAGE(rd_upd);
 PROFILE_STORAGE(rd_til);
 PROFILE_STORAGE(rd_log);
+PROFILE_STORAGE(rd_cns);
 PROFILE_STORAGE(ui_upd);
 PROFILE_STORAGE(bg_upd);
 
@@ -135,36 +137,6 @@ constexpr auto drag_per_frame = engine::utils::FixedS1616::div(1, 60); // 1 unit
 
 // Current road rotation.
 engine::utils::FixedS1616 s_road_rotation;
-
-// Incoming road layouts.
-// TODO: just use an RNG
-static constexpr engine::utils::FixedS1616 s_road_offsets[256] = {
-#define F(x) engine::utils::FixedS1616::div(x, 32)
-    F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0),
-    F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0),
-    F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0),
-    F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0), F(1), F(0), F(0),
-    F(0), F(0), F(0), F(0), F(0), F(0), F(0), F(0),
-    F(0), F(0), F(0), F(0), F(0), F(0), F(0), F(0),
-    F(0), F(0), F(0), F(0), F(0), F(0), F(0), F(0),
-    F(0), F(0), F(0), F(0), F(0), F(0), F(0), F(0),
-    F(-1), F(0), F(-1), F(0), F(-1), F(0), F(-1), F(0),
-    F(-1), F(0), F(-1), F(0), F(-1), F(0), F(-1), F(0),
-    F(-1), F(0), F(-1), F(0), F(-1), F(0), F(-1), F(0),
-    F(-1), F(0), F(-1), F(0), F(-1), F(0), F(-1), F(0),
-
-    // Silence compiler warning...
-    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
-    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
-    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
-    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
-    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
-    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
-    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
-    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
-    F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),F(0),
-#undef F
-};
 
 // Generated with `for i in range(80): print(int(math.pow(1.06, 79-i)-1), end=',')`
 static const uint8_t s_turning_offset[road_sections] = {
@@ -342,6 +314,182 @@ void setup_bitmaps() {
 
 //
 
+// Incoming road layouts.
+// Note: increments are +-10 per layout.
+constexpr int8_t road_layout_forward[128] = {};
+constexpr int8_t road_layout_left_slow[] = {
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+};
+constexpr int8_t road_layout_left_fast[] = {
+    1, 0,
+    1, 0,
+    1, 0,
+    1, 0,
+    1, 0,
+    1, 0,
+    1, 0,
+    1, 0,
+    1, 0,
+    1, 0,
+};
+constexpr int8_t road_layout_right_slow[] = {
+    -1, 0, 0, 0,
+    -1, 0, 0, 0,
+    -1, 0, 0, 0,
+    -1, 0, 0, 0,
+    -1, 0, 0, 0,
+    -1, 0, 0, 0,
+    -1, 0, 0, 0,
+    -1, 0, 0, 0,
+    -1, 0, 0, 0,
+    -1, 0, 0, 0,
+};
+constexpr int8_t road_layout_right_fast[] = {
+    -1, 0,
+    -1, 0,
+    -1, 0,
+    -1, 0,
+    -1, 0,
+    -1, 0,
+    -1, 0,
+    -1, 0,
+    -1, 0,
+    -1, 0,
+};
+
+const int8_t * s_current_road_layout;
+int16_t s_current_road_remaining;
+int8_t s_current_road_bias;
+
+void road_reset() {
+    s_current_road_remaining = 0;
+    s_current_road_bias = 0;
+    s_road_rotation = engine::utils::FixedS1616::from(0);
+}
+
+void road_pick_next(const int8_t * & layout, int16_t & size) {
+    const uint8_t rng = engine::utils::g_rng() & 0xFF;
+    const bool b0 = (rng >> 0) & 1;
+    const bool b1 = (rng >> 1) & 1;
+    const bool b2 = (rng >> 2) & 1;
+
+    enum class Dir { LeftFast, LeftSlow, ForwardShort, ForwardLong, RightSlow, RightFast };
+    Dir dir = Dir::ForwardLong;
+
+    // left fwd right
+    //   2 1 0 -1 -2
+    int8_t bias = s_current_road_bias;
+    switch (bias) {
+        case 2:
+            if (b0) dir = Dir::ForwardShort; // 50%
+            else dir = b1 ? Dir::RightSlow : Dir::RightFast; // 50% right
+            break;
+
+        case 1:
+            if (b0) dir = Dir::ForwardShort; // 50%
+            else if (b1) dir = Dir::RightSlow; // 25% right
+            else if (b2) dir = Dir::RightFast; // 12% right
+            else dir = Dir::LeftSlow; // 12% left
+            break;
+
+        case 0:
+            if (b0) dir = b2 ? Dir::ForwardLong : Dir::ForwardShort; // 50%
+            else if (b1) dir = b2 ? Dir::RightSlow : Dir::RightFast; // 25% right
+            else dir = b2 ? Dir::LeftSlow : Dir::LeftFast; // 25% left
+            break;
+
+        case -1:
+            if (b0) dir = Dir::ForwardShort; // 50%
+            else if (b1) dir = Dir::LeftSlow; // 25% left
+            else if (b2) dir = Dir::LeftFast; // 12% left
+            else dir = Dir::RightSlow; // 12% right
+            break;
+
+        case -2:
+            if (b0) dir = Dir::ForwardShort; // 50%
+            else dir = b1 ? Dir::LeftSlow : Dir::LeftFast; // 50% left
+            break;
+
+        default:
+            ASSERT(false);
+            bias = 0; // reset, shouldn't happen!
+            break;
+    }
+
+    auto set = [&](auto && val) {
+        layout = val;
+        size = engine::utils::size(val);
+    };
+
+    switch (dir) {
+        case Dir::LeftFast:
+            set(road_layout_left_fast);
+            bias += 1;
+            break;
+        case Dir::LeftSlow:
+            set(road_layout_left_slow);
+            bias += 1;
+            break;
+        case Dir::ForwardLong:
+            set(road_layout_forward);
+            break;
+        case Dir::ForwardShort:
+            set(road_layout_forward);
+            size /= 2;
+            break;
+        case Dir::RightSlow:
+            set(road_layout_right_slow);
+            bias -= 1;
+            break;
+        case Dir::RightFast:
+            set(road_layout_right_fast);
+            bias -= 1;
+            break;
+    }
+    s_current_road_bias = bias;
+}
+
+int16_t road_consume_offsets(int16_t count) {
+    PROFILE_SCOPE(rd_cns);
+
+    int16_t total = 0;
+    const int8_t * road_layout = s_current_road_layout;
+    int16_t road_remaining = s_current_road_remaining;
+
+    // Read chunks of the road at a time.
+    while (count > 0) {
+        // Pick a new stretch of road if we're out.
+        if (road_remaining == 0) {
+            road_pick_next(road_layout, road_remaining);
+        }
+
+        const int16_t consumed = engine::utils::min(count, road_remaining);
+        count -= consumed;
+
+        const int8_t * ptr = road_layout;
+        for (uint8_t i = 0; i < consumed; i++) {
+            total += *ptr++;
+        }
+        road_layout += consumed;
+        road_remaining -= consumed;
+    }
+
+    s_current_road_layout = road_layout;
+    s_current_road_remaining = road_remaining;
+    return total;
+}
+
+//
+
 void update_logic() {
     PROFILE_SCOPE(rd_log);
 
@@ -374,13 +522,17 @@ void update_logic() {
     //
 
     // Move along the road.
+    const int16_t position_start = s_road_position.value();
     s_road_position += s_road_speed;
+    const int16_t position_end = s_road_position.value();
     if (s_road_position.value() >= 256) {
         s_road_position -= engine::utils::FixedS1616::from(256); // emulate wrapping like uint8_t
     }
     ASSERT(s_road_position.value() >= 0);
     ASSERT(s_road_position.value() <= 255);
-    s_road_rotation += s_road_offsets[s_road_position.value()];
+
+    const int16_t total_curve = road_consume_offsets(position_end - position_start);
+    s_road_rotation += engine::utils::FixedS1616::div(total_curve, 32);
 }
 
 void draw_sprites() {
@@ -698,6 +850,7 @@ void level_advance(LevelState state) {
     s_level_state = state;
     switch (state) {
         case LevelState::Intro:
+            road_reset();
             s_current_speech = intro_text;
             s_next_state = LevelState::Bombs;
             break;
