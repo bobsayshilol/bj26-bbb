@@ -106,6 +106,7 @@ static_assert(road_length < engine::graphics::SCREEN_HEIGHT);
 constexpr uint16_t road_start = engine::graphics::SCREEN_HEIGHT - road_length;
 
 uint8_t s_center_line_widths[road_length]; // built during setup
+int16_t s_pavement_line_start[road_length];
 
 // Currently location.
 constexpr auto dx_per_frame = engine::utils::FixedS1616::div(1, 32);
@@ -248,6 +249,7 @@ void setup_bitmaps() {
         const int32_t pavement_width = max_pavement_width - (max_pavement_width - min_pavement_width) * (y - road_start) / (SCREEN_HEIGHT - 16 - road_start);
         const int32_t stripes_width = (SCREEN_WIDTH / 2 - pavement_width) / 8;
         s_center_line_widths[y - road_start] = stripes_width & ~1; // must be even for fast memset later
+        s_pavement_line_start[y - road_start] = pavement_width;
         for (int32_t x = 0; x < 256; x++) {
             uint8_t col = pal_black;
             if (x < pavement_width || x > 256 - pavement_width) col = pal_grey;
@@ -386,7 +388,51 @@ void draw_sprites() {
     }
 
     // Tree sprites.
-    // TODO
+    {
+        bool hide_trees = true;
+
+        const uint8_t road_pos = s_road_position.value();
+        if (road_pos > road_start) {
+            // Work out how far down the road we are.
+            const uint8_t road_y = road_pos - road_start;
+            // TODO: need to account for road curvature
+            const int16_t left_x = s_pavement_line_start[road_y] - 4; // magic number
+
+            if (left_x >= 0) {
+                // Map that to the size to use.
+                static_assert(tree_tile_count == 3);
+                uint8_t size_idx = 0;
+                if (road_y > road_length / 2) {
+                    size_idx = 2;
+                } else if (road_y > road_length / 6) {
+                    size_idx = 1;
+                }
+
+                // Draw one on each side.
+                static_assert(tree_sprite_count == 2);
+                ObjSprite sprite;
+                sprite.set_x(SCREEN_WIDTH - left_x);
+                sprite.set_y(road_pos);
+                sprite.set_tile_index(tree_tile_start + size_idx);
+                sprite.set_x_flip(false);
+                set_sprite(tree_sprite_start + 0, sprite);
+
+                sprite.set_x_flip(true);
+                sprite.set_x(left_x);
+                set_sprite(tree_sprite_start + 1, sprite);
+
+                hide_trees = false;
+            }
+        }
+
+        if (hide_trees) {
+            static_assert(tree_sprite_count == 2);
+            ObjSprite sprite;
+            for (uint8_t i = 0; i < tree_sprite_count; i++) {
+                set_sprite(tree_sprite_start + i, sprite);
+            }
+        }
+    }
 
 #if SPRITES_FOR_ROAD
     // Transparent line split tiles.
