@@ -32,6 +32,7 @@ PROFILE_STORAGE(rd_vsy);
 PROFILE_STORAGE(rd_upd);
 PROFILE_STORAGE(rd_til);
 PROFILE_STORAGE(rd_log);
+PROFILE_STORAGE(rd_phy);
 PROFILE_STORAGE(rd_cns);
 PROFILE_STORAGE(ui_upd);
 PROFILE_STORAGE(bg_upd);
@@ -159,9 +160,17 @@ inline int8_t road_curvature_at_section(engine::utils::FixedS1616 const & road_r
 //
 
 enum class LevelState {
-    Intro,
+    Intro1,
+    UFOFlyIn,
+    Intro2,
     Bombs,
+    Win1,
+    BombsCurves,
+    Win2,
+    Dome,
+    Dome2,
     GameOver,
+    GameOver2,
 } s_level_state;
 
 void level_advance(LevelState state);
@@ -425,6 +434,24 @@ void road_pick_next(const int8_t * & layout, int16_t & size) {
             break;
     }
 
+    // Lock the direction for some of the levels.
+    switch (s_level_state) {
+        case LevelState::Intro1:
+        case LevelState::UFOFlyIn:
+        case LevelState::Intro2:
+        case LevelState::Bombs:
+        case LevelState::Win1:
+            dir = Dir::ForwardLong;
+            break;
+        case LevelState::BombsCurves:
+        case LevelState::Win2:
+        case LevelState::Dome:
+        case LevelState::Dome2:
+        case LevelState::GameOver:
+        case LevelState::GameOver2:
+            break;
+    }
+
     auto set = [&](auto && val) {
         layout = val;
         size = engine::utils::size(val);
@@ -490,8 +517,50 @@ int16_t road_consume_offsets(int16_t count) {
 
 //
 
-void update_logic() {
+Entry update_logic() {
     PROFILE_SCOPE(rd_log);
+
+    Entry next = Entry::Driving;
+    switch (s_level_state) {
+        case LevelState::Intro1:
+        case LevelState::Intro2:
+        case LevelState::Win1:
+        case LevelState::Win2:
+        case LevelState::GameOver:
+            // UI states don't need an update loop.
+            break;
+
+        case LevelState::UFOFlyIn:
+            // TODO
+            level_advance(LevelState::Intro2);
+            break;
+        case LevelState::Dome:
+            // TODO
+            level_advance(LevelState::Dome2);
+            break;
+
+        case LevelState::Bombs:
+            // TODO
+            level_advance(LevelState::Win1);
+            break;
+        case LevelState::BombsCurves:
+            // TODO
+            level_advance(LevelState::Win2);
+            break;
+
+        case LevelState::Dome2:
+            next = Entry::MainMenu;
+            break;
+        case LevelState::GameOver2:
+            next = Entry::MainMenu;
+            break;
+    }
+
+    return next;
+}
+
+void update_physics() {
+    PROFILE_SCOPE(rd_phy);
 
     const uint16_t held = engine::input::g_buttons_held;
 
@@ -700,7 +769,7 @@ void draw_road() {
 
 //
 
-enum class UIC : uint8_t { None, Ami, Bucko, Robucko, };
+enum class UIC : uint8_t { None, NoneRight, Ami, Bucko, Robucko, };
 void ui_character(UIC voice) {
     using namespace engine::graphics;
 
@@ -717,6 +786,7 @@ void ui_character(UIC voice) {
     uint8_t sprite_idx = 0;
     switch (voice) {
         case UIC::None:
+        case UIC::NoneRight:
         case UIC::Robucko:
             // No voice.
             for (int y = 0; y < voice_char_height; y++) {
@@ -759,16 +829,93 @@ struct Speech {
     const char * text;
 
     template <uint8_t N>
-    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) {}
+    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) { static_assert(N <= 27); }
     constexpr Speech(decltype(nullptr)) : uic(UIC::None), len(0), text(nullptr) {}
 };
 
-constexpr Speech intro_text[] {
-    { UIC::Bucko, "test" },
-    { UIC::Bucko, "test2" },
-    { UIC::Ami, "words" },
-    { UIC::Robucko, "sky" },
-    nullptr
+constexpr Speech intro1_text[] {
+    { UIC::NoneRight, "bzzt" },
+    { UIC::Bucko, "Ami!" },
+    { UIC::Bucko, "It worked!" },
+    { UIC::Bucko, "That unsuspecting bucko" },
+    { UIC::Bucko, "did the important thing!" },
+
+    { UIC::Ami, "Great!" },
+    { UIC::Ami, "That's one less outpost" },
+    { UIC::Ami, "under robucko control." },
+    { UIC::Ami, "But it won't be long" },
+    { UIC::Ami, "before the other" },
+    { UIC::Ami, "outposts take notice." },
+
+    { UIC::Bucko, "You need to get to them" },
+    { UIC::Bucko, "quickly then!" },
+    { UIC::Bucko, "Make sure to press the" },
+    { UIC::Bucko, "up button and stay in" },
+    { UIC::Bucko, "the centre of the road" },
+    { UIC::Bucko, "to go at full speed." },
+
+    nullptr,
+};
+
+constexpr Speech intro2_text[] {
+    { UIC::Robucko, "We have you surrounded" },
+    { UIC::Robucko, "at least from this sky!" },
+
+    { UIC::Bucko, "Look out!" },
+    { UIC::Bucko, "There's highly armoured" },
+    { UIC::Bucko, "flying robuckos!"},
+    { UIC::Bucko, "And they're about to start" },
+    { UIC::Bucko, "dropping bombs!" },
+    { UIC::Bucko, "Evasive maneuvers!" },
+
+    nullptr,
+};
+
+constexpr Speech win1_text[] {
+    { UIC::Ami, "Hey bucko?" },
+    { UIC::Bucko, "Yes?" },
+    { UIC::Ami, "Why is it that I can" },
+    { UIC::Ami, "only say a few words" },
+    { UIC::Ami, "at a time?" },
+    { UIC::Bucko, "It's a miracle that we" },
+    { UIC::Bucko, "can say anything at" },
+    { UIC::Bucko, "all in this part of" },
+    { UIC::Bucko, "the game lol" },
+
+    { UIC::Bucko, "Look out!" },
+    { UIC::Bucko, "The road ahead gets" },
+    { UIC::Bucko, "a bit twisty." },
+
+    nullptr,
+};
+
+constexpr Speech win2_text[] {
+    { UIC::Bucko, "Ami!" },
+    { UIC::Ami, "Yes?" },
+    { UIC::Bucko, "I think you should name" },
+    { UIC::Bucko, "this operation" },
+    { UIC::Bucko, "help all t' wee creatures!" },
+    { UIC::Ami, "..." },
+    { UIC::Bucko, "because buckos are..." },
+    { UIC::Ami, "no!" },
+    { UIC::Ami, "we're not calling it" },
+    { UIC::Ami, "operation h.a.w.c." },
+    { UIC::Bucko, "trollface" }, // TODO: trollface tiles
+
+    { UIC::Bucko, "Oh!" },
+    { UIC::Bucko, "The dome's coming up." },
+
+    nullptr,
+};
+
+constexpr Speech gameover_text[] {
+    { UIC::Bucko, "Ami?" },
+    { UIC::Bucko, "Ami!" },
+    { UIC::Bucko, "Ami!!!!!!!" },
+
+    { UIC::None, "Game over" },
+
+    nullptr,
 };
 
 const Speech * s_current_speech;
@@ -786,14 +933,14 @@ void ui_redraw() {
     ui_character(speech.uic);
     if (speech.text) {
         switch (speech.uic) {
-            case UIC::None:
-                break;
             case UIC::Ami:
                 font::write_left(speech.text, speech.len, 0, speech_y);
                 break;
+            case UIC::NoneRight:
             case UIC::Bucko:
                 font::write_right(speech.text, speech.len, 0, speech_y);
                 break;
+            case UIC::None:
             case UIC::Robucko:
                 font::write_centered(speech.text, speech.len, speech_sky_y);
                 break;
@@ -807,11 +954,19 @@ void ui_update() {
     // Do nothing if we're not in a UI state.
     bool is_ui = false;
     switch (s_level_state) {
-        case LevelState::Intro:
+        case LevelState::Intro1:
+        case LevelState::Intro2:
+        case LevelState::Win1:
+        case LevelState::Win2:
         case LevelState::GameOver:
             is_ui = true;
             break;
+        case LevelState::UFOFlyIn:
         case LevelState::Bombs:
+        case LevelState::BombsCurves:
+        case LevelState::Dome:
+        case LevelState::Dome2:
+        case LevelState::GameOver2:
             break;
     }
     if (!is_ui) return;
@@ -849,14 +1004,41 @@ void ui_setup() {
 void level_advance(LevelState state) {
     s_level_state = state;
     switch (state) {
-        case LevelState::Intro:
+        case LevelState::Intro1:
             road_reset();
-            s_current_speech = intro_text;
+            s_current_speech = intro1_text;
+            s_next_state = LevelState::UFOFlyIn;
+            break;
+        case LevelState::Intro2:
+            s_current_speech = intro2_text;
             s_next_state = LevelState::Bombs;
             break;
+        case LevelState::Win1:
+            s_current_speech = win1_text;
+            s_next_state = LevelState::BombsCurves;
+            break;
+        case LevelState::Win2:
+            s_current_speech = win2_text;
+            s_next_state = LevelState::Dome;
+            break;
+
+        case LevelState::UFOFlyIn:
+            break;
+
         case LevelState::Bombs:
+        case LevelState::BombsCurves:
+            break;
+
+        case LevelState::Dome:
             break;
         case LevelState::GameOver:
+            s_current_speech = gameover_text;
+            s_next_state = LevelState::GameOver2;
+            break;
+
+        case LevelState::GameOver2:
+        case LevelState::Dome2:
+            // These jump straight to the next scene.
             break;
     }
     ui_redraw();
@@ -876,7 +1058,7 @@ void enter() {
     ui_setup();
 
     // Initial game state.
-    level_advance(LevelState::Intro);
+    level_advance(LevelState::Intro1);
 
     // Show everything now that it's drawn.
     bios_vsync();
@@ -927,7 +1109,12 @@ Entry loop() {
 #endif
 
     // We have a bit of breathing room before we need to draw the road.
-    update_logic();
+    next = update_logic();
+    if (next != Entry::Driving) {
+        return next;
+    }
+
+    update_physics();
     draw_sprites();
     draw_bg();
     ui_update();
