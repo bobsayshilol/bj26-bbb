@@ -12,9 +12,9 @@
 
 //
 // +--+--+
-// |  |  | < bitmap_1+bitmap_2 for skyline
+// |     | < bitmap_2 for skyline
 // +--+--+
-// |     | < bitmap_3 slowly comes up for the dome
+// |     | < bitmap_1 slowly comes up for the dome
 // +--+--+
 // |     | < bitmap_0 for road bending
 // +-----+
@@ -91,12 +91,10 @@ constexpr uint8_t transparent_sprite_count = SPRITES_FOR_ROAD ? 3 : 0; // max 3 
 constexpr uint8_t transparent_tile_start = ufo_tile_start + ufo_tile_count;
 constexpr uint8_t transparent_tile_count = SPRITES_FOR_ROAD ? 1 : 0;
 
-constexpr uint8_t pal_skyline1_start = tree_pal_start + tree_pal_count;
-constexpr uint8_t pal_skyline1_count = 16;
-constexpr uint8_t pal_skyline2_start = pal_skyline1_start + pal_skyline1_count;
-constexpr uint8_t pal_skyline2_count = 16;
-constexpr uint8_t pal_dome_start = pal_skyline2_start + pal_skyline2_count;
-constexpr uint8_t pal_dome_count = 16;
+constexpr uint8_t skyline_pal_start = ufo_pal_start + ufo_pal_count;
+constexpr uint8_t skyline_pal_count = 16;
+constexpr uint8_t dome_pal_start = skyline_pal_start + skyline_pal_count;
+constexpr uint8_t dome_pal_count = 16;
 
 //
 
@@ -229,14 +227,6 @@ void setup_tiles() {
 void setup_bitmaps() {
     using namespace engine::graphics;
 
-    // Skyline bitmap.
-    bitmap_2.position_x() = 0;
-    bitmap_2.position_y() = 0;
-    bitmap_2.width() = SCREEN_WIDTH - 1;
-    bitmap_2.height() = road_start - 1;
-
-    // TODO: draw the skyline
-
     // Road bitmap (static).
     bitmap_0.position_x() = 0;
     bitmap_0.position_y() = road_start;
@@ -264,6 +254,62 @@ void setup_bitmaps() {
             if (128 - stripes_width <= x && x < 128 + stripes_width) col = pal_white;
             VDP.BITMAP_VRAM_8BIT[y * 256 + x] = col;
         }
+    }
+
+    // Skyline bitmap.
+    // TODO: this could be done programatically to save 16k space
+    {
+        // First road_start lines are for the skyline.
+        constexpr uint16_t skyline_start_y = 0;
+        constexpr uint16_t skyline_width = SCREEN_WIDTH;
+        constexpr uint16_t skyline_height = road_start;
+
+        bitmap_2.position_x() = 0;
+        bitmap_2.position_y() = 0;
+        bitmap_2.width() = skyline_width - 1;
+        bitmap_2.height() = skyline_height - 1;
+        bitmap_2.scroll_x() = 0;
+        bitmap_2.scroll_y() = skyline_start_y;
+
+        // Setup palette.
+        static_assert(engine::utils::size(images::skyline_raw::palette) == skyline_pal_count);
+        static_assert(images::skyline_raw::pal_offset == skyline_pal_start);
+        for (uint8_t i = 0; i < skyline_pal_count; i++) {
+            set_palette_colour(skyline_pal_start + i, images::skyline_raw::palette[i]);
+        }
+
+        // Copy data.
+        static_assert(engine::utils::size(images::skyline_raw::data) == skyline_width * skyline_height);
+        uint8_t * data = VDP.BITMAP_VRAM_8BIT + skyline_start_y * SCREEN_WIDTH;
+        engine::utils::fast_memcpy(data, images::skyline_raw::data, skyline_width * skyline_height);
+    }
+
+    // Dome bitmap.
+    // TODO: compress (even RLE) would save huge space here
+    {
+        // Dome comes after the road.
+        constexpr uint16_t dome_start_y = road_start + road_length;
+        constexpr uint16_t dome_width = SCREEN_WIDTH;
+        constexpr uint16_t dome_height = road_start;
+
+        bitmap_1.position_x() = 0;
+        bitmap_1.position_y() = road_start;
+        bitmap_1.width() = dome_width - 1;
+        bitmap_1.height() = 0; // we'll grow this when it appears
+        bitmap_1.scroll_x() = 0;
+        bitmap_1.scroll_y() = dome_start_y;
+
+        // Setup palette.
+        static_assert(engine::utils::size(images::dome_raw::palette) == dome_pal_count);
+        static_assert(images::dome_raw::pal_offset == dome_pal_start);
+        for (uint8_t i = 0; i < dome_pal_count; i++) {
+            set_palette_colour(dome_pal_start + i, images::dome_raw::palette[i]);
+        }
+
+        // Copy data.
+        static_assert(engine::utils::size(images::dome_raw::data) == dome_width * dome_height);
+        uint8_t * data = VDP.BITMAP_VRAM_8BIT + dome_start_y * SCREEN_WIDTH;
+        engine::utils::fast_memcpy(data, images::dome_raw::data, dome_width * dome_height);
     }
 }
 
@@ -442,6 +488,7 @@ void enter() {
     // Show everything now that it's drawn.
     bios_vsync();
     engine::graphics::bitmap_0.enable();
+    engine::graphics::bitmap_1.enable();
     engine::graphics::bitmap_2.enable();
     engine::graphics::enable_sprites();
 
@@ -456,6 +503,7 @@ void leave() {
     bios_vsync();
     engine::graphics::disable_sprites();
     engine::graphics::bitmap_0.disable();
+    engine::graphics::bitmap_1.disable();
     engine::graphics::bitmap_2.disable();
     engine::graphics::reset_sprites<transparent_sprite_start + transparent_sprite_count>();
 

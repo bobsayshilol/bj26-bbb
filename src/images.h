@@ -62,6 +62,18 @@ static const uint8_t data[4 * TileSize];
 static const uint16_t palette[16];
 };
 
+struct skyline_raw {
+static constexpr uint8_t pal_offset = 93;
+static const uint8_t data[256 * 64];
+static const uint16_t palette[16];
+};
+
+struct dome_raw {
+static constexpr uint8_t pal_offset = 109;
+static const uint8_t data[256 * 64];
+static const uint16_t palette[16];
+};
+
 struct text_font {
 static constexpr uint8_t pal_offset = 128;
 // TODO: should compress this to bits, but there's tons of space in the ROM
