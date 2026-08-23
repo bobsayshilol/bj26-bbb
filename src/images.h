@@ -11,65 +11,65 @@ constexpr size_t TileSize = engine::graphics::bg_tile_size * engine::graphics::b
 struct bucko_ball {
 static constexpr uint8_t pal_offset = 3;
 static const uint8_t data[32 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 struct bucko_left {
-static constexpr uint8_t pal_offset = 29;
+static constexpr uint8_t pal_offset = 23;
 static const uint8_t data[12 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 struct robucko_right {
-static constexpr uint8_t pal_offset = 45;
+static constexpr uint8_t pal_offset = 33;
 static const uint8_t data[12 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 struct ami_left {
-static constexpr uint8_t pal_offset = 45;
+static constexpr uint8_t pal_offset = 33;
 static const uint8_t data[12 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 struct mm_bouncer {
-static constexpr uint8_t pal_offset = 19;
+static constexpr uint8_t pal_offset = 13;
 static const uint8_t data[8 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 struct mouse {
 static constexpr uint8_t pal_offset = 3;
 static const uint8_t data[1 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 struct car {
 static constexpr uint8_t pal_offset = 4;
 static const uint8_t data[8 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 struct tree {
-static constexpr uint8_t pal_offset = 61;
+static constexpr uint8_t pal_offset = 43;
 static const uint8_t data[3 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 struct ufo {
-static constexpr uint8_t pal_offset = 77;
+static constexpr uint8_t pal_offset = 63;
 static const uint8_t data[4 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 struct skyline_raw {
-static constexpr uint8_t pal_offset = 93;
+static constexpr uint8_t pal_offset = 73;
 static const uint8_t data[256 * 64];
 static const uint16_t palette[16];
 };
 
 struct dome_raw {
-static constexpr uint8_t pal_offset = 109;
+static constexpr uint8_t pal_offset = 89;
 static const uint8_t data[256 * 64];
 static const uint16_t palette[16];
 };
@@ -78,7 +78,7 @@ struct text_font {
 static constexpr uint8_t pal_offset = 128;
 // TODO: should compress this to bits, but there's tons of space in the ROM
 static const uint8_t data[40 * TileSize];
-static const uint16_t palette[16];
+static const uint16_t palette[10];
 };
 
 template <uint8_t PalStart, uint8_t PalCount, uint8_t TileStart, uint8_t TileCount, typename Tileset>

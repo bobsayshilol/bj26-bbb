@@ -69,7 +69,7 @@ def _extract(file :Path):
 		palette_size = 16
 	else:
 		tile_size = 8
-		palette_size = 16 # TODO: reduce this?
+		palette_size = 10
 
 	with Image.open(file) as img:
 		if (img.width % tile_size) != 0:

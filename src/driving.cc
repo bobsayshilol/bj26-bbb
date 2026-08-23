@@ -51,7 +51,7 @@ constexpr uint8_t font_tile_start = 0;
 constexpr uint8_t font_tile_count = font::font_tile_count;
 
 constexpr uint8_t car_pal_start = 4;
-constexpr uint8_t car_pal_count = 16;
+constexpr uint8_t car_pal_count = 10;
 constexpr uint8_t car_sprite_start = font_sprite_start + font_sprite_count;
 constexpr uint8_t car_sprite_count = 4;
 constexpr uint8_t car_tile_start = font_tile_start + font_tile_count;
@@ -64,35 +64,35 @@ static_assert(car_pal_start + car_pal_count <= images::bucko_left::pal_offset);
 constexpr uint8_t voice_char_width = 3;
 constexpr uint8_t voice_char_height = 4;
 constexpr uint8_t bucko_left_pal_start = images::bucko_left::pal_offset;
-constexpr uint8_t bucko_left_pal_count = 16;
+constexpr uint8_t bucko_left_pal_count = 10;
 constexpr uint8_t bucko_left_sprite_start = car_sprite_start + car_sprite_count;
 constexpr uint8_t bucko_left_sprite_count = voice_char_width * voice_char_height;
 constexpr uint8_t bucko_left_tile_start = car_tile_start + car_tile_count;
 constexpr uint8_t bucko_left_tile_count = bucko_left_sprite_count;
 
 constexpr uint8_t ami_left_pal_start = bucko_left_pal_start + bucko_left_pal_count;
-constexpr uint8_t ami_left_pal_count = 16;
+constexpr uint8_t ami_left_pal_count = 10;
 constexpr uint8_t ami_left_sprite_start = bucko_left_sprite_start; // reuse the bucko sprites
 constexpr uint8_t ami_left_sprite_count = bucko_left_sprite_count;
 constexpr uint8_t ami_left_tile_start = bucko_left_tile_start + bucko_left_tile_count;
 constexpr uint8_t ami_left_tile_count = ami_left_sprite_count;
 
 constexpr uint8_t tree_pal_start = ami_left_pal_start + ami_left_pal_count;
-constexpr uint8_t tree_pal_count = 16;
+constexpr uint8_t tree_pal_count = 10;
 constexpr uint8_t tree_sprite_start = ami_left_sprite_start + ami_left_sprite_count;
 constexpr uint8_t tree_sprite_count = 2; // one on each side
 constexpr uint8_t tree_tile_start = ami_left_tile_start + ami_left_tile_count;
 constexpr uint8_t tree_tile_count = 3; // far/med/close -> tiny/small/big
 
 constexpr uint8_t bomb_pal_start = tree_pal_start + tree_pal_count;
-constexpr uint8_t bomb_pal_count = 0; // TODO
+constexpr uint8_t bomb_pal_count = 10;
 constexpr uint8_t bomb_sprite_start = tree_sprite_start + tree_sprite_count;
 constexpr uint8_t bomb_sprite_count = 32;
 constexpr uint8_t bomb_tile_start = tree_tile_start + tree_tile_count;
 constexpr uint8_t bomb_tile_count = 1;
 
 constexpr uint8_t ufo_pal_start = bomb_pal_start + bomb_pal_count;
-constexpr uint8_t ufo_pal_count = 16;
+constexpr uint8_t ufo_pal_count = 10;
 constexpr uint8_t ufo_sprite_start = bomb_sprite_start + bomb_sprite_count;
 constexpr uint8_t ufo_sprite_count = 4;
 constexpr uint8_t ufo_tile_start = bomb_tile_start + bomb_tile_count;

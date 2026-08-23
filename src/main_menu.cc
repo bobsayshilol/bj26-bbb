@@ -29,14 +29,14 @@ constexpr uint8_t pal_white = 1;
 constexpr uint8_t pal_grey = 2;
 
 constexpr uint8_t mouse_pal_start = pal_grey + 1;
-constexpr uint8_t mouse_pal_count = 16;
+constexpr uint8_t mouse_pal_count = 10;
 constexpr uint8_t mouse_sprite_start = 0;
 constexpr uint8_t mouse_sprite_count = 1;
 constexpr uint8_t mouse_tile_start = 0;
 constexpr uint8_t mouse_tile_count = 1;
 
 constexpr uint8_t pal_bouncer_start = mouse_pal_start + mouse_pal_count;
-constexpr uint8_t pal_bouncer_count = 16;
+constexpr uint8_t pal_bouncer_count = 10;
 constexpr uint8_t bouncer_sprite_start = mouse_sprite_start + mouse_sprite_count;
 constexpr uint8_t bouncer_count = 24;
 constexpr uint8_t bouncer_tile_start = mouse_tile_start + mouse_tile_count;

@@ -5,7 +5,7 @@
 namespace game::font {
 
 constexpr uint8_t font_palette_start = 128;
-constexpr uint8_t font_palette_count = 16;
+constexpr uint8_t font_palette_count = 10;
 constexpr uint8_t font_tile_count = 40;
 constexpr uint8_t font_max_sprites = 64; // max chars on screen too
 

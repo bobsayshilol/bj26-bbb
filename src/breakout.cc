@@ -31,7 +31,7 @@ PROFILE_STORAGE(vsync);
 constexpr uint8_t pal_white = 1;
 constexpr uint8_t pal_grey = 2;
 constexpr uint8_t pal_ball_start = 3;
-constexpr uint8_t pal_ball_count = 16; // TODO: less colours
+constexpr uint8_t pal_ball_count = 10;
 
 // font has highest prio.
 constexpr uint8_t font_sprite_start = 0;
@@ -72,11 +72,11 @@ constexpr uint8_t voice_char_height = 4;
 constexpr uint8_t left_char_tile_start = bg_tile_start + bg_tile_count;
 constexpr uint8_t left_char_tile_count = voice_char_width * voice_char_height;
 constexpr uint8_t left_char_pal_start = bg_pal_start + bg_pal_count;
-constexpr uint8_t left_char_pal_count = 16;
+constexpr uint8_t left_char_pal_count = 10;
 constexpr uint8_t right_char_tile_start = left_char_tile_start + left_char_tile_count;
 constexpr uint8_t right_char_tile_count = voice_char_width * voice_char_height;
 constexpr uint8_t right_char_pal_start = left_char_pal_start + left_char_pal_count;
-constexpr uint8_t right_char_pal_count = 16;
+constexpr uint8_t right_char_pal_count = 10;
 
 //
 
