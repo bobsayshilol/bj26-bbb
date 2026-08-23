@@ -7,7 +7,8 @@
 #include "profiler.h"
 
 namespace game {
-bool g_won = false;
+uint16_t g_unlocked;
+uint32_t g_frame_count;
 } // namespace game
 
 namespace {
@@ -105,16 +106,23 @@ int main() {
 	init();
 	splash();
 
+	// Reset globals.
+	game::g_unlocked = 0;
+	game::g_frame_count = 0;
+
 	// Basic state machine.
 	game::Entry state = game::Entry::Attract;
 	while (true) {
 		// Enter new state.
+		game::g_unlocked = engine::utils::max(game::g_unlocked, static_cast<uint16_t>(state));
 		switch (state) {
 			case game::Entry::Attract: game::attract::enter(); break;
 			case game::Entry::MainMenu: game::main_menu::enter(); break;
 			case game::Entry::Breakout: game::breakout::enter(); break;
 			case game::Entry::Driving: game::driving::enter(); break;
 			case game::Entry::Intertitle: game::intertile::enter(); break;
+			case game::Entry::Cyber: game::cyber::enter(); break;
+			case game::Entry::Winner: game::winner::enter(); break;
 		}
 
 		// Run main loop.
@@ -126,7 +134,10 @@ int main() {
 				case game::Entry::Breakout: next = game::breakout::loop(); break;
 				case game::Entry::Driving: next = game::driving::loop(); break;
 				case game::Entry::Intertitle: next = game::intertile::loop(); break;
+				case game::Entry::Cyber: next = game::cyber::loop(); break;
+				case game::Entry::Winner: next = game::winner::loop(); break;
 			}
+			game::g_frame_count++;
 		}
 
 		// Leave the old state.
@@ -136,6 +147,8 @@ int main() {
 			case game::Entry::Breakout: game::breakout::leave(); break;
 			case game::Entry::Driving: game::driving::leave(); break;
 			case game::Entry::Intertitle: game::intertile::leave(); break;
+			case game::Entry::Cyber: game::cyber::leave(); break;
+			case game::Entry::Winner: game::winner::leave(); break;
 		}
 
 		// Update state.

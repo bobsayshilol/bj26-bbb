@@ -741,7 +741,7 @@ Entry update_logic() {
             break;
 
         case LevelState::Dome2:
-            intertile::setup(intertile::Text::Dome, Entry::MainMenu); // TODO: new state
+            intertile::setup(intertile::Text::Dome, Entry::Cyber);
             next = Entry::Intertitle;
             break;
         case LevelState::GameOver2:

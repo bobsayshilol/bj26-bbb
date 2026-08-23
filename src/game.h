@@ -6,16 +6,24 @@
 
 namespace game {
 
-extern bool g_won;
-
 enum class Entry : uint8_t {
+    // Helpers.
     Attract,
+    Intertitle,
     MainMenu,
+
+    // Levels.
+    // Used by g_unlocked below.
     Breakout,
     Driving,
-    Intertitle,
-    //Cyber,
+    Cyber,
+    Winner,
 };
+
+constexpr uint16_t unlock_all = 100;
+extern uint16_t g_unlocked;
+constexpr uint32_t invalid_frame_count = 1 << 20;
+extern uint32_t g_frame_count;
 
 namespace attract {
 void enter();
@@ -54,5 +62,11 @@ void enter();
 Entry loop();
 void leave();
 } // namespace cyber
+
+namespace winner {
+void enter();
+Entry loop();
+void leave();
+} // namespace winner
 
 } // namespace game

@@ -243,6 +243,7 @@ enum class Action {
     None,
     VolUp,
     VolDown,
+    UnlockAll,
 
     // Menus.
     MainMenu,
@@ -254,6 +255,7 @@ enum class Action {
     Start,
     Breakout,
     Driving,
+    Cyber,
 };
 
 struct Button {
@@ -277,15 +279,15 @@ struct Button {
 constexpr const Button main[] {
     Button("Start Game", engine::graphics::SCREEN_HEIGHT / 2, Action::Start),
     Button("Level Select", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 3, Action::LevelSelect),
-    Button("Options", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 6, Action::Options),
+    Button("Cheats", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 6, Action::Options),
     Button("Credits", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 9, Action::Credits),
 };
 
 constexpr const Button level_select[] {
+    Button("Back", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
     Button("Breakout", engine::graphics::SCREEN_HEIGHT / 2, Action::Breakout),
     Button("Driving", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 3, Action::Driving),
-    Button("moar", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 6, Action::None),
-    Button("Back", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
+    Button("Dome", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 6, Action::Cyber),
 };
 
 constexpr const Button options[] {
@@ -293,6 +295,7 @@ constexpr const Button options[] {
     Button("Volume up", engine::graphics::SCREEN_HEIGHT / 2, Action::VolUp),
     Button("Volume Down", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 3, Action::VolDown),
 #endif
+    Button("Unlock all levels", engine::graphics::SCREEN_HEIGHT / 2, Action::UnlockAll),
     Button("Back", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
 };
 
@@ -315,12 +318,16 @@ void menu_redraw() {
             num_butts = engine::utils::size(buttons::main);
             break;
         case MenuState::LevelSelect:
-            game::font::write_centered("Level Select", engine::graphics::SCREEN_HEIGHT / 4);
+            game::font::write_centered("Unlocked levels", engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::level_select;
             num_butts = engine::utils::size(buttons::level_select);
+            // Only show the appropriate ones.
+            if (g_unlocked < static_cast<uint8_t>(Entry::Cyber)) num_butts--;
+            if (g_unlocked < static_cast<uint8_t>(Entry::Driving)) num_butts--;
+            if (g_unlocked < static_cast<uint8_t>(Entry::Breakout)) num_butts--;
             break;
         case MenuState::Options:
-            game::font::write_centered("Options", engine::graphics::SCREEN_HEIGHT / 4);
+            game::font::write_centered("Cheats", engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::options;
             num_butts = engine::utils::size(buttons::options);
             break;
@@ -458,6 +465,9 @@ Entry menu_update() {
                     s_volume = engine::utils::clamp(s_volume, 0, SOUND_VOL_100);
                     engine::sound::set_volume(s_volume);
                     break;
+                case Action::UnlockAll:
+                    g_unlocked = unlock_all;
+                    break;
 
                 case Action::MainMenu:
                     s_menu_state = MenuState::Main;
@@ -477,12 +487,19 @@ Entry menu_update() {
                     break;
 
                 case Action::Start:
+                    g_frame_count = 0;
                     intertile::setup(intertile::Text::Intro, Entry::Breakout);
                     return Entry::Intertitle;
+
                 case Action::Breakout:
+                    g_frame_count = invalid_frame_count;
                     return Entry::Breakout;
                 case Action::Driving:
+                    g_frame_count = invalid_frame_count;
                     return Entry::Driving;
+                case Action::Cyber:
+                    g_frame_count = invalid_frame_count;
+                    return Entry::Cyber;
         }
     }
 
@@ -551,7 +568,7 @@ void enter() {
     engine::graphics::background_0.enable();
 
     // Kick off the bgm.
-    engine::sound::play_bgm(g_won ? game::music::Bgm::Bgm_MM_good : game::music::Bgm::Bgm_MM_bad);
+    engine::sound::play_bgm(g_unlocked >= static_cast<uint8_t>(Entry::Winner) ? game::music::Bgm::Bgm_MM_good : game::music::Bgm::Bgm_MM_bad);
 
     engine::profiler::print_timings();
 }
