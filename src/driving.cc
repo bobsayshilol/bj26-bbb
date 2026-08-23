@@ -11,6 +11,8 @@
 #include "font.h"
 #include "utils.h"
 #include "vector.h"
+#include "aabb.h"
+#include "maths.h"
 
 //
 // +--+--+
@@ -126,6 +128,11 @@ int16_t s_pavement_line_start[road_length];
 // Currently location.
 constexpr auto dx_per_frame = engine::utils::FixedS1616::div(1, 32);
 engine::utils::FixedS1616 s_xpos; // clamped to [-1, 1]
+constexpr int16_t get_car_x() {
+    constexpr uint16_t car_x_scale = 32;
+    return (s_xpos * car_x_scale).value() + engine::graphics::SCREEN_WIDTH / 2 - engine::graphics::bg_tile_size;
+}
+constexpr int16_t car_y = engine::graphics::SCREEN_HEIGHT - engine::graphics::bg_tile_size - 40;
 
 // How fast we move through the road.
 constexpr uint8_t min_road_speed = 1;
@@ -171,6 +178,135 @@ inline int8_t road_curvature_at_section(engine::utils::FixedS1616 const & road_r
 
 constexpr auto dome_y_per_frame = engine::utils::FixedS1616::div(8, 60);
 engine::utils::FixedS1616 s_dome_y;
+
+//
+
+struct alignas(2) Bomb {
+    uint8_t x;
+    uint8_t y;
+
+    static constexpr uint8_t fall_speed = 2;
+
+    constexpr auto aabb() const {
+        return engine::utils::AABB {
+            x, y,
+            engine::graphics::bg_tile_size, engine::graphics::bg_tile_size,
+        };
+    }
+};
+engine::utils::Vector<Bomb, bomb_sprite_count> s_bombs;
+
+struct UFO {
+    static constexpr int16_t off_screen = -2 * static_cast<int16_t>(engine::graphics::bg_tile_size);
+    static constexpr int16_t middle_screen = engine::graphics::SCREEN_WIDTH / 2 - engine::graphics::bg_tile_size;
+    static constexpr auto dx_per_frame = engine::utils::FixedS1616::from(1);
+    engine::utils::FixedS1616 x;
+
+    static constexpr int16_t y = road_start / 2 - engine::graphics::bg_tile_size;
+
+    static constexpr uint16_t stage_length = 19 * 60;
+    uint16_t timer;
+
+    enum class Pattern : uint8_t { Animate, Arrive, Drop, Escape, Finished, } pattern;
+
+    // Each element is ~ 1/8s apart.
+    // Bombs take ~1 to fall.
+    static_assert(Bomb::fall_speed == 2);
+    static constexpr uint8_t bomb_drop_pattern[] {
+        1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 1, 0, 1, 0, 1, 0,
+        1, 0, 1, 0, 1, 0, 1, 0,
+
+        0, 0, 0, 0, 0, 0, 0, 0,
+
+        1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 1, 0, 1, 0, 1, 0,
+        1, 0, 1, 0, 1, 0, 1, 0,
+
+        0, 0, 0, 0, 0, 0, 0, 0,
+
+        1, 0, 0, 0, 1, 0, 0, 0,
+
+        1, 1, 1, 1, 1, 1, 1, 0,
+        1, 1, 1, 1, 1, 1, 1, 0,
+        1, 1, 1, 1, 1, 1, 1, 0,
+        1, 1, 1, 1, 1, 1, 1, 0,
+
+        1, 0, 0, 1, 0, 0, 1, 0, 0,
+        1, 1, 1, 1, 1, 0,
+        1, 0, 0, 1, 0, 0, 1, 0, 0,
+        1, 1, 1, 1, 1, 0,
+
+        // Give time for the remaining bombs to fall.
+        0, 0, 0, 0, 0, 0, 0, 0,
+    };
+
+    void reset() {
+        x = engine::utils::FixedS1616::from(off_screen);
+        pattern = Pattern::Finished;
+    }
+
+    void animate_in() {
+        pattern = Pattern::Animate;
+    }
+
+    void start() {
+        pattern = Pattern::Arrive;
+        timer = 0;
+    }
+
+    bool update() {
+        bool finished = false;
+
+        switch (pattern) {
+            case Pattern::Animate:
+            case Pattern::Arrive:
+                if (x.value() >= middle_screen) {
+                    pattern = pattern == Pattern::Animate ? Pattern::Finished : Pattern::Drop;
+                } else {
+                    x += dx_per_frame;
+                }
+                break;
+
+            case Pattern::Drop: {
+                const uint16_t t = ++timer;
+                if (t == stage_length) {
+                    pattern = Pattern::Escape;
+                } else {
+                    const auto dx = engine::utils::FixedS1616::div(engine::maths::cos(timer), 64);
+                    x += dx;
+
+                    // 7 = ~8 per second max.
+                    if ((t & 7) == 7) {
+                        static_assert((stage_length >> 3) < 0xFF);
+                        const uint8_t i = t >> 3;
+                        static_assert((stage_length >> 3) <= engine::utils::size(bomb_drop_pattern)); // TODO: should be ==
+                        if (bomb_drop_pattern[i]) {
+                            s_bombs.push_back({
+                                static_cast<uint8_t>(x.value()),
+                                y + engine::graphics::bg_tile_size * 2
+                            });
+                        }
+                    }
+                }
+            } break;
+
+            case Pattern::Escape:
+                if (x.value() <= off_screen) {
+                    pattern = Pattern::Finished;
+                } else {
+                    x -= dx_per_frame;
+                }
+                break;
+
+            case Pattern::Finished:
+                finished = true;
+                break;
+        }
+
+        return finished;
+    }
+} s_ufo;
 
 //
 
@@ -220,6 +356,11 @@ void setup_tiles() {
         ufo_pal_start, ufo_pal_count,
         ufo_tile_start, ufo_tile_count,
         images::ufo
+    >();
+    images::copy_tile_data<
+        bomb_pal_start, bomb_pal_count,
+        bomb_tile_start, bomb_tile_count,
+        images::bomb
     >();
 
     // Characters.
@@ -546,8 +687,10 @@ Entry update_logic() {
             break;
 
         case LevelState::UFOFlyIn:
-            // TODO
-            level_advance(LevelState::Intro2);
+            // Move the UFO into view.
+            if (s_ufo.update()) {
+                level_advance(LevelState::Intro2);
+            }
             break;
         case LevelState::Dome:
             // Animate the dome rising.
@@ -558,13 +701,12 @@ Entry update_logic() {
             break;
 
         case LevelState::Bombs:
-            // TODO
-            level_advance(LevelState::Win1);
-            break;
-        case LevelState::BombsCurves:
-            // TODO
-            level_advance(LevelState::Win2);
-            break;
+        case LevelState::BombsCurves: {
+            const auto level = s_level_state == LevelState::Bombs ? LevelState::Win1 : LevelState::Win2;
+            if (s_ufo.update()) {
+                level_advance(level);
+            }
+        } break;
 
         case LevelState::Dome2:
             intertile::setup(intertile::Text::Dome, Entry::MainMenu); // TODO: new state
@@ -621,6 +763,42 @@ void update_physics() {
 
     const int16_t total_curve = road_consume_offsets(position_end - position_start);
     s_road_rotation += engine::utils::FixedS1616::div(total_curve, 32);
+
+    //
+
+    // Bomb collisions.
+    static_assert(car_sprite_count == 4);
+    const engine::utils::AABB car_aabb {
+        get_car_x(), car_y,
+        2 * engine::graphics::bg_tile_size, 2 * engine::graphics::bg_tile_size,
+    };
+
+    uint8_t num_bombs = s_bombs.size();
+    for (uint8_t i = 0; i < num_bombs; ) {
+        auto & bomb = s_bombs[i];
+
+        // Move the bomb down.
+        bomb.y += bomb.fall_speed;
+
+        // See if it collided.
+        bool remove = false;
+        if (bomb.y > car_y) {
+            remove = true;
+        } else if (car_aabb.intersects(bomb.aabb())) {
+            remove = true;
+            // TODO
+            DEBUG_MSG("car hit");
+        }
+
+        // Remove this one, otherwise jump to next.
+        if (remove) {
+            s_bombs.remove_fast(i);
+            num_bombs--;
+            engine::graphics::set_sprite(bomb_sprite_start + num_bombs, {}); // reset the sprite that was removed
+        } else {
+            i++;
+        }
+    }
 }
 
 void draw_sprites() {
@@ -631,15 +809,12 @@ void draw_sprites() {
     {
         static_assert(car_sprite_count == 4);
 
-        constexpr uint16_t car_x_scale = 32;
-        constexpr uint16_t car_y = SCREEN_HEIGHT - engine::graphics::bg_tile_size - 40;
-
         const uint16_t held = engine::input::g_buttons_held;
         const uint8_t is_turning = (held & (GAMEPAD_BTN_LEFT | GAMEPAD_BTN_RIGHT)) ? 4 : 0;
         const bool x_flipped = held & GAMEPAD_BTN_LEFT;
 
         // Car sprite.
-        const auto car_x = (s_xpos * car_x_scale).value() + SCREEN_WIDTH / 2 - engine::graphics::bg_tile_size;
+        const auto car_x = get_car_x();
         for (uint8_t idx = 0; idx < car_sprite_count; idx++) {
             ObjSprite sprite;
             const uint16_t dx = ((idx & 1) ^ x_flipped) ? engine::graphics::bg_tile_size : 0;
@@ -696,6 +871,44 @@ void draw_sprites() {
             for (uint8_t i = 0; i < tree_sprite_count; i++) {
                 set_sprite(tree_sprite_start + i, sprite);
             }
+        }
+    }
+
+    // UFO.
+    {
+        static_assert(ufo_sprite_count == 4);
+
+        constexpr int16_t ufo_y = s_ufo.y;
+        const int16_t ufo_x = s_ufo.x.value();
+
+        if (ufo_x >= 0) {
+            for (uint8_t idx = 0; idx < ufo_sprite_count; idx++) {
+                ObjSprite sprite;
+                const uint16_t dx = (idx & 1) ? engine::graphics::bg_tile_size : 0;
+                const uint16_t dy = (idx & 2) ? engine::graphics::bg_tile_size : 0;
+                sprite.set_x(ufo_x + dx);
+                sprite.set_y(ufo_y + dy);
+                sprite.set_tile_index(ufo_tile_start + idx);
+                set_sprite(ufo_sprite_start + idx, sprite);
+            }
+        } else {
+            for (uint8_t idx = 0; idx < ufo_sprite_count; idx++) {
+                ObjSprite sprite;
+                set_sprite(ufo_sprite_start + idx, sprite);
+            }
+        }
+    }
+
+    // Bombs.
+    {
+        ObjSprite sprite;
+        sprite.set_tile_index(bomb_tile_start);
+        int sprite_idx = 0;
+        for (const auto & bomb : s_bombs) {
+            sprite.set_x(bomb.x);
+            sprite.set_y(bomb.y);
+            set_sprite(bomb_sprite_start + sprite_idx, sprite);
+            sprite_idx++;
         }
     }
 
@@ -1047,12 +1260,15 @@ void level_advance(LevelState state) {
             break;
 
         case LevelState::UFOFlyIn:
+            s_ufo.animate_in();
+            break;
         case LevelState::Dome:
             // Animation state.
             break;
 
         case LevelState::Bombs:
         case LevelState::BombsCurves:
+            s_ufo.start();
             break;
 
         case LevelState::GameOver:
@@ -1083,6 +1299,7 @@ void enter() {
 
     // Initial game state.
     s_dome_y = engine::utils::FixedS1616::from(0);
+    s_ufo.reset();
     level_advance(LevelState::Intro1);
 
     // Show everything now that it's drawn.
