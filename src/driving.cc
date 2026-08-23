@@ -770,7 +770,7 @@ void update_physics() {
     else if (held & GAMEPAD_BTN_RIGHT) { s_xpos += dx_per_frame; }
 
     // The curvature moves us too.
-    const auto curvature = (s_road_rotation * 64).value() / 16;
+    const auto curvature = (s_road_rotation * 64).value() * (s_road_speed * 4).value() / 64;
     s_xpos += engine::utils::FixedS1616::div(curvature, 128);
 
     // Clamp position.
