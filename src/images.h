@@ -56,20 +56,32 @@ static const uint8_t data[3 * TileSize];
 static const uint16_t palette[10];
 };
 
+struct bomb {
+static constexpr uint8_t pal_offset = 53;
+static const uint8_t data[1 * TileSize];
+static const uint16_t palette[10];
+};
+
 struct ufo {
 static constexpr uint8_t pal_offset = 63;
 static const uint8_t data[4 * TileSize];
 static const uint16_t palette[10];
 };
 
-struct skyline_raw {
+struct gauge {
 static constexpr uint8_t pal_offset = 73;
+static const uint8_t data[5 * TileSize];
+static const uint16_t palette[10];
+};
+
+struct skyline_raw {
+static constexpr uint8_t pal_offset = 83;
 static const uint8_t data[256 * 64];
 static const uint16_t palette[16];
 };
 
 struct dome_raw {
-static constexpr uint8_t pal_offset = 89;
+static constexpr uint8_t pal_offset = 99;
 static const uint8_t data[256 * 64];
 static const uint16_t palette[16];
 };
