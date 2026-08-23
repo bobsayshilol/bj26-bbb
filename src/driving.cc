@@ -280,7 +280,7 @@ struct UFO {
                     if ((t & 7) == 7) {
                         static_assert((stage_length >> 3) < 0xFF);
                         const uint8_t i = t >> 3;
-                        static_assert((stage_length >> 3) <= engine::utils::size(bomb_drop_pattern)); // TODO: should be ==
+                        static_assert((stage_length >> 3) == engine::utils::size(bomb_drop_pattern));
                         if (bomb_drop_pattern[i]) {
                             s_bombs.push_back({
                                 static_cast<uint8_t>(x.value()),
@@ -316,6 +316,7 @@ enum class LevelState {
     Intro2,
     Bombs,
     Win1,
+    Curves,
     BombsCurves,
     Win2,
     Dome,
@@ -596,15 +597,23 @@ void road_pick_next(const int8_t * & layout, int16_t & size) {
         case LevelState::UFOFlyIn:
         case LevelState::Intro2:
         case LevelState::Bombs:
-        case LevelState::Win1:
             dir = Dir::ForwardLong;
             break;
+        case LevelState::Win1:
+            dir = Dir::ForwardShort;
+            break;
+        case LevelState::Curves:
         case LevelState::BombsCurves:
         case LevelState::Win2:
-        case LevelState::Dome:
-        case LevelState::Dome2:
         case LevelState::GameOver:
         case LevelState::GameOver2:
+            break;
+        case LevelState::Dome:
+        case LevelState::Dome2:
+            // Reset to forward.
+            if (bias < 0) dir = Dir::LeftFast;
+            else if (bias > 0) dir = Dir::RightFast;
+            else dir = Dir::ForwardLong;
             break;
     }
 
@@ -681,6 +690,7 @@ Entry update_logic() {
         case LevelState::Intro1:
         case LevelState::Intro2:
         case LevelState::Win1:
+        case LevelState::Curves:
         case LevelState::Win2:
         case LevelState::GameOver:
             // UI states don't need an update loop.
@@ -1077,12 +1087,12 @@ constexpr Speech intro1_text[] {
     { UIC::Bucko, "That unsuspecting bucko" },
     { UIC::Bucko, "did the important thing!" },
 
-    { UIC::Ami, "Great!" },
+    { UIC::Ami, "Good job bucko!" },
     { UIC::Ami, "That's one less outpost" },
     { UIC::Ami, "under robucko control." },
     { UIC::Ami, "But it won't be long" },
     { UIC::Ami, "before the other" },
-    { UIC::Ami, "outposts take notice." },
+    { UIC::Ami, "outposts notice." },
 
     { UIC::Bucko, "You need to get to them" },
     { UIC::Bucko, "quickly then!" },
@@ -1095,13 +1105,14 @@ constexpr Speech intro1_text[] {
 };
 
 constexpr Speech intro2_text[] {
+    { UIC::Robucko, "Halt!" },
     { UIC::Robucko, "We have you surrounded" },
     { UIC::Robucko, "at least from this sky!" },
 
     { UIC::Bucko, "Look out!" },
-    { UIC::Bucko, "There's highly armoured" },
-    { UIC::Bucko, "flying robuckos!"},
-    { UIC::Bucko, "And they're about to start" },
+    { UIC::Bucko, "That's a highly armoured" },
+    { UIC::Bucko, "flying robucko!"},
+    { UIC::Bucko, "And it's about to start" },
     { UIC::Bucko, "dropping bombs!" },
     { UIC::Bucko, "Evasive maneuvers!" },
 
@@ -1109,6 +1120,44 @@ constexpr Speech intro2_text[] {
 };
 
 constexpr Speech win1_text[] {
+    { UIC::Bucko, "Phew!" },
+    { UIC::Bucko, "It looks like it" },
+    { UIC::Bucko, "ran out of bombs" },
+    { UIC::Bucko, "and flew away." },
+    { UIC::Bucko, "You saved us Ami!" },
+    { UIC::Ami, "..." },
+    { UIC::Ami, "Don't you think that" },
+    { UIC::Ami, "it'll come back after" },
+    { UIC::Ami, "it's restocked?" },
+    { UIC::Bucko, "Oh." },
+    { UIC::Bucko, "I didn't think about that." },
+    { UIC::Ami, "..." },
+
+    { UIC::Bucko, "Then you should skip the" },
+    { UIC::Bucko, "other outposts and head" },
+    { UIC::Bucko, "straight to the dome." },
+    //{ UIC::Bucko, "And not because the" },
+    //{ UIC::Bucko, "dev ran out of time" },
+
+    nullptr,
+};
+
+constexpr Speech curves_text[] {
+    { UIC::Bucko, "Look out!" },
+    { UIC::Bucko, "The road ahead gets" },
+    { UIC::Bucko, "a bit twisty." },
+
+    { UIC::Bucko, "If you're not careful" },
+    { UIC::Bucko, "you'll get pushed away" },
+    { UIC::Bucko, "from the centre." },
+
+    { UIC::Bucko, "It's a good thing that" },
+    { UIC::Bucko, "the roads are so wide." },
+
+    { UIC::Ami, "I thought that my car" },
+    { UIC::Ami, "was just small." },
+
+#if 0
     { UIC::Ami, "Hey bucko?" },
     { UIC::Bucko, "Yes?" },
     { UIC::Ami, "Why is it that I can" },
@@ -1118,10 +1167,7 @@ constexpr Speech win1_text[] {
     { UIC::Bucko, "can say anything at" },
     { UIC::Bucko, "all in this part of" },
     { UIC::Bucko, "the game lol" },
-
-    { UIC::Bucko, "Look out!" },
-    { UIC::Bucko, "The road ahead gets" },
-    { UIC::Bucko, "a bit twisty." },
+#endif
 
     nullptr,
 };
@@ -1129,14 +1175,26 @@ constexpr Speech win1_text[] {
 constexpr Speech win2_text[] {
     { UIC::Bucko, "Ami!" },
     { UIC::Ami, "Yes?" },
+#if 1
+    { UIC::Bucko, "Since you're part Irish" },
+    { UIC::Bucko, "would you say that buckos" },
+    { UIC::Bucko, "are wee creatures?" },
+    { UIC::Ami, "Where are you going" },
+    { UIC::Ami, "with this?" },
+    { UIC::Bucko, "Well you could name" },
+    { UIC::Bucko, "this operation" },
+    { UIC::Bucko, "help all t' wee creatures!" },
+#else
     { UIC::Bucko, "I think you should name" },
     { UIC::Bucko, "this operation" },
     { UIC::Bucko, "help all t' wee creatures!" },
     { UIC::Ami, "..." },
     { UIC::Bucko, "because buckos are..." },
-    { UIC::Ami, "no!" },
-    { UIC::Ami, "we're not calling it" },
-    { UIC::Ami, "operation h.a.w.c." },
+#endif
+    { UIC::Ami, "No!" },
+    { UIC::Ami, "We're not calling it" },
+    { UIC::Ami, "operation H.A.W.C." },
+    { UIC::Ami, "That was last year's joke." },
     { UIC::Bucko, "trollface" }, // TODO: trollface tiles
 
     { UIC::Bucko, "Oh!" },
@@ -1194,6 +1252,7 @@ void ui_update() {
         case LevelState::Intro1:
         case LevelState::Intro2:
         case LevelState::Win1:
+        case LevelState::Curves:
         case LevelState::Win2:
         case LevelState::GameOver:
             is_ui = true;
@@ -1252,6 +1311,10 @@ void level_advance(LevelState state) {
             break;
         case LevelState::Win1:
             s_current_speech = win1_text;
+            s_next_state = LevelState::Curves;
+            break;
+        case LevelState::Curves:
+            s_current_speech = curves_text;
             s_next_state = LevelState::BombsCurves;
             break;
         case LevelState::Win2:
