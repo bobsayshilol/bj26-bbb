@@ -100,13 +100,20 @@ constexpr uint8_t ufo_sprite_count = 4;
 constexpr uint8_t ufo_tile_start = bomb_tile_start + bomb_tile_count;
 constexpr uint8_t ufo_tile_count = 4;
 
+constexpr uint8_t gauge_pal_start = ufo_pal_start + ufo_pal_count;
+constexpr uint8_t gauge_pal_count = 10;
+constexpr uint8_t gauge_sprite_start = ufo_sprite_start + ufo_sprite_count;
+constexpr uint8_t gauge_sprite_count = 1;
+constexpr uint8_t gauge_tile_start = ufo_tile_start + ufo_tile_count;
+constexpr uint8_t gauge_tile_count = 5;
+
 // Reuses the basic palette above.
-constexpr uint8_t transparent_sprite_start = ufo_sprite_start + ufo_sprite_count;
+constexpr uint8_t transparent_sprite_start = gauge_sprite_start + gauge_sprite_count;
 constexpr uint8_t transparent_sprite_count = SPRITES_FOR_ROAD ? 3 : 0; // max 3 road splits
-constexpr uint8_t transparent_tile_start = ufo_tile_start + ufo_tile_count;
+constexpr uint8_t transparent_tile_start = gauge_tile_start + gauge_tile_count;
 constexpr uint8_t transparent_tile_count = SPRITES_FOR_ROAD ? 1 : 0;
 
-constexpr uint8_t skyline_pal_start = ufo_pal_start + ufo_pal_count;
+constexpr uint8_t skyline_pal_start = gauge_pal_start + gauge_pal_count;
 constexpr uint8_t skyline_pal_count = 16;
 constexpr uint8_t dome_pal_start = skyline_pal_start + skyline_pal_count;
 constexpr uint8_t dome_pal_count = 16;
@@ -377,6 +384,13 @@ void setup_tiles() {
         ami_left_pal_start, ami_left_pal_count,
         ami_left_tile_start, ami_left_tile_count,
         images::ami_left
+    >();
+
+    // UI bits.
+    images::copy_tile_data<
+        gauge_pal_start, gauge_pal_count,
+        gauge_tile_start, gauge_tile_count,
+        images::gauge
     >();
 
 #if SPRITES_FOR_ROAD
@@ -747,7 +761,7 @@ void update_physics() {
 
     // Speed.
     const uint16_t max_road_speed = get_current_max_speed();
-    if ((held & GAMEPAD_BTN_UP) && (s_road_speed * road_speed_scale).value() < max_road_speed) { s_road_speed += accel_per_frame; }
+    if ((held & GAMEPAD_BTN_UP) && (s_road_speed * road_speed_scale).value() <= max_road_speed) { s_road_speed += accel_per_frame; }
     else if ((held & GAMEPAD_BTN_DOWN)) { s_road_speed -= accel_per_frame; } // clamp happens after drag
 
     // Apply drag.
@@ -936,6 +950,22 @@ void draw_sprites() {
         }
     }
 
+    // Speed gauge.
+    {
+        constexpr uint8_t x_pos = 3;
+        constexpr uint8_t y_pos = SCREEN_HEIGHT / 3;
+
+        // Should really be checking that max speed is number of tiles.
+        static_assert(road_speed_scale + 1 == gauge_tile_count);
+        const uint8_t speed_idx = s_road_speed.value();
+
+        ObjSprite sprite;
+        sprite.set_x(x_pos);
+        sprite.set_y(y_pos);
+        sprite.set_tile_index(gauge_tile_start + speed_idx);
+        set_sprite(gauge_sprite_start, sprite);
+    }
+
 #if SPRITES_FOR_ROAD
     // Transparent line split tiles.
     sprite.set_tile_index(transparent_tile_start); // single tile
@@ -1110,9 +1140,10 @@ constexpr Speech intro1_text[] {
 
     { UIC::Bucko, "You need to get to them" },
     { UIC::Bucko, "quickly then!" },
-    { UIC::Bucko, "The up and down buttons" },
-    { UIC::Bucko, "control your speed and" },
-    { UIC::Bucko, "the closer to the centre" },
+    { UIC::Bucko, "Use the up and down" },
+    { UIC::Bucko, "buttons to control your" },
+    { UIC::Bucko, "speed." },
+    { UIC::Bucko, "The closer to the centre" },
     { UIC::Bucko, "you are the faster" },
     { UIC::Bucko, "you can go." },
 
