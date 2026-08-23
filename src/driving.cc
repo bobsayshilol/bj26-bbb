@@ -10,6 +10,7 @@
 #include "images.h"
 #include "font.h"
 #include "utils.h"
+#include "vector.h"
 
 //
 // +--+--+
@@ -83,11 +84,18 @@ constexpr uint8_t tree_sprite_count = 2; // one on each side
 constexpr uint8_t tree_tile_start = ami_left_tile_start + ami_left_tile_count;
 constexpr uint8_t tree_tile_count = 3; // far/med/close -> tiny/small/big
 
-constexpr uint8_t ufo_pal_start = tree_pal_start + tree_pal_count;
+constexpr uint8_t bomb_pal_start = tree_pal_start + tree_pal_count;
+constexpr uint8_t bomb_pal_count = 0; // TODO
+constexpr uint8_t bomb_sprite_start = tree_sprite_start + tree_sprite_count;
+constexpr uint8_t bomb_sprite_count = 32;
+constexpr uint8_t bomb_tile_start = tree_tile_start + tree_tile_count;
+constexpr uint8_t bomb_tile_count = 1;
+
+constexpr uint8_t ufo_pal_start = bomb_pal_start + bomb_pal_count;
 constexpr uint8_t ufo_pal_count = 16;
-constexpr uint8_t ufo_sprite_start = tree_sprite_start + tree_sprite_count;
+constexpr uint8_t ufo_sprite_start = bomb_sprite_start + bomb_sprite_count;
 constexpr uint8_t ufo_sprite_count = 4;
-constexpr uint8_t ufo_tile_start = tree_tile_start + tree_tile_count;
+constexpr uint8_t ufo_tile_start = bomb_tile_start + bomb_tile_count;
 constexpr uint8_t ufo_tile_count = 4;
 
 // Reuses the basic palette above.
@@ -100,6 +108,8 @@ constexpr uint8_t skyline_pal_start = ufo_pal_start + ufo_pal_count;
 constexpr uint8_t skyline_pal_count = 16;
 constexpr uint8_t dome_pal_start = skyline_pal_start + skyline_pal_count;
 constexpr uint8_t dome_pal_count = 16;
+
+static_assert(dome_pal_start + dome_pal_count <= font::font_palette_start);
 
 //
 
@@ -1073,7 +1083,7 @@ void enter() {
 
     // Initial game state.
     s_dome_y = engine::utils::FixedS1616::from(0);
-    level_advance(LevelState::Dome);
+    level_advance(LevelState::Intro1);
 
     // Show everything now that it's drawn.
     bios_vsync();
