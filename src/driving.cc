@@ -735,17 +735,6 @@ void update_physics() {
 
     const uint16_t held = engine::input::g_buttons_held;
 
-    // Handle input.
-    if (held & GAMEPAD_BTN_LEFT) { s_xpos -= dx_per_frame; }
-    else if (held & GAMEPAD_BTN_RIGHT) { s_xpos += dx_per_frame; }
-
-    // Clamp position.
-    if (s_xpos.value() >= 1) {
-        s_xpos = engine::utils::FixedS1616::from(1);
-    } else if (s_xpos.value() < -1) { // TODO: this should be <=, but off-by-one with -ve (see header)
-        s_xpos = engine::utils::FixedS1616::from(-1);
-    }
-
     //
 
     // Speed.
@@ -773,6 +762,23 @@ void update_physics() {
 
     const int16_t total_curve = road_consume_offsets(position_end - position_start);
     s_road_rotation += engine::utils::FixedS1616::div(total_curve, 32);
+
+    //
+
+    // Handle input.
+    if (held & GAMEPAD_BTN_LEFT) { s_xpos -= dx_per_frame; }
+    else if (held & GAMEPAD_BTN_RIGHT) { s_xpos += dx_per_frame; }
+
+    // The curvature moves us too.
+    const auto curvature = (s_road_rotation * 64).value() / 16;
+    s_xpos += engine::utils::FixedS1616::div(curvature, 128);
+
+    // Clamp position.
+    if (s_xpos.value() >= 1) {
+        s_xpos = engine::utils::FixedS1616::from(1);
+    } else if (s_xpos.value() < -1) { // TODO: this should be <=, but off-by-one with -ve (see header)
+        s_xpos = engine::utils::FixedS1616::from(-1);
+    }
 
     //
 
