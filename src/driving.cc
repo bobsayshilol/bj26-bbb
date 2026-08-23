@@ -159,6 +159,11 @@ inline int8_t road_curvature_at_section(engine::utils::FixedS1616 const & road_r
 
 //
 
+constexpr auto dome_y_per_frame = engine::utils::FixedS1616::div(8, 60);
+engine::utils::FixedS1616 s_dome_y;
+
+//
+
 enum class LevelState {
     Intro1,
     UFOFlyIn,
@@ -535,8 +540,11 @@ Entry update_logic() {
             level_advance(LevelState::Intro2);
             break;
         case LevelState::Dome:
-            // TODO
-            level_advance(LevelState::Dome2);
+            // Animate the dome rising.
+            s_dome_y += dome_y_per_frame;
+            if (s_dome_y.value() >= road_start) {
+                level_advance(LevelState::Dome2);
+            }
             break;
 
         case LevelState::Bombs:
@@ -549,7 +557,8 @@ Entry update_logic() {
             break;
 
         case LevelState::Dome2:
-            next = Entry::MainMenu;
+            intertile::setup(intertile::Text::Dome, Entry::MainMenu); // TODO: new state
+            next = Entry::Intertitle;
             break;
         case LevelState::GameOver2:
             next = Entry::MainMenu;
@@ -702,6 +711,11 @@ void draw_bg() {
     // Scroll the skyline.
     const auto scroll = (s_road_rotation * 128).value() / 16;
     engine::graphics::bitmap_2.scroll_x() -= scroll;
+
+    // Make the dome rise.
+    const int16_t dome_y = s_dome_y.value();
+    engine::graphics::bitmap_1.height() = dome_y;
+    engine::graphics::bitmap_1.position_y() = road_start - dome_y;
 }
 
 void draw_road() {
@@ -1023,14 +1037,14 @@ void level_advance(LevelState state) {
             break;
 
         case LevelState::UFOFlyIn:
+        case LevelState::Dome:
+            // Animation state.
             break;
 
         case LevelState::Bombs:
         case LevelState::BombsCurves:
             break;
 
-        case LevelState::Dome:
-            break;
         case LevelState::GameOver:
             s_current_speech = gameover_text;
             s_next_state = LevelState::GameOver2;
@@ -1058,7 +1072,8 @@ void enter() {
     ui_setup();
 
     // Initial game state.
-    level_advance(LevelState::Intro1);
+    s_dome_y = engine::utils::FixedS1616::from(0);
+    level_advance(LevelState::Dome);
 
     // Show everything now that it's drawn.
     bios_vsync();

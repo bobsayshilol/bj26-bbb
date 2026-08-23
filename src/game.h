@@ -42,7 +42,7 @@ void leave();
 } // namespace driving
 
 namespace intertile {
-enum class Text { Intro, Meanwhile, GameOver, };
+enum class Text { Intro, Meanwhile, Dome, GameOver, };
 void setup(Text text, Entry next);
 void enter();
 Entry loop();
