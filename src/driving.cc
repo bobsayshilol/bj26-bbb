@@ -135,14 +135,15 @@ constexpr int16_t get_car_x() {
 constexpr int16_t car_y = engine::graphics::SCREEN_HEIGHT - engine::graphics::bg_tile_size - 40;
 
 // How fast we move through the road.
-constexpr uint8_t min_road_speed = 1;
+constexpr uint8_t road_speed_scale = 4;
+constexpr uint8_t min_road_speed = 2;
 engine::utils::FixedS1616 s_road_position; // clamped to [0, 256]
-engine::utils::FixedS1616 s_road_speed = engine::utils::FixedS1616::from(min_road_speed);
+engine::utils::FixedS1616 s_road_speed;
 
 uint8_t get_current_max_speed() {
     static constexpr uint8_t max_road_speeds[8+1] = {
-        1, 2, 3, 4, 4, 3, 2, 1,
-        1, // extra in case of xpos=1
+        2, 4, 8, 16, 16, 8, 4, 2,
+        2, // extra in case of xpos=1
     };
     const int16_t idx = 4 + (s_xpos * 4).value(); // 4 + [-4, 4]
     ASSERT(idx >= 0);
@@ -319,6 +320,8 @@ enum class LevelState {
     Curves,
     BombsCurves,
     Win2,
+    BombsCurves2,
+    Win3,
     Dome,
     Dome2,
     GameOver,
@@ -605,6 +608,8 @@ void road_pick_next(const int8_t * & layout, int16_t & size) {
         case LevelState::Curves:
         case LevelState::BombsCurves:
         case LevelState::Win2:
+        case LevelState::BombsCurves2:
+        case LevelState::Win3:
         case LevelState::GameOver:
         case LevelState::GameOver2:
             break;
@@ -692,6 +697,7 @@ Entry update_logic() {
         case LevelState::Win1:
         case LevelState::Curves:
         case LevelState::Win2:
+        case LevelState::Win3:
         case LevelState::GameOver:
             // UI states don't need an update loop.
             break;
@@ -711,12 +717,14 @@ Entry update_logic() {
             break;
 
         case LevelState::Bombs:
-        case LevelState::BombsCurves: {
-            const auto level = s_level_state == LevelState::Bombs ? LevelState::Win1 : LevelState::Win2;
-            if (s_ufo.update()) {
-                level_advance(level);
-            }
-        } break;
+            if (s_ufo.update()) level_advance(LevelState::Win1);
+            break;
+        case LevelState::BombsCurves:
+            if (s_ufo.update()) level_advance(LevelState::Win2);
+            break;
+        case LevelState::BombsCurves2:
+            if (s_ufo.update()) level_advance(LevelState::Win3);
+            break;
 
         case LevelState::Dome2:
             intertile::setup(intertile::Text::Dome, Entry::MainMenu); // TODO: new state
@@ -739,13 +747,13 @@ void update_physics() {
 
     // Speed.
     const uint16_t max_road_speed = get_current_max_speed();
-    if ((held & GAMEPAD_BTN_UP) && s_road_speed.value() < max_road_speed) { s_road_speed += accel_per_frame; }
+    if ((held & GAMEPAD_BTN_UP) && (s_road_speed * road_speed_scale).value() < max_road_speed) { s_road_speed += accel_per_frame; }
     else if ((held & GAMEPAD_BTN_DOWN)) { s_road_speed -= accel_per_frame; } // clamp happens after drag
 
     // Apply drag.
     s_road_speed -= drag_per_frame;
-    if (s_road_speed.value() < min_road_speed) {
-        s_road_speed = engine::utils::FixedS1616::from(min_road_speed);
+    if ((s_road_speed * road_speed_scale).value() < min_road_speed) {
+        s_road_speed = engine::utils::FixedS1616::div(min_road_speed, road_speed_scale);
     }
 
     //
@@ -770,7 +778,7 @@ void update_physics() {
     else if (held & GAMEPAD_BTN_RIGHT) { s_xpos += dx_per_frame; }
 
     // The curvature moves us too.
-    const auto curvature = (s_road_rotation * 64).value() * (s_road_speed * 4).value() / 64;
+    const auto curvature = (s_road_rotation * 64).value() * (s_road_speed * road_speed_scale).value() / 64;
     s_xpos += engine::utils::FixedS1616::div(curvature, 128);
 
     // Clamp position.
@@ -798,7 +806,7 @@ void update_physics() {
 
         // See if it collided.
         bool remove = false;
-        if (bomb.y > car_y) {
+        if (bomb.y > car_aabb.y + car_aabb.h) {
             remove = true;
         } else if (car_aabb.intersects(bomb.aabb())) {
             remove = true;
@@ -948,7 +956,7 @@ void draw_bg() {
     PROFILE_SCOPE(bg_upd);
 
     // Scroll the skyline.
-    const auto scroll = (s_road_rotation * 128).value() / 16;
+    const auto scroll = (s_road_rotation * 64).value() * (s_road_speed * road_speed_scale).value() / 64;
     engine::graphics::bitmap_2.scroll_x() -= scroll;
 
     // Make the dome rise.
@@ -1102,10 +1110,11 @@ constexpr Speech intro1_text[] {
 
     { UIC::Bucko, "You need to get to them" },
     { UIC::Bucko, "quickly then!" },
-    { UIC::Bucko, "Make sure to press the" },
-    { UIC::Bucko, "up button and stay in" },
-    { UIC::Bucko, "the centre of the road" },
-    { UIC::Bucko, "to go at full speed." },
+    { UIC::Bucko, "The up and down buttons" },
+    { UIC::Bucko, "control your speed and" },
+    { UIC::Bucko, "the closer to the centre" },
+    { UIC::Bucko, "you are the faster" },
+    { UIC::Bucko, "you can go." },
 
     nullptr,
 };
@@ -1145,14 +1154,14 @@ constexpr Speech win1_text[] {
     //{ UIC::Bucko, "And not because the" },
     //{ UIC::Bucko, "dev ran out of time" },
 
-    nullptr,
-};
-
-constexpr Speech curves_text[] {
     { UIC::Bucko, "Look out!" },
     { UIC::Bucko, "The road ahead gets" },
     { UIC::Bucko, "a bit twisty." },
 
+    nullptr,
+};
+
+constexpr Speech curves_text[] {
     { UIC::Bucko, "If you're not careful" },
     { UIC::Bucko, "you'll get pushed away" },
     { UIC::Bucko, "from the centre." },
@@ -1203,8 +1212,17 @@ constexpr Speech win2_text[] {
     { UIC::Ami, "That was last year's joke." },
     { UIC::Bucko, "trollface" }, // TODO: trollface tiles
 
-    { UIC::Bucko, "Oh!" },
-    { UIC::Bucko, "The dome's coming up." },
+    nullptr,
+};
+
+constexpr Speech win3_text[] {
+    { UIC::Bucko, "I think that was the" },
+    { UIC::Bucko, "last stage." },
+    { UIC::Ami, "How can you tell?" },
+    { UIC::Bucko, "Rule of 3." },
+    { UIC::Ami, "..." },
+    { UIC::Bucko, "And we're approaching" },
+    { UIC::Bucko, "the dome." },
 
     nullptr,
 };
@@ -1213,8 +1231,6 @@ constexpr Speech gameover_text[] {
     { UIC::Bucko, "Ami?" },
     { UIC::Bucko, "Ami!" },
     { UIC::Bucko, "Ami!!!!!!!" },
-
-    { UIC::None, "Game over" },
 
     nullptr,
 };
@@ -1260,12 +1276,14 @@ void ui_update() {
         case LevelState::Win1:
         case LevelState::Curves:
         case LevelState::Win2:
+        case LevelState::Win3:
         case LevelState::GameOver:
             is_ui = true;
             break;
         case LevelState::UFOFlyIn:
         case LevelState::Bombs:
         case LevelState::BombsCurves:
+        case LevelState::BombsCurves2:
         case LevelState::Dome:
         case LevelState::Dome2:
         case LevelState::GameOver2:
@@ -1325,6 +1343,10 @@ void level_advance(LevelState state) {
             break;
         case LevelState::Win2:
             s_current_speech = win2_text;
+            s_next_state = LevelState::BombsCurves2;
+            break;
+        case LevelState::Win3:
+            s_current_speech = win3_text;
             s_next_state = LevelState::Dome;
             break;
 
@@ -1337,6 +1359,7 @@ void level_advance(LevelState state) {
 
         case LevelState::Bombs:
         case LevelState::BombsCurves:
+        case LevelState::BombsCurves2:
             s_ufo.start();
             break;
 
@@ -1367,6 +1390,7 @@ void enter() {
     ui_setup();
 
     // Initial game state.
+    s_road_speed = engine::utils::FixedS1616::div(min_road_speed, road_speed_scale);
     s_dome_y = engine::utils::FixedS1616::from(0);
     s_ufo.reset();
     level_advance(LevelState::Intro1);
