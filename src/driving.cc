@@ -824,6 +824,8 @@ void update_physics() {
             remove = true;
         } else if (car_aabb.intersects(bomb.aabb())) {
             remove = true;
+
+            engine::sound::play_effect(game::music::SoundEffect::SE_Driving_Hit);
             // TODO
             DEBUG_MSG("car hit");
         }
@@ -1357,6 +1359,7 @@ void level_advance(LevelState state) {
     switch (state) {
         case LevelState::Intro1:
             road_reset();
+            engine::sound::play_effect(game::music::SoundEffect::SE_Driving_Car);
             s_current_speech = intro1_text;
             s_next_state = LevelState::UFOFlyIn;
             break;
@@ -1365,6 +1368,7 @@ void level_advance(LevelState state) {
             s_next_state = LevelState::Bombs;
             break;
         case LevelState::Win1:
+            engine::sound::play_effect(game::music::SoundEffect::SE_Driving_Car);
             s_current_speech = win1_text;
             s_next_state = LevelState::Curves;
             break;
@@ -1373,15 +1377,18 @@ void level_advance(LevelState state) {
             s_next_state = LevelState::BombsCurves;
             break;
         case LevelState::Win2:
+            engine::sound::play_effect(game::music::SoundEffect::SE_Driving_Car);
             s_current_speech = win2_text;
             s_next_state = LevelState::BombsCurves2;
             break;
         case LevelState::Win3:
+            engine::sound::play_effect(game::music::SoundEffect::SE_Driving_Car);
             s_current_speech = win3_text;
             s_next_state = LevelState::Dome;
             break;
 
         case LevelState::UFOFlyIn:
+            engine::sound::play_effect(game::music::SoundEffect::SE_Driving_WeewooHi);
             s_ufo.animate_in();
             break;
         case LevelState::Dome:
@@ -1391,6 +1398,7 @@ void level_advance(LevelState state) {
         case LevelState::Bombs:
         case LevelState::BombsCurves:
         case LevelState::BombsCurves2:
+            engine::sound::play_effect(game::music::SoundEffect::SE_Driving_WeewooLo);
             s_ufo.start();
             break;
 
@@ -1450,6 +1458,7 @@ void leave() {
 
     // Reset sound.
     engine::sound::stop_bgm();
+    engine::sound::play_effect(game::music::SoundEffect::SE_Stop);
 }
 
 Entry loop() {

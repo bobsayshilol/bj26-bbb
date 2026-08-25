@@ -52,15 +52,24 @@ MAKE_SFX(sfx_tense,
 
 MAKE_SFX(sfx_car_engine,
     SFX_PROG(0x5F)
-    SFX_ON(0x3B)
+    SFX_ON(0x3B) // car revs
 );
 MAKE_SFX(sfx_weewoo_hi,
     SFX_PROG(0x5F)
-    SFX_ON(0x54)
+    SFX_ON(0x3B) // car revs
+    SFX_ON(0x54) // weewoo(hi)
 );
 MAKE_SFX(sfx_weewoo_low,
     SFX_PROG(0x5F)
-    SFX_ON(0x3C)
+    SFX_ON(0x3B) // car revs
+    SFX_ON(0x3C) // weewoo(lo)
+);
+MAKE_SFX(sfx_driving_hit,
+    SFX_PROG(voices::beep) // the prog switch silences this beep...
+    SFX_ON(0x30)
+    SFX_PROG(0x5F)
+    SFX_ON(0x3B) // car revs
+    SFX_ON(0x3C) // weewoo(lo)
 );
 
 uint8_t sfx_test[] = {
@@ -223,6 +232,8 @@ const uint8_t * const sfx_list[] {
     [SoundEffect::SE_Driving_Car] = sfx_car_engine,
     [SoundEffect::SE_Driving_WeewooHi] = sfx_weewoo_hi,
     [SoundEffect::SE_Driving_WeewooLo] = sfx_weewoo_low,
+    [SoundEffect::SE_Driving_Hit] = sfx_driving_hit,
+    [SoundEffect::SE_Stop] = sfx_click, // TODO: there's probably one that should be in bios.h
 };
 static_assert(SoundEffect::SE_Count == engine::utils::size(sfx_list));
 

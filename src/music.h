@@ -26,6 +26,8 @@ enum SoundEffect : uint8_t {
     SE_Driving_Car,
     SE_Driving_WeewooHi,
     SE_Driving_WeewooLo,
+    SE_Driving_Hit,
+    SE_Stop,
     SE_Count,
 };
 
