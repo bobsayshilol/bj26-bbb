@@ -59,17 +59,22 @@ constexpr uint8_t car_sprite_count = 4;
 constexpr uint8_t car_tile_start = font_tile_start + font_tile_count;
 constexpr uint8_t car_tile_count = car_sprite_count * 2; // one for forwards, one for left/right (flip)
 
-// There's free palette space here (20-29).
-
-// Bit awkward, but bucko_left must be at a fixed offset (from breakout).
-static_assert(car_pal_start + car_pal_count <= images::bucko_left::pal_offset);
 constexpr uint8_t voice_char_width = 3;
 constexpr uint8_t voice_char_height = 4;
+constexpr uint8_t bucko_troll_right_pal_start = car_pal_start + car_pal_count;
+constexpr uint8_t bucko_troll_right_pal_count = 10;
+constexpr uint8_t bucko_troll_right_sprite_start = car_sprite_start + car_sprite_count;
+constexpr uint8_t bucko_troll_right_sprite_count = voice_char_width * voice_char_height;
+constexpr uint8_t bucko_troll_right_tile_start = car_tile_start + car_tile_count;
+constexpr uint8_t bucko_troll_right_tile_count = bucko_troll_right_sprite_count;
+
+// Bit awkward, but bucko_left must be at a fixed offset (from breakout).
+static_assert(bucko_troll_right_pal_start + bucko_troll_right_pal_count <= images::bucko_left::pal_offset);
 constexpr uint8_t bucko_left_pal_start = images::bucko_left::pal_offset;
 constexpr uint8_t bucko_left_pal_count = 10;
-constexpr uint8_t bucko_left_sprite_start = car_sprite_start + car_sprite_count;
-constexpr uint8_t bucko_left_sprite_count = voice_char_width * voice_char_height;
-constexpr uint8_t bucko_left_tile_start = car_tile_start + car_tile_count;
+constexpr uint8_t bucko_left_sprite_start = bucko_troll_right_sprite_start;
+constexpr uint8_t bucko_left_sprite_count = bucko_troll_right_sprite_count; // reuse the bucko sprites
+constexpr uint8_t bucko_left_tile_start = bucko_troll_right_tile_start + bucko_troll_right_tile_count;
 constexpr uint8_t bucko_left_tile_count = bucko_left_sprite_count;
 
 constexpr uint8_t ami_left_pal_start = bucko_left_pal_start + bucko_left_pal_count;
@@ -384,6 +389,11 @@ void setup_tiles() {
         ami_left_pal_start, ami_left_pal_count,
         ami_left_tile_start, ami_left_tile_count,
         images::ami_left
+    >();
+    images::copy_tile_data<
+        bucko_troll_right_pal_start, bucko_troll_right_pal_count,
+        bucko_troll_right_tile_start, bucko_troll_right_tile_count,
+        images::bucko_troll_right
     >();
 
     // UI bits.
@@ -1062,7 +1072,7 @@ void draw_road() {
 
 //
 
-enum class UIC : uint8_t { None, NoneRight, Ami, Bucko, Robucko, };
+enum class UIC : uint8_t { None, NoneRight, Ami, Bucko, Robucko, BuckoTroll, };
 void ui_character(UIC voice) {
     using namespace engine::graphics;
 
@@ -1108,6 +1118,17 @@ void ui_character(UIC voice) {
                     sprite.set_y(right_start_y + y * bg_tile_size);
                     sprite.set_tile_index(bucko_left_tile_start + sprite_idx);
                     sprite.set_x_flip(true);
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+        case UIC::BuckoTroll:
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = 0; x < voice_char_width; x++) {
+                    sprite.set_x(right_start_x + x * bg_tile_size);
+                    sprite.set_y(right_start_y + y * bg_tile_size);
+                    sprite.set_tile_index(bucko_troll_right_tile_start + sprite_idx);
                     set_sprite(sprite_start + sprite_idx, sprite);
                     sprite_idx++;
                 }
@@ -1243,7 +1264,7 @@ constexpr Speech win2_text[] {
     { UIC::Ami, "We're not calling it" },
     { UIC::Ami, "operation H.A.W.C." },
     { UIC::Ami, "That was last year's joke." },
-    { UIC::Bucko, "trollface" }, // TODO: trollface tiles
+    { UIC::BuckoTroll, "" },
 
     nullptr,
 };
@@ -1288,6 +1309,7 @@ void ui_redraw() {
                 break;
             case UIC::NoneRight:
             case UIC::Bucko:
+            case UIC::BuckoTroll:
                 font::write_right(speech.text, speech.len, 0, speech_y);
                 break;
             case UIC::None:

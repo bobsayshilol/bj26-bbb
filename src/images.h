@@ -14,20 +14,26 @@ static const uint8_t data[32 * TileSize];
 static const uint16_t palette[10];
 };
 
+struct bucko_troll_right {
+static constexpr uint8_t pal_offset = 14;
+static const uint8_t data[12 * TileSize];
+static const uint16_t palette[10];
+};
+
 struct bucko_left {
-static constexpr uint8_t pal_offset = 23;
+static constexpr uint8_t pal_offset = 24;
 static const uint8_t data[12 * TileSize];
 static const uint16_t palette[10];
 };
 
 struct robucko_right {
-static constexpr uint8_t pal_offset = 33;
+static constexpr uint8_t pal_offset = 34;
 static const uint8_t data[12 * TileSize];
 static const uint16_t palette[10];
 };
 
 struct ami_left {
-static constexpr uint8_t pal_offset = 33;
+static constexpr uint8_t pal_offset = 34;
 static const uint8_t data[12 * TileSize];
 static const uint16_t palette[10];
 };
@@ -51,37 +57,37 @@ static const uint16_t palette[10];
 };
 
 struct tree {
-static constexpr uint8_t pal_offset = 43;
+static constexpr uint8_t pal_offset = 44;
 static const uint8_t data[3 * TileSize];
 static const uint16_t palette[10];
 };
 
 struct bomb {
-static constexpr uint8_t pal_offset = 53;
+static constexpr uint8_t pal_offset = 54;
 static const uint8_t data[1 * TileSize];
 static const uint16_t palette[10];
 };
 
 struct ufo {
-static constexpr uint8_t pal_offset = 63;
+static constexpr uint8_t pal_offset = 64;
 static const uint8_t data[4 * TileSize];
 static const uint16_t palette[10];
 };
 
 struct gauge {
-static constexpr uint8_t pal_offset = 73;
+static constexpr uint8_t pal_offset = 74;
 static const uint8_t data[5 * TileSize];
 static const uint16_t palette[10];
 };
 
 struct skyline_raw {
-static constexpr uint8_t pal_offset = 83;
+static constexpr uint8_t pal_offset = 84;
 static const uint8_t data[256 * 64];
 static const uint16_t palette[16];
 };
 
 struct dome_raw {
-static constexpr uint8_t pal_offset = 99;
+static constexpr uint8_t pal_offset = 100;
 static const uint8_t data[256 * 64];
 static const uint16_t palette[16];
 };
