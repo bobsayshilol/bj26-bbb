@@ -86,9 +86,7 @@ void bg_redraw() {
     bitmap_0.scroll_x() = 0;
 
     switch (s_bg_style) {
-        case BGStyle::Outside:
-        case BGStyle::OutsideWavy: {
-
+        case BGStyle::Outside: {
             // TODO: precalculate this?
             for (int32_t y = 0; y < SCREEN_HEIGHT; y++) {
                 // Double up the pixels so that the projected image looks bigger.
@@ -122,8 +120,7 @@ void bg_redraw() {
             }
         } break;
 
-        case BGStyle::Entering:
-        case BGStyle::EnteringGlitchy: {
+        case BGStyle::Entering: {
             // TODO: this jumps around all over the place in memory writing 8bit values...
             for (int32_t t = 0; t <= entering_pal_size; t++) {
                 for (int16_t ty = -entering_pal_size; ty < entering_pal_size; ty++) {
@@ -147,6 +144,11 @@ void bg_redraw() {
                 }
             }
         } break;
+
+        case BGStyle::OutsideWavy:
+        case BGStyle::EnteringGlitchy:
+            // Don't need to redraw these.
+            break;
 
         case BGStyle::Done:
             break;
@@ -183,7 +185,7 @@ void bg_update() {
         case BGStyle::OutsideWavy:
         case BGStyle::Entering:
             // TODO: need a smooth state to bring this in
-            for (uint8_t line = 0; line < engine::graphics::SCREEN_HEIGHT; line += 4) {
+            for (uint8_t line = 4; line < engine::graphics::SCREEN_HEIGHT; line += 4) {
                 wait_until_line(line);
                 uint16_t shift = engine::maths::sin(timer + line) / 8;
                 engine::graphics::bitmap_0.scroll_x() = shift;
@@ -193,24 +195,22 @@ void bg_update() {
         case BGStyle::EnteringGlitchy: {
             const uint32_t g0 = engine::utils::g_rng();
             const uint32_t g1 = engine::utils::g_rng();
-            const uint32_t g2 = engine::utils::g_rng();
-            const uint32_t g3 = engine::utils::g_rng();
             const uint8_t glitch_lines[8] {
                 static_cast<uint8_t>((g0 >>  0) & 0xFF),
+                static_cast<uint8_t>((g0 >>  8) & 0xFF),
                 static_cast<uint8_t>((g0 >> 16) & 0xFF),
+                static_cast<uint8_t>((g0 >> 24) & 0xFF),
                 static_cast<uint8_t>((g1 >>  0) & 0xFF),
+                static_cast<uint8_t>((g1 >>  8) & 0xFF),
                 static_cast<uint8_t>((g1 >> 16) & 0xFF),
-                static_cast<uint8_t>((g2 >>  0) & 0xFF),
-                static_cast<uint8_t>((g2 >> 16) & 0xFF),
-                static_cast<uint8_t>((g3 >>  0) & 0xFF),
-                static_cast<uint8_t>((g3 >> 16) & 0xFF),
+                static_cast<uint8_t>((g1 >> 24) & 0xFF),
             };
-            for (uint8_t line = 0; line < engine::graphics::SCREEN_HEIGHT; line += 4) {
+            for (uint8_t line = 4; line < engine::graphics::SCREEN_HEIGHT; line += 4) {
                 wait_until_line(line);
                 uint16_t shift = engine::maths::sin(timer + line) / 8;
                 for (uint8_t glitch : glitch_lines) {
                     if (line == glitch) {
-                        shift = engine::graphics::SCREEN_WIDTH / 3;
+                        shift = glitch * 3; //engine::graphics::SCREEN_WIDTH / 3;
                         break;
                     }
                 }
