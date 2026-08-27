@@ -117,7 +117,7 @@ while idx < len(deltas):
         assert(False)
 
 print("Writing it out")
-with open("wormhole.cc", "w") as f:
+with open("data_wormhole.cc", "w") as f:
     f.write("#include \"images.h\"\n")
     f.write("namespace game::images {\n")
     f.write(f"static_assert(wormhole::pal_size == {pal_size_x * pal_size_y});\n")

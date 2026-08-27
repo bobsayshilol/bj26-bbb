@@ -1,5 +1,6 @@
 #include "game.h"
 #include "graphics.h"
+#include "images.h"
 #include "input.h"
 #include "maths.h"
 #include "memory.h"
@@ -87,17 +88,27 @@ void bg_redraw() {
 
     switch (s_bg_style) {
         case BGStyle::Outside: {
+#if 1
+            static_assert(images::wormhole::width == SCREEN_WIDTH);
+            static_assert(images::wormhole::height == SCREEN_HEIGHT);
+            static_assert(images::wormhole::pal_offset == bg_pal_start);
+            static_assert(images::wormhole::pal_size == bg_pal_count);
+            images::wormhole::decompress(VDP.BITMAP_VRAM_8BIT);
+#else
             // TODO: precalculate this?
             for (int32_t y = 0; y < SCREEN_HEIGHT; y++) {
                 // Double up the pixels so that the projected image looks bigger.
                 // It also lets us use 16bit writes.
                 constexpr uint8_t scale = 2;
-                auto to_pal = [](uint8_t x, uint8_t y) {
+                auto to_pal = [](uint8_t u, uint8_t v) {
                     static_assert(bg_pal_count == 8 * 8);
-                    const uint8_t pal = bg_pal_start + ((y / scale) & 7) * 8 + ((x / scale) & 7);
+                    const uint8_t pal = bg_pal_start + ((u / scale) & 7) * 8 + ((v / scale) & 7);
                     return pal;
                 };
 
+                // F(x,y) = 1 - 1 / (x^2 + y^2)
+
+                const int32_t d = (y - 0) / SCREEN_HEIGHT;
                 for (int32_t x = 0; x < SCREEN_WIDTH; x += scale) {
                     // d = (y - horizon) / SCREEN_HEIGHT
                     // z = 1 / d
@@ -106,9 +117,10 @@ void bg_redraw() {
                     const int16_t ty = y / scale - SCREEN_HEIGHT / 2;
                     const uint8_t pal = to_pal(tx, ty);
                     const uint16_t pal16 = (uint16_t(pal) << 8) | pal;
-                    VDP.BITMAP_VRAM[(y * 256 + x) / 2] = pal16;
+                    VDP.BITMAP_VRAM[(y * SCREEN_WIDTH + x) / 2] = pal16;
                 }
             }
+#endif
 
             // Setup the image to be projected.
             static_assert(bg_pal_count == 8 * 8);

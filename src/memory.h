@@ -4,7 +4,7 @@
 
 namespace engine::utils {
 
-// Fast memcpy that assumes src+dst are aligned to 2 bytes, and size is a multiple of 2.
+// Fast memcpy that assumes src+dst are aligned to 2 bytes, and elems is a multiple of 2.
 inline void fast_memcpy(void * dst, const void * src, uint32_t elems) {
     ASSERT(((uintptr_t)dst & 1) == 0);
     ASSERT(((uintptr_t)src & 1) == 0);
