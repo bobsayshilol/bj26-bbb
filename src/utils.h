@@ -165,6 +165,54 @@ template <typename T> constexpr inline T min(T a, T b) { return a < b ? a : b; }
 template <typename T> constexpr inline T max(T a, T b) { return a > b ? a : b; }
 template <typename T> constexpr inline T clamp(T x, T lo, T hi) { return min(max(x, lo), hi); }
 
+template <uint8_t Count, typename T>
+constexpr void rotate_left(T * start, T * end) {
+    // 16bit reads/writes are faster.
+    static_assert((sizeof(T) & 1) == 0, "Unoptimised for non-16bit reads/writes");
+    ASSERT(end - start >= Count);
+
+    // Store first elements.
+    T * ptr = start;
+    T tmp[Count ? Count : 1];
+    for (uint8_t i = 0; i < Count; i++) {
+        tmp[i] = MOVE(*ptr++);
+    }
+
+    // Rotate them.
+    while (ptr != end) {
+        *start++ = MOVE(*ptr++);
+    }
+
+    // Store temp back.
+    for (uint8_t i = 0; i < Count; i++) {
+        *start++ = MOVE(tmp[i]);
+    }
+}
+
+template <uint8_t Count, typename T>
+constexpr void rotate_right(T * start, T * end) {
+    // 16bit reads/writes are faster.
+    static_assert((sizeof(T) & 1) == 0, "Unoptimised for non-16bit reads/writes");
+    ASSERT(end - start >= Count);
+
+    // Store first elements.
+    T tmp[Count ? Count : 1];
+    T * mid = end - Count;
+    for (uint8_t i = 0; i < Count; i++) {
+        tmp[i] = MOVE(mid[i]);
+    }
+
+    // Rotate them.
+    while (mid != start) {
+        *--end = MOVE(*--mid);
+    }
+
+    // Store temp back.
+    for (uint8_t i = 0; i < Count; i++) {
+        *start++ = MOVE(tmp[i]);
+    }
+}
+
 
 
 // Sanity check that the above works.
@@ -321,6 +369,72 @@ constexpr int check_min_max_clamp() {
     return -1;
 }
 static_assert(check_min_max_clamp() == -1);
+
+constexpr int check_rotate_left() {
+    {
+        uint16_t x[3] = { 1, 2, 3 };
+        rotate_left<0>(x, x + 3);
+        if (x[0] != 1) return 0;
+        if (x[1] != 2) return 0;
+        if (x[2] != 3) return 0;
+    }
+    {
+        uint16_t x[3] = { 1, 2, 3 };
+        rotate_left<1>(x, x + 3);
+        if (x[0] != 2) return 1;
+        if (x[1] != 3) return 1;
+        if (x[2] != 1) return 1;
+    }
+    {
+        uint16_t x[3] = { 1, 2, 3 };
+        rotate_left<2>(x, x + 3);
+        if (x[0] != 3) return 2;
+        if (x[1] != 1) return 2;
+        if (x[2] != 2) return 2;
+    }
+    {
+        uint16_t x[3] = { 1, 2, 3 };
+        rotate_left<3>(x, x + 3);
+        if (x[0] != 1) return 3;
+        if (x[1] != 2) return 3;
+        if (x[2] != 3) return 3;
+    }
+    return -1;
+}
+static_assert(check_rotate_left() == -1);
+
+constexpr int check_rotate_right() {
+    {
+        uint16_t x[3] = { 1, 2, 3 };
+        rotate_right<0>(x, x + 3);
+        if (x[0] != 1) return 0;
+        if (x[1] != 2) return 0;
+        if (x[2] != 3) return 0;
+    }
+    {
+        uint16_t x[3] = { 1, 2, 3 };
+        rotate_right<1>(x, x + 3);
+        if (x[0] != 3) return 1;
+        if (x[1] != 1) return 1;
+        if (x[2] != 2) return 1;
+    }
+    {
+        uint16_t x[3] = { 1, 2, 3 };
+        rotate_right<2>(x, x + 3);
+        if (x[0] != 2) return 2;
+        if (x[1] != 3) return 2;
+        if (x[2] != 1) return 2;
+    }
+    {
+        uint16_t x[3] = { 1, 2, 3 };
+        rotate_right<3>(x, x + 3);
+        if (x[0] != 1) return 3;
+        if (x[1] != 2) return 3;
+        if (x[2] != 3) return 3;
+    }
+    return -1;
+}
+static_assert(check_rotate_right() == -1);
 
 } // test
 
