@@ -37,7 +37,7 @@ def depth(px,py,pz):
 
 # Convert to a palette.
 def to_pal(px,py,pz):
-    z_offset = 4
+    z_offset = -4
     x_scale = 2 # bodge
     r = px**2 + py**2 + (pz - z_offset)**2
     pal_x = int(r * x_scale)
