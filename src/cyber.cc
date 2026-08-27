@@ -24,7 +24,27 @@ constexpr uint8_t font_sprite_count = font::font_max_sprites;
 constexpr uint8_t font_tile_start = 0;
 constexpr uint8_t font_tile_count = font::font_tile_count;
 
-constexpr uint8_t bg_pal_start = engine::graphics::pal_transparent + 1;
+constexpr uint8_t voice_char_width = 3;
+constexpr uint8_t voice_char_height = 4;
+
+// Empty space for palette [1,24)
+
+// Bit awkward, but bucko_left must be at a fixed offset (from breakout).
+constexpr uint8_t bucko_left_pal_start = images::bucko_left::pal_offset;
+constexpr uint8_t bucko_left_pal_count = 10;
+constexpr uint8_t bucko_left_sprite_start = font_sprite_start + font_sprite_count;
+constexpr uint8_t bucko_left_sprite_count = voice_char_width * voice_char_height;
+constexpr uint8_t bucko_left_tile_start = font_tile_start + font_tile_count;
+constexpr uint8_t bucko_left_tile_count = bucko_left_sprite_count;
+
+constexpr uint8_t ami_left_pal_start = bucko_left_pal_start + bucko_left_pal_count;
+constexpr uint8_t ami_left_pal_count = 10;
+constexpr uint8_t ami_left_sprite_start = bucko_left_sprite_start; // reuse the bucko sprites
+constexpr uint8_t ami_left_sprite_count = bucko_left_sprite_count;
+constexpr uint8_t ami_left_tile_start = bucko_left_tile_start + bucko_left_tile_count;
+constexpr uint8_t ami_left_tile_count = ami_left_sprite_count;
+
+constexpr uint8_t bg_pal_start = ami_left_pal_start + ami_left_pal_count;
 constexpr uint8_t bg_pal_count = 8 * 8;
 
 constexpr uint8_t entering_pal_size = 16; // +1 really
@@ -49,22 +69,23 @@ enum class LevelState {
     Start,
     Reveal,
     RevealFinished,
-    OutsideCode,
     OutsideTalk,
+    OutsideCode,
+    OutsideFinished,
     Entering,
-    EnteringGlitchy,
+    Inside,
+    InsideGlitchy,
     Finished,
 } s_level_state;
 
 enum class CodeState {
-    CodeA, // upside down V
-    CodeM, // clearly a capital M
-    CodeI, // the number 1
-    CodeC, // square pacman facing right
-    CodeU, // square pacman on its back
+    CodeA,
+    CodeM,
+    CodeI,
+    CodeC,
+    CodeU,
     CodeT,
     CodeE,
-    Done,
 } s_code_state;
 
 void level_advance(LevelState state);
@@ -74,8 +95,8 @@ void level_advance(LevelState state);
 enum class BGStyle {
     Outside,
     OutsideWavy,
-    Entering,
-    EnteringGlitchy,
+    Inside,
+    InsideGlitchy,
 } s_bg_style;
 
 uint16_t s_bg_pallete[bg_pal_count];
@@ -84,11 +105,11 @@ uint16_t s_bg_timer;
 
 enum WormSpeed : uint16_t {
     None = 0,
-    //EnterSlow = 0x0001,
-    //EnterFast = 0x00FF,
+    EnterSlow = 0x0001,
+    EnterFast = 0x00FF,
     SpinSlow = 0x0100,
     SpinFast = 0xFF00,
-    //SpinFastEnterSlow = 0xFF01,
+    SpinFastEnterSlow = 0xFF01,
     SpinFastEnterFast = 0xFFFF,
 } s_wormhole_speed;
 
@@ -105,15 +126,15 @@ void bg_pallete_update() {
             // Update palette locally.
             static_assert(bg_pal_count == 8 * 8);
 
-            const uint8_t worm_spin = s_wormhole_speed;
-            const uint8_t worm_enter = s_wormhole_speed >> 8;
+            const uint8_t worm_enter = s_wormhole_speed;
+            const uint8_t worm_spin = s_wormhole_speed >> 8;
 
-            if (timer & worm_spin) {
+            if (timer & worm_enter) {
                 for (uint8_t y = 0; y < 8; y++) {
-                    engine::utils::rotate_left<1>(s_bg_pallete + y * 8, s_bg_pallete + (y + 1) * 8);
+                    engine::utils::rotate_right<1>(s_bg_pallete + y * 8, s_bg_pallete + (y + 1) * 8);
                 }
             }
-            if (timer & worm_enter) {
+            if (timer & worm_spin) {
                 engine::utils::rotate_right<8>(s_bg_pallete, s_bg_pallete + bg_pal_count);
             }
 
@@ -122,8 +143,8 @@ void bg_pallete_update() {
         }
         break;
 
-        case BGStyle::Entering:
-        case BGStyle::EnteringGlitchy: {
+        case BGStyle::Inside:
+        case BGStyle::InsideGlitchy: {
             for (uint8_t i = 0; i <= entering_pal_size; i++) {
                 const int8_t t256 = engine::maths::sin(timer - i * (256 / entering_pal_size));
                 const uint8_t b = 15 + bios_mathMulS16(t256, 15) / 256;
@@ -170,7 +191,7 @@ void bg_redraw() {
             engine::graphics::set_palette_colour(cover_pal_start, RGB555(15,0,0));
         } break;
 
-        case BGStyle::Entering: {
+        case BGStyle::Inside: {
             // TODO: this jumps around all over the place in memory writing 8bit values...
             for (int32_t t = 0; t <= entering_pal_size; t++) {
                 for (int16_t ty = -entering_pal_size; ty < entering_pal_size; ty++) {
@@ -196,7 +217,7 @@ void bg_redraw() {
         } break;
 
         case BGStyle::OutsideWavy:
-        case BGStyle::EnteringGlitchy:
+        case BGStyle::InsideGlitchy:
             // Don't need to redraw these.
             break;
     }
@@ -242,7 +263,7 @@ void bg_update() {
             }
             break;
 
-        case BGStyle::Entering:
+        case BGStyle::Inside:
             for (uint8_t line = 4; line < engine::graphics::SCREEN_HEIGHT; line += 4) {
                 wait_until_line(line);
                 uint16_t shift = engine::maths::sin(timer + line) / 8;
@@ -250,7 +271,7 @@ void bg_update() {
             }
             break;
 
-        case BGStyle::EnteringGlitchy: {
+        case BGStyle::InsideGlitchy: {
             const uint32_t g0 = engine::utils::g_rng();
             const uint32_t g1 = engine::utils::g_rng();
             const uint8_t glitch_lines[8] {
@@ -280,8 +301,213 @@ void bg_update() {
 
 //
 
-void ui_setup() {
-    game::font::setup_tiles<font_tile_start, font_sprite_start>();
+// TODO: this is a dupe of the text from driving
+
+enum class UIC : uint8_t { None, Ami, Bucko, };
+void ui_character(UIC voice) {
+    using namespace engine::graphics;
+
+    // All characters have the same sprites.
+    static_assert(ami_left_sprite_start == bucko_left_sprite_start);
+    constexpr uint8_t sprite_start = ami_left_sprite_start;
+
+    constexpr uint8_t left_start_x = 0;
+    constexpr uint8_t left_start_y = SCREEN_HEIGHT - bg_tile_size * voice_char_height;
+    constexpr uint8_t right_start_x = SCREEN_WIDTH - bg_tile_size * voice_char_width;
+    constexpr uint8_t right_start_y = left_start_y;
+
+    ObjSprite sprite;
+    uint8_t sprite_idx = 0;
+    switch (voice) {
+        case UIC::None:
+            // No voice.
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = 0; x < voice_char_width; x++) {
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+        case UIC::Ami:
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = 0; x < voice_char_width; x++) {
+                    sprite.set_x(left_start_x + x * bg_tile_size);
+                    sprite.set_y(left_start_y + y * bg_tile_size);
+                    sprite.set_tile_index(ami_left_tile_start + sprite_idx);
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+        case UIC::Bucko:
+            // Tiles need a flip, and the x co-ord too.
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = voice_char_width - 1; x >= 0; x--) {
+                    sprite.set_x(right_start_x + x * bg_tile_size);
+                    sprite.set_y(right_start_y + y * bg_tile_size);
+                    sprite.set_tile_index(bucko_left_tile_start + sprite_idx);
+                    sprite.set_x_flip(true);
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+    }
+}
+
+struct Speech {
+    UIC uic;
+    uint8_t len;
+    const char * text;
+
+    template <uint8_t N>
+    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) { static_assert(N <= 27); }
+    constexpr Speech(decltype(nullptr)) : uic(UIC::None), len(0), text(nullptr) {}
+};
+
+constexpr Speech start_text[] {
+    { UIC::Bucko, "Ami!" },
+    { UIC::Bucko, "Can you still hear me?" },
+    { UIC::Bucko, "The reception near the" },
+    { UIC::Bucko, "dome has gotten worse" },
+    { UIC::Bucko, "since the takeover." },
+    { UIC::Ami, "Yes. All clear." },
+    { UIC::Bucko, "Great!" },
+    { UIC::Bucko, "Near your location there" },
+    { UIC::Bucko, "should be an unassuming" },
+    { UIC::Bucko, "and well hidden vent." },
+    { UIC::Bucko, "Do you see it?" },
+    { UIC::Ami, "..." },
+    { UIC::Ami, "I see it." },
+    { UIC::Bucko, "Great!" },
+    { UIC::Bucko, "I'll open it from here." },
+
+    nullptr,
+};
+
+constexpr Speech revealed_text[] {
+    { UIC::Bucko, "We call this" },
+    { UIC::Bucko, "The W.E.B." },
+    { UIC::Bucko, "I don't know what it" },
+    { UIC::Bucko, "stands for." },
+    { UIC::Bucko, "But apparently it's" },
+    { UIC::Bucko, "really important." },
+    { UIC::Bucko, "Every time I ask the" },
+    { UIC::Bucko, "other buckos about it" },
+    { UIC::Bucko, "they start talking about" },
+    { UIC::Bucko, "lawn mowers and" },
+    { UIC::Bucko, "mainframes." },
+    { UIC::Bucko, "Anyway." },
+    { UIC::Bucko, "You'll need to get in" },
+    { UIC::Bucko, "there and reboot it." },
+    { UIC::Bucko, "That should break the" },
+    { UIC::Bucko, "robuckos!" },
+
+    nullptr,
+};
+
+constexpr Speech code_A_text[] {
+    { UIC::Bucko, "See that keypad?" },
+    { UIC::Bucko, "I have the codes here." },
+    { UIC::Bucko, "But they're difficult" },
+    { UIC::Bucko, "to read and haven't been" },
+    { UIC::Bucko, "used in a while." },
+
+    { UIC::Bucko, "It looks like this" },
+    { UIC::Bucko, "first one is an" },
+    { UIC::Bucko, "upside down V?" },
+
+    nullptr,
+};
+
+constexpr Speech code_M_text[] {
+    { UIC::Bucko, "This one is clearly" },
+    { UIC::Bucko, "a capital M." },
+
+    nullptr,
+};
+
+constexpr Speech code_I_text[] {
+    { UIC::Bucko, "I think the next one" },
+    { UIC::Bucko, "is the number 1?" },
+
+    nullptr,
+};
+
+constexpr Speech code_C_text[] {
+    { UIC::Bucko, "Oh!" },
+    { UIC::Bucko, "This is a square pacman!" },
+
+    nullptr,
+};
+
+constexpr Speech code_U_text[] {
+    { UIC::Bucko, "The square pacman is" },
+    { UIC::Bucko, "on his back." },
+
+    nullptr,
+};
+
+constexpr Speech code_T_text[] {
+    { UIC::Bucko, "I can't tell what" },
+    { UIC::Bucko, "this one is meant" },
+    { UIC::Bucko, "to be." },
+
+    nullptr,
+};
+
+constexpr Speech code_E_text[] {
+    { UIC::Bucko, "Some bucko took a bite" },
+    { UIC::Bucko, "out of this page." },
+
+    nullptr,
+};
+
+constexpr Speech code_finished_text[] {
+    { UIC::Bucko, "Attagirl!" },
+    { UIC::Bucko, "In we go" },
+
+    nullptr,
+};
+
+constexpr Speech inside_text[] {
+    { UIC::Bucko, "We're in!" },
+
+    nullptr,
+};
+
+constexpr Speech glitchy_text[] {
+    { UIC::Bucko, "Somethings" },
+
+    nullptr,
+};
+
+const Speech * s_current_speech;
+LevelState s_next_state;
+
+void ui_redraw() {
+    // Empty it out.
+    font::clear_text();
+
+    constexpr uint8_t speech_y = engine::graphics::SCREEN_HEIGHT * 2 / 3;
+    constexpr uint8_t speech_sky_y = engine::graphics::SCREEN_HEIGHT / 3;
+
+    // Show any speech if it's active.
+    const auto & speech = *s_current_speech;
+    ui_character(speech.uic);
+    if (speech.text) {
+        switch (speech.uic) {
+            case UIC::Ami:
+                font::write_left(speech.text, speech.len, 0, speech_y);
+                break;
+            case UIC::Bucko:
+                font::write_right(speech.text, speech.len, 0, speech_y);
+                break;
+            case UIC::None:
+                font::write_centered(speech.text, speech.len, speech_sky_y);
+                break;
+        }
+    }
 }
 
 void ui_update() {
@@ -293,21 +519,20 @@ void ui_update() {
         case LevelState::Start:
         case LevelState::RevealFinished:
         case LevelState::OutsideTalk:
-        case LevelState::Entering:
-        case LevelState::EnteringGlitchy:
+        case LevelState::OutsideFinished:
+        case LevelState::Inside:
+        case LevelState::InsideGlitchy:
             is_ui = true;
             break;
         case LevelState::Reveal:
         case LevelState::OutsideCode:
+        case LevelState::Entering:
         case LevelState::Finished:
             break;
     }
     if (!is_ui) return;
 
     if (engine::input::g_buttons_pressed & GAMEPAD_BTN_A) {
-#if 1 // TODO: speech
-        level_advance((LevelState)((int)s_level_state + 1));
-#else
         // Advance to next line.
         auto *speech = ++s_current_speech;
         if (speech->text == nullptr) {
@@ -316,8 +541,23 @@ void ui_update() {
         } else {
             ui_redraw();
         }
-#endif
     }
+}
+
+void ui_setup() {
+    game::font::setup_tiles<font_tile_start, font_sprite_start>();
+
+    // Character sprites.
+    images::copy_tile_data<
+        bucko_left_pal_start, bucko_left_pal_count,
+        bucko_left_tile_start, bucko_left_tile_count,
+        images::bucko_left
+    >();
+    images::copy_tile_data<
+        ami_left_pal_start, ami_left_pal_count,
+        ami_left_tile_start, ami_left_tile_count,
+        images::ami_left
+    >();
 }
 
 //
@@ -329,13 +569,10 @@ bool update_logic() {
         case LevelState::Start:
         case LevelState::RevealFinished:
         case LevelState::OutsideTalk:
-        case LevelState::Entering:
-        case LevelState::EnteringGlitchy:
+        case LevelState::OutsideFinished:
+        case LevelState::Inside:
+        case LevelState::InsideGlitchy:
             // Event driven logic.
-            break;
-
-        case LevelState::OutsideCode:
-            // TODO: input handling
             break;
 
         case LevelState::Reveal: {
@@ -348,6 +585,34 @@ bool update_logic() {
                 level_advance(LevelState::RevealFinished);
             }
         } break;
+
+        case LevelState::OutsideCode:
+            switch (s_code_state) {
+                case CodeState::CodeA:
+                case CodeState::CodeM:
+                case CodeState::CodeI:
+                case CodeState::CodeC:
+                case CodeState::CodeU:
+                case CodeState::CodeT:
+                    // TODO: input handling
+                    if (s_code_state == CodeState::CodeI) {
+                        s_wormhole_speed = WormSpeed::SpinSlow;
+                    }
+                    s_code_state = static_cast<CodeState>((uint8_t)s_code_state + 1);
+                    level_advance(LevelState::OutsideTalk);
+                    break;
+                case CodeState::CodeE:
+                    s_wormhole_speed = WormSpeed::SpinFast;
+                    level_advance(LevelState::OutsideFinished);
+                    break;
+            }
+            break;
+
+        case LevelState::Entering:
+            if (s_bg_timer > 4 * 60) {
+                level_advance(LevelState::Inside);
+            }
+            break;
 
         case LevelState::Finished:
             finished = true;
@@ -364,30 +629,72 @@ void level_advance(LevelState state) {
     s_level_state = state;
     switch (state) {
         case LevelState::Start:
+            s_current_speech = start_text;
+            s_next_state = LevelState::Reveal;
             s_bg_style = BGStyle::Outside;
+            s_wormhole_speed = WormSpeed::None;
             s_bg_timer = 0;
-            s_code_state = CodeState::CodeA;
             bg_redraw();
             break;
 
         case LevelState::Reveal:
+            // Nothing to do.
+            break;
+
         case LevelState::RevealFinished:
-        case LevelState::OutsideCode:
+            s_current_speech = revealed_text;
+            s_next_state = LevelState::OutsideTalk;
+            // Hide the cover completely.
+            engine::graphics::bitmap_0.disable();
+            // Start on the codes.
+            s_code_state = CodeState::CodeA;
+            break;
+
         case LevelState::OutsideTalk:
-            // TODO: speech
+            s_next_state = LevelState::OutsideCode;
+            switch (s_code_state) {
+                case CodeState::CodeA: s_current_speech = code_A_text; break;
+                case CodeState::CodeM: s_current_speech = code_M_text; break;
+                case CodeState::CodeI: s_current_speech = code_I_text; break;
+                case CodeState::CodeC: s_current_speech = code_C_text; break;
+                case CodeState::CodeU: s_current_speech = code_U_text; break;
+                case CodeState::CodeT: s_current_speech = code_T_text; break;
+                case CodeState::CodeE: s_current_speech = code_E_text; break;
+            }
+            break;
+
+        case LevelState::OutsideCode:
+            // Nothing to do.
+            break;
+
+        case LevelState::OutsideFinished:
+            s_current_speech = code_finished_text;
+            s_next_state = LevelState::Entering;
             break;
 
         case LevelState::Entering:
-            s_bg_style = BGStyle::Entering;
+            s_wormhole_speed = WormSpeed::SpinFastEnterFast; // or slow?
+            // Reset timer for countdown.
+            s_bg_timer = 0;
             break;
-        case LevelState::EnteringGlitchy:
-            s_bg_style = BGStyle::EnteringGlitchy;
+
+        case LevelState::Inside:
+            s_current_speech = inside_text;
+            s_next_state = LevelState::InsideGlitchy;
+            s_bg_style = BGStyle::Inside;
+            bg_redraw();
+            break;
+        case LevelState::InsideGlitchy:
+            s_current_speech = glitchy_text;
+            s_next_state = LevelState::Finished;
+            s_bg_style = BGStyle::InsideGlitchy;
             break;
 
         case LevelState::Finished:
             // Logic will finish this off.
             break;
     }
+    ui_redraw();
 }
 
 } // namespace
