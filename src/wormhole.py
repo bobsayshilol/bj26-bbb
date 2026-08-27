@@ -87,10 +87,11 @@ for i in range(len(output) - 1):
 # Chunk into blocks.
 compressed = []
 idx = 0
+bins = [0, 0, 0, 0]
 while idx < len(deltas):
     # Z Z|Y Y|X X|0 0
     # Y Y|X X X X|0 1
-    # Y|X X X X X|1 0
+    # Y Y Y Y|X X|1 0
     # X X X X X X|1 1
 
     d0 = deltas[idx]
@@ -98,23 +99,28 @@ while idx < len(deltas):
     d2 = deltas[idx + 2] if idx + 2 < len(deltas) else 1000
 
     if d0 < 4 and d1 < 4 and d2 < 4:
+        bins[0] += 1
         d = 0 | (d0 << 2) | (d1 << 4) | (d2 << 6)
         compressed.append(d)
         idx += 3
     elif d0 < 16 and d1 < 4:
+        bins[1] += 1
         d = 1 | (d0 << 2) | (d1 << 6)
         compressed.append(d)
         idx += 2
-    elif d0 < 32 and d1 < 2:
-        d = 2 | (d0 << 2) | (d1 << 7)
+    elif d0 < 4 and d1 < 16:
+        bins[2] += 1
+        d = 2 | (d0 << 2) | (d1 << 4)
         compressed.append(d)
         idx += 2
     elif d0 < 64:
+        bins[3] += 1
         d = 3 | (d0 << 2)
         compressed.append(d)
         idx += 1
     else:
         assert(False)
+print("bins:", bins)
 
 print("Writing it out")
 with open("data_wormhole.cc", "w") as f:
@@ -160,8 +166,8 @@ void wormhole::decompress(uint8_t * output) {
                 emit((value >> 6) & 3);
                 break;
             case 2:
-                emit((value >> 2) & 31);
-                emit((value >> 7) & 1);
+                emit((value >> 2) & 3);
+                emit((value >> 4) & 15);
                 break;
             case 3:
                 emit((value >> 2) & 63);
