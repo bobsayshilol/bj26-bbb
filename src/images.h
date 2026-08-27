@@ -92,6 +92,14 @@ static const uint8_t data[256 * 64];
 static const uint16_t palette[16];
 };
 
+struct wormhole {
+static constexpr uint8_t pal_offset = 1;
+static constexpr uint8_t pal_size = 64;
+static constexpr uint16_t width = 256;
+static constexpr uint16_t height = 224;
+static void decompress(uint8_t * output);
+};
+
 struct text_font {
 static constexpr uint8_t pal_offset = 128;
 // TODO: should compress this to bits, but there's tons of space in the ROM
