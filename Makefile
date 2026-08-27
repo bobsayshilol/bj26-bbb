@@ -113,7 +113,10 @@ images: $(TILES)
 		$(CONVTILES) $${f} $(SRCDIR)/data_$$(basename $${f}).cc || exit 1; \
 	done
 
-data: music images
+wormhole:
+	cd src && $(PYTHON3) wormhole.py
+
+data: music images wormhole
 
 
 clean:
