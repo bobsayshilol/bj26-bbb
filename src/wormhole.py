@@ -134,7 +134,7 @@ with open("data_wormhole.cc", "w") as f:
     f.write("};\n")
     f.write("""
 void wormhole::decompress(uint8_t * output) {
-    auto * begin = output;
+    [[maybe_unused]] auto * begin = output;
 
     uint8_t acc = start;
     *output++ = acc;
