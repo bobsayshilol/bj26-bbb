@@ -1,3 +1,4 @@
+#include "aabb.h"
 #include "game.h"
 #include "graphics.h"
 #include "images.h"
@@ -16,6 +17,9 @@ namespace {
 
 PROFILE_STORAGE(bg_pud);
 PROFILE_STORAGE(bg_drw);
+PROFILE_STORAGE(ui_upd);
+PROFILE_STORAGE(cr_upd);
+PROFILE_STORAGE(dr_lin);
 PROFILE_STORAGE(vsync);
 
 constexpr uint8_t pal_black = 1;
@@ -23,6 +27,8 @@ constexpr uint8_t pal_white = 2;
 constexpr uint8_t pal_red = 3;
 constexpr uint8_t pal_green = 4;
 constexpr uint8_t pal_blue = 5;
+constexpr uint8_t pal_grey = 6;
+constexpr uint8_t pal_basic_end = 7;
 
 // font has highest prio.
 constexpr uint8_t font_sprite_start = 0;
@@ -33,11 +39,17 @@ constexpr uint8_t font_tile_count = font::font_tile_count;
 constexpr uint8_t voice_char_width = 3;
 constexpr uint8_t voice_char_height = 4;
 
-constexpr uint8_t keypad_pal_start = pal_red + 1;
+// Cursor has higher prio than keypad.
+constexpr uint8_t cursor_sprite_start = font_sprite_start + font_sprite_count;
+constexpr uint8_t cursor_sprite_count = 1;
+constexpr uint8_t cursor_tile_start = font_tile_start + font_tile_count;
+constexpr uint8_t cursor_tile_count = 1;
+
+constexpr uint8_t keypad_pal_start = pal_basic_end + 1;
 constexpr uint8_t keypad_pal_count = 0;
-constexpr uint8_t keypad_sprite_start = font_sprite_start + font_sprite_count;
+constexpr uint8_t keypad_sprite_start = cursor_sprite_start + cursor_sprite_count;
 constexpr uint8_t keypad_sprite_count = 9; // 3x3 grid
-constexpr uint8_t keypad_tile_start = font_tile_start + font_tile_count;
+constexpr uint8_t keypad_tile_start = cursor_tile_start + cursor_tile_count;
 constexpr uint8_t keypad_tile_count = 4;
 constexpr uint8_t keypad_tile_off = keypad_tile_start + 0;
 constexpr uint8_t keypad_tile_on = keypad_tile_start + 1;
@@ -348,8 +360,48 @@ constexpr uint16_t keypad_lines_E[] { make_mask<0,2>(), make_mask<3,5>(), make_m
 //const uint16_t * s_keypad_current_masks;
 //uint8_t s_keypad_line_mask;
 
-int16_t s_cursor_x;
-int16_t s_cursor_y;
+struct alignas(uint16_t) ButtonPos {
+    uint8_t x;
+    uint8_t y;
+
+    constexpr auto aabb() const {
+        return engine::utils::AABB{
+            x, y,
+            engine::graphics::bg_tile_size, engine::graphics::bg_tile_size,
+        };
+    }
+};
+constexpr auto button_positions = []{
+    using namespace engine::graphics;
+    engine::utils::Array<ButtonPos, 9> butts{};
+    int idx = 0;
+    for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; i++) {
+            const uint8_t x = (SCREEN_WIDTH / 2) + i * (SCREEN_WIDTH / 3) - bg_tile_size / 2;
+            const uint8_t y = (SCREEN_HEIGHT / 2) + j * (SCREEN_HEIGHT / 3) - bg_tile_size / 2;
+            butts[idx].x = x;
+            butts[idx].y = y;
+            idx++;
+        }
+    }
+    return butts;
+}();
+
+struct alignas(uint16_t) CursorPos {
+    uint8_t x = 0;
+    uint8_t y = 0;
+
+    constexpr bool valid() const { return x > 0; }
+
+    constexpr auto aabb() const {
+        return engine::utils::AABB{
+            x, y,
+            engine::graphics::bg_tile_size, engine::graphics::bg_tile_size,
+        };
+    }
+};
+CursorPos s_cursor_cur;
+CursorPos s_cursor_start;
 
 void keypad_setup() {
     using namespace engine::graphics;
@@ -360,9 +412,21 @@ void keypad_setup() {
     engine::utils::fast_memset8(get_tile_data(keypad_tile_good), pal_green, bg_tile_size * bg_tile_size);
     engine::utils::fast_memset8(get_tile_data(keypad_tile_bad), pal_red, bg_tile_size * bg_tile_size);
 
+    Pixel2 * cursor_data = get_tile_data(cursor_tile_start);
+    engine::utils::fast_memset8(cursor_data, pal_transparent, bg_tile_size * bg_tile_size);
+    constexpr int cursor_size = 2;
+    for (int i = -cursor_size; i <= cursor_size; i++) {
+        constexpr uint16_t pal16 = pal_grey | uint16_t{pal_grey} << 8;
+        constexpr int center = 4;
+        cursor_data[((center + i) + (center + 0) * 8) / 2] = pal16; // x
+        cursor_data[((center + 0) + (center + i) * 8) / 2] = pal16; // y
+    }
+
     // Slight offset so that it doesn't overlap.
-    s_cursor_x = SCREEN_WIDTH / 2 - 2 * bg_tile_size;
-    s_cursor_y = SCREEN_HEIGHT / 2;
+    s_cursor_cur.x = SCREEN_WIDTH / 2 - 2 * bg_tile_size;
+    s_cursor_cur.y = SCREEN_HEIGHT / 2;
+
+    s_cursor_start = {};
 }
 
 void keypad_show() {
@@ -381,13 +445,12 @@ void keypad_show() {
     // Draw the buttons.
     ObjSprite sprite;
     sprite.set_tile_index(keypad_tile_off);
-    uint8_t sprite_idx = keypad_sprite_start;
-    for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-            sprite.set_x((SCREEN_WIDTH / 2) + x * (SCREEN_WIDTH / 3));
-            sprite.set_y((SCREEN_HEIGHT / 2) + y * (SCREEN_HEIGHT / 3));
-            set_sprite(sprite_idx++, sprite);
-        }
+    static_assert(button_positions.size() == keypad_sprite_count);
+    for (uint8_t i = 0; i < keypad_sprite_count; i++) {
+        const auto & butt = button_positions[i];
+        sprite.set_x(butt.x);
+        sprite.set_y(butt.y);
+        set_sprite(keypad_sprite_start + i, sprite);
     }
 }
 
@@ -404,12 +467,159 @@ void keypad_hide() {
     }
 }
 
+// TODO: move this to engine code
+// TODO: and could be optimised?
+void draw_line(uint8_t * data, uint16_t width, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t pal) {
+    PROFILE_SCOPE(dr_lin);
+
+    if (x1 < x0) {
+        engine::utils::swap(x0, x1);
+        engine::utils::swap(y0, y1);
+    } else if (x0 == x1 && y0 == y1) {
+        // Draw a single dot.
+        x1++;
+    }
+
+    constexpr uint8_t shift = 16;
+    const uint32_t sx0 = uint32_t{x0} << shift;
+    const uint32_t sy0 = uint32_t{y0} << shift;
+    const uint32_t sx1 = uint32_t{x1} << shift;
+    const uint32_t sy1 = uint32_t{y1} << shift;
+    const int32_t dsx = sx1 - sx0;
+    const int32_t dsy = sy1 - sy0;
+    ASSERT(dsx >= 0); // we know x1 > x0
+    const int32_t adsx = dsx;
+    const int32_t adsy = engine::utils::abs(dsy);
+
+    uint32_t sx = sx0;
+    uint32_t sy = sy0;
+    int32_t ddsx = 0;
+    int32_t ddsy = 0;
+
+    auto step = [&]{
+        uint32_t x = sx >> shift;
+        uint32_t y = sy >> shift;
+        data[y * width + x] = pal;
+        sx += ddsx;
+        sy += ddsy;
+    };
+
+    if (adsy <= adsx) { // moving to the right, small slope
+        ddsx = 1 << shift;
+        ddsy = dsy / (dsx >> shift);
+        while (sx <= sx1) { step(); }
+    } else if (dsy > 0) { // tall up slope
+        ddsx = dsx / (dsy >> shift);
+        ddsy = 1 << shift;
+        while (sy <= sy1) { step(); }
+    } else { // tall down slope
+        ASSERT(dsy < 0);
+        ddsx = dsx / (adsy >> shift);
+        ddsy = -(1 << shift);
+        while (sy >= sy1) { step(); }
+    }
+}
+
+void cursor_update() {
+    using namespace engine::graphics;
+    PROFILE_SCOPE(cr_upd);
+
+    const auto old_pos = s_cursor_cur;
+    bool changed = false;
+
+    // Handle cursor movement.
+    const auto held = engine::input::g_buttons_held;
+    if (held & GAMEPAD_BTN_LEFT) {
+        s_cursor_cur.x -= 2;
+        changed = true;
+    } else if (held & GAMEPAD_BTN_RIGHT) {
+        s_cursor_cur.x += 2;
+        changed = true;
+    }
+    if (held & GAMEPAD_BTN_UP) {
+        s_cursor_cur.y -= 2;
+        changed = true;
+    } else if (held & GAMEPAD_BTN_DOWN) {
+        s_cursor_cur.y += 2;
+        changed = true;
+    }
+
+    // Clamp it.
+    constexpr uint8_t screen_padding = 3;
+    s_cursor_cur.x = engine::utils::clamp<uint8_t>(
+        s_cursor_cur.x,
+        screen_padding,
+        SCREEN_WIDTH - bg_tile_size - screen_padding
+    );
+    s_cursor_cur.y = engine::utils::clamp<uint8_t>(
+        s_cursor_cur.y,
+        screen_padding,
+        SCREEN_HEIGHT - bg_tile_size - screen_padding
+    );
+
+    if (s_cursor_start.valid() && changed) {
+        // Reusing cover data.
+        auto * data = VDP.BITMAP_VRAM_8BIT + SCREEN_WIDTH * SCREEN_HEIGHT;
+
+        // Move the cursor to the center of the tile.
+        constexpr uint8_t offset = bg_tile_size / 2;
+        data += offset + offset * SCREEN_WIDTH;
+
+        // Undraw old line.
+        draw_line(
+            data, SCREEN_WIDTH,
+            s_cursor_start.x, s_cursor_start.y,
+            old_pos.x, old_pos.y,
+            pal_transparent
+        );
+
+        // Draw the new line.
+        draw_line(
+            data, SCREEN_WIDTH,
+            s_cursor_start.x, s_cursor_start.y,
+            s_cursor_cur.x, s_cursor_cur.y,
+            pal_grey
+        );
+    }
+
+    // Move the cursor.
+    ObjSprite sprite;
+    sprite.set_tile_index(cursor_tile_start);
+    sprite.set_x(s_cursor_cur.x);
+    sprite.set_y(s_cursor_cur.y);
+    set_sprite(cursor_sprite_start, sprite);
+}
+
 void keypad_update() {
-    bool success = true;
+    cursor_update();
 
-    // TODO: gameplay
+    const auto pressed_a = engine::input::g_buttons_pressed & GAMEPAD_BTN_A;
+    if (pressed_a) {
+        if (s_cursor_start.valid()) {
+            // Finished this line.
+            s_cursor_start = {};
 
-    if (success) {
+            // TODO: add to mask
+        } else {
+            // See if we can start a new line.
+            const auto cursor_aabb = s_cursor_cur.aabb();
+            for (const auto & butt : button_positions) {
+                if (cursor_aabb.intersects(butt.aabb())) {
+                    s_cursor_start = s_cursor_cur;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Don't trigger a solve while A is pressed or it'll skip to the next line of speech.
+    bool solved = false;
+    if (!pressed_a) {
+        // TODO: gameplay
+        solved = false;
+    }
+
+    if (solved) {
         // Advance to next stage.
         switch (s_code_state) {
             case CodeState::CodeA:
@@ -846,6 +1056,7 @@ void enter() {
     engine::graphics::set_palette_colour(pal_red, RGB555(31,0,0));
     engine::graphics::set_palette_colour(pal_green, RGB555(0,31,0));
     engine::graphics::set_palette_colour(pal_blue, RGB555(0,0,31));
+    engine::graphics::set_palette_colour(pal_grey, RGB555(20,20,20));
 
     // Draw bits.
     bg_setup();
