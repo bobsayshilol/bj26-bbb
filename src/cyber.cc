@@ -117,6 +117,7 @@ enum class CodeState {
     CodeA,
     CodeM,
     CodeI,
+    CodeMid,
     CodeC,
     CodeU,
     CodeT,
@@ -627,6 +628,8 @@ void keypad_update() {
             case CodeState::CodeU: undraw(g_lines_U); break;
             case CodeState::CodeT: undraw(g_lines_T); break;
             case CodeState::CodeE: undraw(g_lines_E); break;
+
+            case CodeState::CodeMid: ASSERT(false); break;
         }
 
         DEBUG_MSG("Total matched: ", s_keypad_lines_matched);
@@ -649,6 +652,8 @@ void keypad_update() {
                     s_wormhole_speed = WormSpeed::SpinFast;
                     level_advance(LevelState::OutsideFinished);
                     break;
+
+                case CodeState::CodeMid: ASSERT(false); break;
             }
 
         } else {
@@ -723,6 +728,8 @@ void keypad_update() {
                             case CodeState::CodeU: g_lines_U[idx] = line; break;
                             case CodeState::CodeT: g_lines_T[idx] = line; break;
                             case CodeState::CodeE: g_lines_E[idx] = line; break;
+
+                            case CodeState::CodeMid: ASSERT(false); break;
                         }
                     }
 
@@ -878,9 +885,9 @@ constexpr Speech keypad_text[] {
 constexpr Speech code_A_text[] {
     { UIC::Bucko, "It looks like the" },
 #if !SKIP_STUFF
-    { UIC::Bucko, "first one has three lines." },
-    { UIC::Bucko, "They're in the shape of a" },
-    { UIC::Bucko, "V with a line through it." },
+    { UIC::Bucko, "first one has three lines" },
+    { UIC::Bucko, "in the shape of a 'V'" },
+    { UIC::Bucko, "with a line through it." },
     { UIC::Bucko, "Oh!" },
     { UIC::Bucko, "It could be upside down." },
 #endif
@@ -892,7 +899,7 @@ constexpr Speech code_M_text[] {
     { UIC::Bucko, "This one is clearly" },
 #if !SKIP_STUFF
     { UIC::Bucko, "4 lines in the shape" },
-    { UIC::Bucko, "of a W." },
+    { UIC::Bucko, "of a 'W'." },
     { UIC::Bucko, "..." },
     { UIC::Bucko, "Wait!" },
     { UIC::Bucko, "This one is upside" },
@@ -910,17 +917,20 @@ constexpr Speech code_I_text[] {
     nullptr,
 };
 
-constexpr Speech code_C_text[] {
-    // TODO: separate state
+constexpr Speech code_mid_text[] {
     { UIC::None, "Stage 1 emitters online" },
     { UIC::Ami, "What's happening?!" },
     { UIC::Bucko, "You're entering access" },
     { UIC::Bucko, "codes into a machine." },
     { UIC::Ami, "..." },
 
+    nullptr,
+};
+
+constexpr Speech code_C_text[] {
     { UIC::Bucko, "The next one is clearly" },
-    { UIC::Bucko, "a box missing one of" },
-    { UIC::Bucko, "its sides." },
+    { UIC::Bucko, "a big box that's missing" },
+    { UIC::Bucko, "one of its sides." },
 
     nullptr,
 };
@@ -949,8 +959,8 @@ constexpr Speech code_T_text[] {
 
 constexpr Speech code_E_text[] {
     { UIC::Bucko, "It's hard to tell but" },
-    { UIC::Bucko, "there's 3 horizontal and" },
-    { UIC::Bucko, "and 1 vertical lines." },
+    { UIC::Bucko, "there's 1 vertical and" },
+    { UIC::Bucko, "and 3 horizontal lines." },
 
     nullptr,
 };
@@ -963,8 +973,8 @@ constexpr Speech code_finished_text[] {
     { UIC::Ami, "That looks scary." },
     { UIC::Bucko, "Don't worry!" },
     { UIC::Bucko, "It's a powerful vortex" },
-    { UIC::Bucko, "that will pull you" },
-    { UIC::Bucko, "in even if you don't" },
+    { UIC::Bucko, "that will pull you in" },
+    { UIC::Bucko, "even if you..." },
 #endif
 
     nullptr,
@@ -1162,6 +1172,13 @@ void level_advance(LevelState state) {
                 case CodeState::CodeU: s_current_speech = code_U_text; set_keys(keypad_lines_U); break;
                 case CodeState::CodeT: s_current_speech = code_T_text; set_keys(keypad_lines_T); break;
                 case CodeState::CodeE: s_current_speech = code_E_text; set_keys(keypad_lines_E); break;
+
+                case CodeState::CodeMid:
+                    // HACK: jump back to this state with different text.
+                    s_current_speech = code_mid_text;
+                    s_next_state = LevelState::OutsideTalk;
+                    s_code_state = CodeState::CodeC;
+                    break;
             }
         } break;
 
