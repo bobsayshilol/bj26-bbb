@@ -522,6 +522,28 @@ void cursor_update() {
         changed = true;
     }
 
+    // Pull the cursor towards the center.
+    // TODO: smoother drift
+    if ((s_bg_timer & 15) == 15) {
+        constexpr uint8_t center_x = (SCREEN_WIDTH - bg_tile_size) / 2;
+        constexpr uint8_t center_y = 160 - bg_tile_size / 2;
+        const int16_t dx = s_cursor_cur.x - center_x;
+        const int16_t dy = s_cursor_cur.y - center_y;
+        constexpr int16_t r = 16;
+
+        if (dx > r) s_cursor_cur.x -= 2;
+        else if (dx > 0) s_cursor_cur.x -= 1;
+        else if (dx < 0) s_cursor_cur.x += 1;
+        else if (dx < -r) s_cursor_cur.x += 2;
+
+        if (dy > r) s_cursor_cur.y -= 2;
+        else if (dy > 0) s_cursor_cur.y -= 1;
+        else if (dy < 0) s_cursor_cur.y += 1;
+        else if (dy < -r) s_cursor_cur.y += 2;
+
+        changed = true;
+    }
+
     // Clamp it.
     constexpr uint8_t screen_padding = 3;
     s_cursor_cur.x = engine::utils::clamp<uint8_t>(
@@ -1176,13 +1198,13 @@ void level_advance(LevelState state) {
 
 } // namespace
 
-engine::utils::Array<Line, 2*3> g_lines_A;
-engine::utils::Array<Line, 2*4> g_lines_M;
-engine::utils::Array<Line, 2*1> g_lines_I;
-engine::utils::Array<Line, 2*3> g_lines_C;
-engine::utils::Array<Line, 2*3> g_lines_U;
-engine::utils::Array<Line, 2*2> g_lines_T;
-engine::utils::Array<Line, 2*4> g_lines_E;
+engine::utils::Array<Line, 3> g_lines_A;
+engine::utils::Array<Line, 4> g_lines_M;
+engine::utils::Array<Line, 1> g_lines_I;
+engine::utils::Array<Line, 3> g_lines_C;
+engine::utils::Array<Line, 3> g_lines_U;
+engine::utils::Array<Line, 2> g_lines_T;
+engine::utils::Array<Line, 4> g_lines_E;
 
 void enter() {
     // Setup palette.
