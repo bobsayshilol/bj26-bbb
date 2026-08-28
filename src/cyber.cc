@@ -1264,7 +1264,7 @@ Entry loop() {
     }
 
     if (update_logic()) {
-        return Entry::MainMenu; // TODO
+        return Entry::Winner;
     }
 
     bg_update();
