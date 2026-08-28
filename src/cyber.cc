@@ -185,10 +185,20 @@ void bg_redraw() {
             //s_bg_pallete[4 * 8 + 2] = RGB555(15, 15, 15);
             //s_bg_pallete[5 * 8 + 2] = RGB555(15, 15, 15);
 
-            // Copy a cover image.
-            // TODO: proper image
-            engine::utils::fast_memset8(VDP.BITMAP_VRAM_8BIT + SCREEN_WIDTH * SCREEN_HEIGHT, cover_pal_start, SCREEN_WIDTH * SCREEN_HEIGHT);
-            engine::graphics::set_palette_colour(cover_pal_start, RGB555(15,0,0));
+
+            // Same for the cover.
+
+            // Setup palette.
+            static_assert(engine::utils::size(images::cover_raw::palette) == cover_pal_count);
+            static_assert(images::cover_raw::pal_offset == cover_pal_start);
+            for (uint8_t i = 0; i < cover_pal_count; i++) {
+                set_palette_colour(cover_pal_start + i, images::cover_raw::palette[i]);
+            }
+
+            // Copy data.
+            static_assert(images::cover_raw::width == SCREEN_WIDTH);
+            static_assert(images::cover_raw::height == SCREEN_HEIGHT);
+            images::cover_raw::decompress(VDP.BITMAP_VRAM_8BIT + SCREEN_WIDTH * SCREEN_HEIGHT);
         } break;
 
         case BGStyle::Inside: {

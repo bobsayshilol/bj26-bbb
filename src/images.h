@@ -96,6 +96,14 @@ static void decompress(uint8_t * output);
 static const uint16_t palette[16];
 };
 
+struct cover_raw {
+static constexpr uint8_t pal_offset = 108;
+static constexpr uint16_t width = 256;
+static constexpr uint16_t height = 224;
+static void decompress(uint8_t * output);
+static const uint16_t palette[16];
+};
+
 struct wormhole {
 static constexpr uint8_t pal_offset = 44;
 static constexpr uint8_t pal_size = 64;
