@@ -18,6 +18,12 @@ PROFILE_STORAGE(bg_pud);
 PROFILE_STORAGE(bg_drw);
 PROFILE_STORAGE(vsync);
 
+constexpr uint8_t pal_black = 1;
+constexpr uint8_t pal_white = 2;
+constexpr uint8_t pal_red = 3;
+constexpr uint8_t pal_green = 4;
+constexpr uint8_t pal_blue = 5;
+
 // font has highest prio.
 constexpr uint8_t font_sprite_start = 0;
 constexpr uint8_t font_sprite_count = font::font_max_sprites;
@@ -27,14 +33,27 @@ constexpr uint8_t font_tile_count = font::font_tile_count;
 constexpr uint8_t voice_char_width = 3;
 constexpr uint8_t voice_char_height = 4;
 
-// Empty space for palette [1,24)
+constexpr uint8_t keypad_pal_start = pal_red + 1;
+constexpr uint8_t keypad_pal_count = 0;
+constexpr uint8_t keypad_sprite_start = font_sprite_start + font_sprite_count;
+constexpr uint8_t keypad_sprite_count = 9; // 3x3 grid
+constexpr uint8_t keypad_tile_start = font_tile_start + font_tile_count;
+constexpr uint8_t keypad_tile_count = 4;
+constexpr uint8_t keypad_tile_off = keypad_tile_start + 0;
+constexpr uint8_t keypad_tile_on = keypad_tile_start + 1;
+constexpr uint8_t keypad_tile_good = keypad_tile_start + 2;
+constexpr uint8_t keypad_tile_bad = keypad_tile_start + 3;
+
+// Empty space for palette up to 24.
+
+static_assert(keypad_pal_start + keypad_pal_count <= images::bucko_left::pal_offset);
 
 // Bit awkward, but bucko_left must be at a fixed offset (from breakout).
 constexpr uint8_t bucko_left_pal_start = images::bucko_left::pal_offset;
 constexpr uint8_t bucko_left_pal_count = 10;
-constexpr uint8_t bucko_left_sprite_start = font_sprite_start + font_sprite_count;
+constexpr uint8_t bucko_left_sprite_start = keypad_sprite_start + keypad_sprite_count;
 constexpr uint8_t bucko_left_sprite_count = voice_char_width * voice_char_height;
-constexpr uint8_t bucko_left_tile_start = font_tile_start + font_tile_count;
+constexpr uint8_t bucko_left_tile_start = keypad_tile_start + keypad_tile_count;
 constexpr uint8_t bucko_left_tile_count = bucko_left_sprite_count;
 
 constexpr uint8_t ami_left_pal_start = bucko_left_pal_start + bucko_left_pal_count;
@@ -69,6 +88,7 @@ enum class LevelState {
     Start,
     Reveal,
     RevealFinished,
+    KeypadShown,
     OutsideTalk,
     OutsideCode,
     OutsideFinished,
@@ -311,6 +331,109 @@ void bg_update() {
 
 //
 
+// 0 1 2
+// 3 4 5
+// 6 7 8
+template <uint8_t A, uint8_t B> constexpr uint16_t make_mask() { return (1 << A) | (1 << B); }
+constexpr uint16_t keypad_lines_A[] { make_mask<6,1>(), make_mask<1,8>(), };
+constexpr uint16_t keypad_lines_M[] { make_mask<6,0>(), make_mask<0,4>(), make_mask<4,2>(), make_mask<2,8>(), };
+constexpr uint16_t keypad_lines_I[] { make_mask<1,7>(), };
+constexpr uint16_t keypad_lines_C[] { make_mask<8,6>(), make_mask<6,0>(), make_mask<0,2>(), };
+constexpr uint16_t keypad_lines_U[] { make_mask<2,8>(), make_mask<8,6>(), make_mask<6,0>(), };
+constexpr uint16_t keypad_lines_T[] { make_mask<0,2>(), make_mask<1,7>(), };
+constexpr uint16_t keypad_lines_E[] { make_mask<0,2>(), make_mask<3,5>(), make_mask<6,8>(), make_mask<0,6>(), };
+
+//uint8_t s_keypad_last_press;
+
+//const uint16_t * s_keypad_current_masks;
+//uint8_t s_keypad_line_mask;
+
+int16_t s_cursor_x;
+int16_t s_cursor_y;
+
+void keypad_setup() {
+    using namespace engine::graphics;
+
+    // Setup the tiles.
+    engine::utils::fast_memset8(get_tile_data(keypad_tile_off), pal_white, bg_tile_size * bg_tile_size);
+    engine::utils::fast_memset8(get_tile_data(keypad_tile_on), pal_blue, bg_tile_size * bg_tile_size);
+    engine::utils::fast_memset8(get_tile_data(keypad_tile_good), pal_green, bg_tile_size * bg_tile_size);
+    engine::utils::fast_memset8(get_tile_data(keypad_tile_bad), pal_red, bg_tile_size * bg_tile_size);
+
+    // Slight offset so that it doesn't overlap.
+    s_cursor_x = SCREEN_WIDTH / 2 - 2 * bg_tile_size;
+    s_cursor_y = SCREEN_HEIGHT / 2;
+}
+
+void keypad_show() {
+    using namespace engine::graphics;
+
+    // Reuse the cover for the cursor and lines.
+    engine::utils::fast_memset8(VDP.BITMAP_VRAM_8BIT + SCREEN_WIDTH * SCREEN_HEIGHT, pal_transparent, SCREEN_WIDTH * SCREEN_HEIGHT);
+    bitmap_0.enable();
+    bitmap_0.position_x() = 0;
+    bitmap_0.position_y() = 0;
+    bitmap_0.width() = SCREEN_WIDTH - 1;
+    bitmap_0.height() = SCREEN_HEIGHT - 1;
+    bitmap_0.scroll_x() = 0;
+    bitmap_0.scroll_y() = SCREEN_HEIGHT;
+
+    // Draw the buttons.
+    ObjSprite sprite;
+    sprite.set_tile_index(keypad_tile_off);
+    uint8_t sprite_idx = keypad_sprite_start;
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            sprite.set_x((SCREEN_WIDTH / 2) + x * (SCREEN_WIDTH / 3));
+            sprite.set_y((SCREEN_HEIGHT / 2) + y * (SCREEN_HEIGHT / 3));
+            set_sprite(sprite_idx++, sprite);
+        }
+    }
+}
+
+void keypad_hide() {
+    using namespace engine::graphics;
+
+    // Hide the lines.
+    bitmap_0.disable();
+
+    // Hide the buttons.
+    ObjSprite sprite;
+    for (uint8_t i = 0; i < keypad_sprite_count; i++) {
+        set_sprite(keypad_sprite_start + i, sprite);
+    }
+}
+
+void keypad_update() {
+    bool success = true;
+
+    // TODO: gameplay
+
+    if (success) {
+        // Advance to next stage.
+        switch (s_code_state) {
+            case CodeState::CodeA:
+            case CodeState::CodeM:
+            case CodeState::CodeI:
+            case CodeState::CodeC:
+            case CodeState::CodeU:
+            case CodeState::CodeT:
+                if (s_code_state == CodeState::CodeI) {
+                    s_wormhole_speed = WormSpeed::SpinSlow;
+                }
+                s_code_state = static_cast<CodeState>((uint8_t)s_code_state + 1);
+                level_advance(LevelState::OutsideTalk);
+                break;
+            case CodeState::CodeE:
+                s_wormhole_speed = WormSpeed::SpinFast;
+                level_advance(LevelState::OutsideFinished);
+                break;
+        }
+    }
+}
+
+//
+
 // TODO: this is a dupe of the text from driving
 
 enum class UIC : uint8_t { None, Ami, Bucko, };
@@ -416,15 +539,20 @@ constexpr Speech revealed_text[] {
     nullptr,
 };
 
-constexpr Speech code_A_text[] {
+constexpr Speech keypad_text[] {
     { UIC::Bucko, "See that keypad?" },
     { UIC::Bucko, "I have the codes here." },
     { UIC::Bucko, "But they're difficult" },
     { UIC::Bucko, "to read and haven't been" },
     { UIC::Bucko, "used in a while." },
 
+    nullptr,
+};
+
+constexpr Speech code_A_text[] {
     { UIC::Bucko, "It looks like this" },
-    { UIC::Bucko, "first one is an" },
+    { UIC::Bucko, "first one is 2 lines." },
+    { UIC::Bucko, "Kinda looks like an" },
     { UIC::Bucko, "upside down V?" },
 
     nullptr,
@@ -432,28 +560,31 @@ constexpr Speech code_A_text[] {
 
 constexpr Speech code_M_text[] {
     { UIC::Bucko, "This one is clearly" },
-    { UIC::Bucko, "a capital M." },
+    { UIC::Bucko, "4 lines in the shape" },
+    { UIC::Bucko, "of a capital M." },
 
     nullptr,
 };
 
 constexpr Speech code_I_text[] {
     { UIC::Bucko, "I think the next one" },
-    { UIC::Bucko, "is the number 1?" },
+    { UIC::Bucko, "is the number one?" },
+    { UIC::Bucko, "But it's only one line." },
 
     nullptr,
 };
 
 constexpr Speech code_C_text[] {
-    { UIC::Bucko, "Oh!" },
-    { UIC::Bucko, "This is a square pacman!" },
+    { UIC::None, "Stage 1 emitters online" },
+    { UIC::Bucko, "The next one is clearly" },
+    { UIC::Bucko, "a square pacman!" },
 
     nullptr,
 };
 
 constexpr Speech code_U_text[] {
     { UIC::Bucko, "The square pacman is" },
-    { UIC::Bucko, "on his back." },
+    { UIC::Bucko, "on his back now." },
 
     nullptr,
 };
@@ -462,18 +593,21 @@ constexpr Speech code_T_text[] {
     { UIC::Bucko, "I can't tell what" },
     { UIC::Bucko, "this one is meant" },
     { UIC::Bucko, "to be." },
+    { UIC::Bucko, "But it has 2 lines." },
 
     nullptr,
 };
 
 constexpr Speech code_E_text[] {
     { UIC::Bucko, "Some bucko took a bite" },
-    { UIC::Bucko, "out of this page." },
+    { UIC::Bucko, "out of the remaining" },
+    { UIC::Bucko, "pages!" },
 
     nullptr,
 };
 
 constexpr Speech code_finished_text[] {
+    { UIC::None, "Stage 2 emitters activated" },
     { UIC::Bucko, "Attagirl!" },
     { UIC::Bucko, "In we go" },
 
@@ -482,12 +616,18 @@ constexpr Speech code_finished_text[] {
 
 constexpr Speech inside_text[] {
     { UIC::Bucko, "We're in!" },
+    { UIC::Bucko, "Well you are." },
+    { UIC::Bucko, "What's it like in there?" },
+    { UIC::Bucko, "Do they have cake?" },
+
+    { UIC::Ami, "I... no." },
 
     nullptr,
 };
 
 constexpr Speech glitchy_text[] {
-    { UIC::Bucko, "Somethings" },
+    { UIC::Bucko, "Somethings off." },
+    { UIC::Bucko, "Somethings off" },
 
     nullptr,
 };
@@ -528,6 +668,7 @@ void ui_update() {
     switch (s_level_state) {
         case LevelState::Start:
         case LevelState::RevealFinished:
+        case LevelState::KeypadShown:
         case LevelState::OutsideTalk:
         case LevelState::OutsideFinished:
         case LevelState::Inside:
@@ -578,6 +719,7 @@ bool update_logic() {
     switch (s_level_state) {
         case LevelState::Start:
         case LevelState::RevealFinished:
+        case LevelState::KeypadShown:
         case LevelState::OutsideTalk:
         case LevelState::OutsideFinished:
         case LevelState::Inside:
@@ -597,25 +739,7 @@ bool update_logic() {
         } break;
 
         case LevelState::OutsideCode:
-            switch (s_code_state) {
-                case CodeState::CodeA:
-                case CodeState::CodeM:
-                case CodeState::CodeI:
-                case CodeState::CodeC:
-                case CodeState::CodeU:
-                case CodeState::CodeT:
-                    // TODO: input handling
-                    if (s_code_state == CodeState::CodeI) {
-                        s_wormhole_speed = WormSpeed::SpinSlow;
-                    }
-                    s_code_state = static_cast<CodeState>((uint8_t)s_code_state + 1);
-                    level_advance(LevelState::OutsideTalk);
-                    break;
-                case CodeState::CodeE:
-                    s_wormhole_speed = WormSpeed::SpinFast;
-                    level_advance(LevelState::OutsideFinished);
-                    break;
-            }
+            keypad_update();
             break;
 
         case LevelState::Entering:
@@ -653,11 +777,17 @@ void level_advance(LevelState state) {
 
         case LevelState::RevealFinished:
             s_current_speech = revealed_text;
-            s_next_state = LevelState::OutsideTalk;
+            s_next_state = LevelState::KeypadShown;
             // Hide the cover completely.
             engine::graphics::bitmap_0.disable();
+            break;
+
+        case LevelState::KeypadShown:
+            s_current_speech = keypad_text;
+            s_next_state = LevelState::OutsideTalk;
             // Start on the codes.
             s_code_state = CodeState::CodeA;
+            keypad_show();
             break;
 
         case LevelState::OutsideTalk:
@@ -680,6 +810,7 @@ void level_advance(LevelState state) {
         case LevelState::OutsideFinished:
             s_current_speech = code_finished_text;
             s_next_state = LevelState::Entering;
+            keypad_hide();
             break;
 
         case LevelState::Entering:
@@ -710,9 +841,16 @@ void level_advance(LevelState state) {
 } // namespace
 
 void enter() {
+    engine::graphics::set_palette_colour(pal_black, RGB555(0,0,0));
+    engine::graphics::set_palette_colour(pal_white, RGB555(31,31,31));
+    engine::graphics::set_palette_colour(pal_red, RGB555(31,0,0));
+    engine::graphics::set_palette_colour(pal_green, RGB555(0,31,0));
+    engine::graphics::set_palette_colour(pal_blue, RGB555(0,0,31));
+
     // Draw bits.
     bg_setup();
     ui_setup();
+    keypad_setup();
 
     // Initial state.
     level_advance(LevelState::Start);
@@ -733,7 +871,7 @@ void leave() {
     engine::graphics::disable_sprites();
     engine::graphics::bitmap_0.disable();
     engine::graphics::bitmap_1.disable();
-    engine::graphics::reset_sprites<font_sprite_start + font_sprite_count>();
+    engine::graphics::reset_sprites<ami_left_sprite_start + ami_left_sprite_count>();
     font::clear_text();
 
     // Reset sound.
