@@ -480,6 +480,7 @@ void keypad_hide() {
 }
 
 void draw_web_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t pal) {
+    PROFILE_SCOPE(dr_lin);
     using namespace engine::graphics;
 
     // Reusing cover data.
