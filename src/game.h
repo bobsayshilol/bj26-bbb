@@ -1,6 +1,7 @@
 #pragma once
 
 #include "debug.h"
+#include "utils.h"
 
 #include <stdint.h>
 
@@ -58,6 +59,14 @@ void leave();
 } // namespace driving
 
 namespace cyber {
+struct Line { uint8_t x0, y0, x1, y1; };
+extern engine::utils::Array<Line, 2*3> g_lines_A;
+extern engine::utils::Array<Line, 2*4> g_lines_M;
+extern engine::utils::Array<Line, 2*1> g_lines_I;
+extern engine::utils::Array<Line, 2*3> g_lines_C;
+extern engine::utils::Array<Line, 2*3> g_lines_U;
+extern engine::utils::Array<Line, 2*2> g_lines_T;
+extern engine::utils::Array<Line, 2*4> g_lines_E;
 void enter();
 Entry loop();
 void leave();

@@ -11,6 +11,9 @@
 #include "font.h"
 #include "utils.h"
 
+// Skip stuff for testing/debugging.
+#define SKIP_STUFF 0
+
 namespace game::cyber {
 
 namespace {
@@ -347,7 +350,7 @@ void bg_update() {
 // 3 4 5
 // 6 7 8
 template <uint8_t A, uint8_t B> constexpr uint16_t make_mask() { return (1 << A) | (1 << B); }
-constexpr uint16_t keypad_lines_A[] { make_mask<6,1>(), make_mask<1,8>(), };
+constexpr uint16_t keypad_lines_A[] { make_mask<6,1>(), make_mask<1,8>(), make_mask<3,5>(), };
 constexpr uint16_t keypad_lines_M[] { make_mask<6,0>(), make_mask<0,4>(), make_mask<4,2>(), make_mask<2,8>(), };
 constexpr uint16_t keypad_lines_I[] { make_mask<1,7>(), };
 constexpr uint16_t keypad_lines_C[] { make_mask<8,6>(), make_mask<6,0>(), make_mask<0,2>(), };
@@ -355,10 +358,13 @@ constexpr uint16_t keypad_lines_U[] { make_mask<2,8>(), make_mask<8,6>(), make_m
 constexpr uint16_t keypad_lines_T[] { make_mask<0,2>(), make_mask<1,7>(), };
 constexpr uint16_t keypad_lines_E[] { make_mask<0,2>(), make_mask<3,5>(), make_mask<6,8>(), make_mask<0,6>(), };
 
-//uint8_t s_keypad_last_press;
+const uint16_t * s_keypad_current_masks;
+uint8_t s_keypad_current_masks_size;
 
-//const uint16_t * s_keypad_current_masks;
-//uint8_t s_keypad_line_mask;
+uint16_t s_keypad_line_start_bit; // current line start bit
+uint8_t s_keypad_lines_used; // number of lines used so far
+uint8_t s_keypad_lines_matched; // how many lines matched
+uint8_t s_keypad_total_line_mask; // bit N means that s_keypad_current_masks[N] has been matched
 
 struct alignas(uint16_t) ButtonPos {
     uint8_t x;
@@ -520,6 +526,24 @@ void draw_line(uint8_t * data, uint16_t width, uint16_t x0, uint16_t y0, uint16_
     }
 }
 
+void draw_web_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t pal) {
+    using namespace engine::graphics;
+
+    // Reusing cover data.
+    auto * data = VDP.BITMAP_VRAM_8BIT + SCREEN_WIDTH * SCREEN_HEIGHT;
+
+    // Move the cursor to the center of the tile.
+    constexpr uint8_t offset = bg_tile_size / 2;
+    data += offset + offset * SCREEN_WIDTH;
+
+    draw_line(
+        data, SCREEN_WIDTH,
+        x0, y0,
+        x1, y1,
+        pal
+    );
+}
+
 void cursor_update() {
     using namespace engine::graphics;
     PROFILE_SCOPE(cr_upd);
@@ -558,24 +582,15 @@ void cursor_update() {
     );
 
     if (s_cursor_start.valid() && changed) {
-        // Reusing cover data.
-        auto * data = VDP.BITMAP_VRAM_8BIT + SCREEN_WIDTH * SCREEN_HEIGHT;
-
-        // Move the cursor to the center of the tile.
-        constexpr uint8_t offset = bg_tile_size / 2;
-        data += offset + offset * SCREEN_WIDTH;
-
         // Undraw old line.
-        draw_line(
-            data, SCREEN_WIDTH,
+        draw_web_line(
             s_cursor_start.x, s_cursor_start.y,
             old_pos.x, old_pos.y,
             pal_transparent
         );
 
         // Draw the new line.
-        draw_line(
-            data, SCREEN_WIDTH,
+        draw_web_line(
             s_cursor_start.x, s_cursor_start.y,
             s_cursor_cur.x, s_cursor_cur.y,
             pal_grey
@@ -594,50 +609,134 @@ void keypad_update() {
     cursor_update();
 
     const auto pressed_a = engine::input::g_buttons_pressed & GAMEPAD_BTN_A;
-    if (pressed_a) {
-        if (s_cursor_start.valid()) {
-            // Finished this line.
-            s_cursor_start = {};
+    const bool used_all_lines = s_keypad_lines_used == s_keypad_current_masks_size;
 
-            // TODO: add to mask
-        } else {
-            // See if we can start a new line.
-            const auto cursor_aabb = s_cursor_cur.aabb();
-            for (const auto & butt : button_positions) {
-                if (cursor_aabb.intersects(butt.aabb())) {
-                    s_cursor_start = s_cursor_cur;
-                    break;
-                }
+    // Don't trigger a solve while A is pressed or it'll skip to the next line of speech.
+    if (used_all_lines && !pressed_a) {
+        // Undraw the lines.
+        auto undraw = [](const auto& lines) {
+            for (auto & line : lines) {
+                draw_web_line(line.x0, line.y0, line.x1, line.y1, engine::graphics::pal_transparent);
             }
+        };
+        switch (s_code_state) {
+            case CodeState::CodeA: undraw(g_lines_A); break;
+            case CodeState::CodeM: undraw(g_lines_M); break;
+            case CodeState::CodeI: undraw(g_lines_I); break;
+            case CodeState::CodeC: undraw(g_lines_C); break;
+            case CodeState::CodeU: undraw(g_lines_U); break;
+            case CodeState::CodeT: undraw(g_lines_T); break;
+            case CodeState::CodeE: undraw(g_lines_E); break;
+        }
+
+        DEBUG_MSG("Total matched: ", s_keypad_lines_matched);
+        if (s_keypad_current_masks_size == s_keypad_lines_matched) {
+            // Advance to next stage.
+            switch (s_code_state) {
+                case CodeState::CodeA:
+                case CodeState::CodeM:
+                case CodeState::CodeI:
+                case CodeState::CodeC:
+                case CodeState::CodeU:
+                case CodeState::CodeT:
+                    if (s_code_state == CodeState::CodeI) {
+                        s_wormhole_speed = WormSpeed::SpinSlow;
+                    }
+                    s_code_state = static_cast<CodeState>((uint8_t)s_code_state + 1);
+                    level_advance(LevelState::OutsideTalk);
+                    break;
+                case CodeState::CodeE:
+                    s_wormhole_speed = WormSpeed::SpinFast;
+                    level_advance(LevelState::OutsideFinished);
+                    break;
+            }
+
+        } else {
+            // Repeat the help.
+            // TODO: another state to flash lines red?
+            level_advance(LevelState::OutsideTalk);
+            return;
         }
     }
 
-    // Don't trigger a solve while A is pressed or it'll skip to the next line of speech.
-    bool solved = false;
-    if (!pressed_a) {
-        // TODO: gameplay
-        solved = false;
-    }
+    if (pressed_a && !used_all_lines) {
+        // See if we can start/finish a line.
+        const auto cursor_aabb = s_cursor_cur.aabb();
+        constexpr uint8_t num_butts = button_positions.size();
+        for (uint8_t i = 0; i < num_butts; i++) {
+            const uint16_t butt_bit = 1 << i;
+            const auto & butt = button_positions[i];
+            if (cursor_aabb.intersects(butt.aabb())) {
+                if (s_cursor_start.valid()) {
+                    // Read and clear mask;
+                    const uint16_t line_mask = s_keypad_line_start_bit | butt_bit;
+                    s_keypad_line_start_bit = 0;
 
-    if (solved) {
-        // Advance to next stage.
-        switch (s_code_state) {
-            case CodeState::CodeA:
-            case CodeState::CodeM:
-            case CodeState::CodeI:
-            case CodeState::CodeC:
-            case CodeState::CodeU:
-            case CodeState::CodeT:
-                if (s_code_state == CodeState::CodeI) {
-                    s_wormhole_speed = WormSpeed::SpinSlow;
+                    bool keep = false;
+                    // Ignore lines that go back to themselves.
+                    if (line_mask != butt_bit) {
+                        keep = true;
+
+                        // Check for a match.
+                        for (uint8_t mask_idx = 0; mask_idx < s_keypad_current_masks_size; mask_idx++) {
+                            const uint16_t mask_bit = 1 << mask_idx;
+                            const uint16_t mask = s_keypad_current_masks[mask_idx];
+                            if (mask == line_mask) {
+                                // See if we already have this one.
+                                if (s_keypad_total_line_mask & mask_bit) {
+                                    // We already have this one.
+                                    DEBUG_MSG("Already added ", mask_bit);
+                                } else {
+                                    // Add it.
+                                    DEBUG_MSG("Matched ", mask_bit);
+                                    s_keypad_total_line_mask |= mask_bit;
+                                    s_keypad_lines_matched++;
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!keep) {
+                        DEBUG_MSG("Didn't add");
+                        // Didn't count, remove it.
+                        draw_web_line(
+                            s_cursor_start.x, s_cursor_start.y,
+                            s_cursor_cur.x, s_cursor_cur.y,
+                            engine::graphics::pal_transparent
+                        );
+
+                    } else {
+                        DEBUG_MSG("Count increased");
+                        const auto idx = s_keypad_lines_used++;
+
+                        // Add the line that was drawn.
+                        const Line line{
+                            s_cursor_start.x, s_cursor_start.y,
+                            s_cursor_cur.x, s_cursor_cur.y,
+                        };
+                        switch (s_code_state) {
+                            case CodeState::CodeA: g_lines_A[idx] = line; break;
+                            case CodeState::CodeM: g_lines_M[idx] = line; break;
+                            case CodeState::CodeI: g_lines_I[idx] = line; break;
+                            case CodeState::CodeC: g_lines_C[idx] = line; break;
+                            case CodeState::CodeU: g_lines_U[idx] = line; break;
+                            case CodeState::CodeT: g_lines_T[idx] = line; break;
+                            case CodeState::CodeE: g_lines_E[idx] = line; break;
+                        }
+                    }
+
+                    s_cursor_start = {};
+
+                } else {
+                    // Start a new line.
+                    s_cursor_start = s_cursor_cur;
+                    s_keypad_line_start_bit = butt_bit;
                 }
-                s_code_state = static_cast<CodeState>((uint8_t)s_code_state + 1);
-                level_advance(LevelState::OutsideTalk);
+
+                // No other buttons will collide.
                 break;
-            case CodeState::CodeE:
-                s_wormhole_speed = WormSpeed::SpinFast;
-                level_advance(LevelState::OutsideFinished);
-                break;
+            }
         }
     }
 }
@@ -710,11 +809,12 @@ struct Speech {
 
 constexpr Speech start_text[] {
     { UIC::Bucko, "Ami!" },
+#if !SKIP_STUFF
     { UIC::Bucko, "Can you still hear me?" },
     { UIC::Bucko, "The reception near the" },
     { UIC::Bucko, "dome has gotten worse" },
     { UIC::Bucko, "since the takeover." },
-    { UIC::Ami, "Yes. All clear." },
+    { UIC::Ami, "All clear here." },
     { UIC::Bucko, "Great!" },
     { UIC::Bucko, "Near your location there" },
     { UIC::Bucko, "should be an unassuming" },
@@ -724,113 +824,161 @@ constexpr Speech start_text[] {
     { UIC::Ami, "I see it." },
     { UIC::Bucko, "Great!" },
     { UIC::Bucko, "I'll open it from here." },
+#endif
 
     nullptr,
 };
 
 constexpr Speech revealed_text[] {
+    { UIC::Ami, "Whoa!" },
     { UIC::Bucko, "We call this" },
+#if !SKIP_STUFF
     { UIC::Bucko, "The W.E.B." },
     { UIC::Bucko, "I don't know what it" },
     { UIC::Bucko, "stands for." },
     { UIC::Bucko, "But apparently it's" },
-    { UIC::Bucko, "really important." },
+    { UIC::Bucko, "really important to" },
+    { UIC::Bucko, "everything in buckopia." },
     { UIC::Bucko, "Every time I ask the" },
     { UIC::Bucko, "other buckos about it" },
     { UIC::Bucko, "they start talking about" },
     { UIC::Bucko, "lawn mowers and" },
     { UIC::Bucko, "mainframes." },
+    { UIC::Ami, "..." },
     { UIC::Bucko, "Anyway." },
     { UIC::Bucko, "You'll need to get in" },
     { UIC::Bucko, "there and reboot it." },
-    { UIC::Bucko, "That should break the" },
+    { UIC::Bucko, "That should reset the" },
     { UIC::Bucko, "robuckos!" },
+    { UIC::Ami, "OK." },
+    { UIC::Ami, "What do I need to do?" },
+#endif
 
     nullptr,
 };
 
 constexpr Speech keypad_text[] {
-    { UIC::Bucko, "See that keypad?" },
-    { UIC::Bucko, "I have the codes here." },
-    { UIC::Bucko, "But they're difficult" },
-    { UIC::Bucko, "to read and haven't been" },
-    { UIC::Bucko, "used in a while." },
+    { UIC::Bucko, "Do you see a keypad" },
+#if !SKIP_STUFF
+    { UIC::Bucko, "with 9 buttons?" },
+    { UIC::Ami, "I see 9... somethings." },
+    { UIC::Bucko, "They're probably it." },
+    { UIC::Bucko, "It looks like you need" },
+    { UIC::Bucko, "to join them together" },
+    { UIC::Bucko, "in certain patterns." },
+    { UIC::Bucko, "I have the codes here" },
+    { UIC::Bucko, "but they're written in" },
+    { UIC::Bucko, "an older script which" },
+    { UIC::Bucko, "is difficult to read." },
+#endif
 
     nullptr,
 };
 
 constexpr Speech code_A_text[] {
-    { UIC::Bucko, "It looks like this" },
-    { UIC::Bucko, "first one is 2 lines." },
-    { UIC::Bucko, "Kinda looks like an" },
-    { UIC::Bucko, "upside down V?" },
+    { UIC::Bucko, "It looks like the" },
+#if !SKIP_STUFF
+    { UIC::Bucko, "first one has three lines." },
+    { UIC::Bucko, "They're in the shape of a" },
+    { UIC::Bucko, "V with a line through it." },
+    { UIC::Bucko, "Oh!" },
+    { UIC::Bucko, "It could be upside down." },
+#endif
 
     nullptr,
 };
 
 constexpr Speech code_M_text[] {
     { UIC::Bucko, "This one is clearly" },
+#if !SKIP_STUFF
     { UIC::Bucko, "4 lines in the shape" },
-    { UIC::Bucko, "of a capital M." },
+    { UIC::Bucko, "of a W." },
+    { UIC::Bucko, "..." },
+    { UIC::Bucko, "Wait!" },
+    { UIC::Bucko, "This one is upside" },
+    { UIC::Bucko, "down too!" },
+#endif
 
     nullptr,
 };
 
 constexpr Speech code_I_text[] {
     { UIC::Bucko, "I think the next one" },
-    { UIC::Bucko, "is the number one?" },
+    { UIC::Bucko, "is a number?" },
     { UIC::Bucko, "But it's only one line." },
 
     nullptr,
 };
 
 constexpr Speech code_C_text[] {
+    // TODO: separate state
     { UIC::None, "Stage 1 emitters online" },
+    { UIC::Ami, "What's happening?!" },
+    { UIC::Bucko, "You're entering access" },
+    { UIC::Bucko, "codes into a machine." },
+    { UIC::Ami, "..." },
+
     { UIC::Bucko, "The next one is clearly" },
-    { UIC::Bucko, "a square pacman!" },
+    { UIC::Bucko, "a box missing one of" },
+    { UIC::Bucko, "its sides." },
 
     nullptr,
 };
 
 constexpr Speech code_U_text[] {
-    { UIC::Bucko, "The square pacman is" },
-    { UIC::Bucko, "on his back now." },
+    { UIC::Bucko, "The box has been" },
+    { UIC::Bucko, "pushed onto its back." },
 
     nullptr,
 };
 
 constexpr Speech code_T_text[] {
+    { UIC::Bucko, "Some bucko took a bite" },
+#if !SKIP_STUFF
+    { UIC::Bucko, "out of the remaining" },
+    { UIC::Bucko, "pages!" },
     { UIC::Bucko, "I can't tell what" },
     { UIC::Bucko, "this one is meant" },
     { UIC::Bucko, "to be." },
-    { UIC::Bucko, "But it has 2 lines." },
+    { UIC::Bucko, "But it has two" },
+    { UIC::Bucko, "perpendicular lines." },
+#endif
 
     nullptr,
 };
 
 constexpr Speech code_E_text[] {
-    { UIC::Bucko, "Some bucko took a bite" },
-    { UIC::Bucko, "out of the remaining" },
-    { UIC::Bucko, "pages!" },
+    { UIC::Bucko, "It's hard to tell but" },
+    { UIC::Bucko, "there's 3 horizontal and" },
+    { UIC::Bucko, "and 1 vertical lines." },
 
     nullptr,
 };
 
 constexpr Speech code_finished_text[] {
     { UIC::None, "Stage 2 emitters activated" },
-    { UIC::Bucko, "Attagirl!" },
-    { UIC::Bucko, "In we go" },
+#if !SKIP_STUFF
+    { UIC::Bucko, "Attagirl Ami!" },
+    { UIC::Bucko, "Time to jump in!" },
+    { UIC::Ami, "That looks scary." },
+    { UIC::Bucko, "Don't worry!" },
+    { UIC::Bucko, "It's a powerful vortex" },
+    { UIC::Bucko, "that will pull you" },
+    { UIC::Bucko, "in even if you don't" },
+#endif
 
     nullptr,
 };
 
 constexpr Speech inside_text[] {
     { UIC::Bucko, "We're in!" },
+#if !SKIP_STUFF
     { UIC::Bucko, "Well you are." },
     { UIC::Bucko, "What's it like in there?" },
     { UIC::Bucko, "Do they have cake?" },
 
     { UIC::Ami, "I... no." },
+#endif
 
     nullptr,
 };
@@ -850,7 +998,7 @@ void ui_redraw() {
     font::clear_text();
 
     constexpr uint8_t speech_y = engine::graphics::SCREEN_HEIGHT * 2 / 3;
-    constexpr uint8_t speech_sky_y = engine::graphics::SCREEN_HEIGHT / 3;
+    constexpr uint8_t speech_sky_y = engine::graphics::SCREEN_HEIGHT / 5;
 
     // Show any speech if it's active.
     const auto & speech = *s_current_speech;
@@ -939,7 +1087,7 @@ bool update_logic() {
 
         case LevelState::Reveal: {
             // Remove the cover.
-            constexpr uint16_t dh = 1;
+            constexpr uint16_t dh = SKIP_STUFF ? 10 : 1;
             engine::graphics::bitmap_0.scroll_y() += dh;
             engine::graphics::bitmap_0.height() -= dh;
             uint16_t h = engine::graphics::bitmap_0.height();
@@ -1000,21 +1148,29 @@ void level_advance(LevelState state) {
             keypad_show();
             break;
 
-        case LevelState::OutsideTalk:
+        case LevelState::OutsideTalk: {
             s_next_state = LevelState::OutsideCode;
+            auto set_keys = [](const auto & masks) {
+                s_keypad_current_masks = masks;
+                s_keypad_current_masks_size = engine::utils::size(masks);
+            };
             switch (s_code_state) {
-                case CodeState::CodeA: s_current_speech = code_A_text; break;
-                case CodeState::CodeM: s_current_speech = code_M_text; break;
-                case CodeState::CodeI: s_current_speech = code_I_text; break;
-                case CodeState::CodeC: s_current_speech = code_C_text; break;
-                case CodeState::CodeU: s_current_speech = code_U_text; break;
-                case CodeState::CodeT: s_current_speech = code_T_text; break;
-                case CodeState::CodeE: s_current_speech = code_E_text; break;
+                case CodeState::CodeA: s_current_speech = code_A_text; set_keys(keypad_lines_A); break;
+                case CodeState::CodeM: s_current_speech = code_M_text; set_keys(keypad_lines_M); break;
+                case CodeState::CodeI: s_current_speech = code_I_text; set_keys(keypad_lines_I); break;
+                case CodeState::CodeC: s_current_speech = code_C_text; set_keys(keypad_lines_C); break;
+                case CodeState::CodeU: s_current_speech = code_U_text; set_keys(keypad_lines_U); break;
+                case CodeState::CodeT: s_current_speech = code_T_text; set_keys(keypad_lines_T); break;
+                case CodeState::CodeE: s_current_speech = code_E_text; set_keys(keypad_lines_E); break;
             }
-            break;
+        } break;
 
         case LevelState::OutsideCode:
-            // Nothing to do.
+            // Reset state.
+            s_keypad_line_start_bit = 0;
+            s_keypad_lines_used = 0;
+            s_keypad_lines_matched = 0;
+            s_keypad_total_line_mask = 0;
             break;
 
         case LevelState::OutsideFinished:
@@ -1050,7 +1206,16 @@ void level_advance(LevelState state) {
 
 } // namespace
 
+engine::utils::Array<Line, 2*3> g_lines_A;
+engine::utils::Array<Line, 2*4> g_lines_M;
+engine::utils::Array<Line, 2*1> g_lines_I;
+engine::utils::Array<Line, 2*3> g_lines_C;
+engine::utils::Array<Line, 2*3> g_lines_U;
+engine::utils::Array<Line, 2*2> g_lines_T;
+engine::utils::Array<Line, 2*4> g_lines_E;
+
 void enter() {
+    // Setup palette.
     engine::graphics::set_palette_colour(pal_black, RGB555(0,0,0));
     engine::graphics::set_palette_colour(pal_white, RGB555(31,31,31));
     engine::graphics::set_palette_colour(pal_red, RGB555(31,0,0));
