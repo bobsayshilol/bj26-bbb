@@ -124,12 +124,12 @@ def _write_rle(prefix :str, data :list[int], file :TextIOWrapper):
 	def emit():
 		if last is not None:
 			if last == pal_transparent:
-				rle.append(0xFFFF) # magic value for decompression code
+				rle.append(0xFF) # magic value for decompression code
 			else:
 				rle.append(last)
 			rle.append(count)
 	for val in data:
-		if val != last or count == 0xFFFF:
+		if val != last or count == 0xFF:
 			emit()
 			last = val
 			count = 0
@@ -138,7 +138,7 @@ def _write_rle(prefix :str, data :list[int], file :TextIOWrapper):
 	emit()
 
 	# Write it out.
-	file.write(f"static constexpr uint16_t compressed[] = {{\n")
+	file.write(f"alignas(uint16_t) static constexpr uint8_t compressed[] = {{\n")
 	for r in rle:
 		file.write(f"{r},\n")
 	file.write("};\n")
@@ -153,12 +153,13 @@ def _write_rle(prefix :str, data :list[int], file :TextIOWrapper):
 	static_assert((count & 1) == 0);
 
 	for (uint32_t i = 0; i < count; i += 2) {
-		uint16_t value = compressed[i];
-		if (value == 0xFFFF) value = engine::graphics::pal_transparent;
+		uint8_t value = compressed[i];
+		if (value == 0xFF) value = engine::graphics::pal_transparent;
 		else value += pal_offset;
 
 		const uint16_t length = compressed[i + 1] + 1;
 		for (uint16_t j = 0; j < length; j++) {
+			// TODO: could do 16bit stores here
 			*output++ = value;
 		}
 	}
