@@ -19,6 +19,7 @@ from pathlib import Path
 palette_size = 16
 
 tile_size = 8
+raw = False
 
 pal_transparent = -1
 
@@ -63,8 +64,9 @@ def _get_idx(pal, px):
 
 def _extract(file :Path):
 	# Untiled images are plain copies.
-	global tile_size, palette_size
-	if "_raw." in file.name:
+	global tile_size, palette_size, is_raw
+	is_raw = "_raw." in file.name
+	if is_raw:
 		tile_size = 1
 		palette_size = 16
 	else:
@@ -114,6 +116,58 @@ def _write_pal(pal, file :TextIOWrapper):
 		file.write(f"RGB555({r}, {g}, {b}),\n")
 
 
+def _write_rle(prefix :str, data :list[int], file :TextIOWrapper):
+	# RLE compress the data.
+	rle = []
+	last = None
+	count = 0
+	def emit():
+		if last is not None:
+			if last == pal_transparent:
+				rle.append(0xFFFF) # magic value for decompression code
+			else:
+				rle.append(last)
+			rle.append(count)
+	for val in data:
+		if val != last or count == 0xFFFF:
+			emit()
+			last = val
+			count = 0
+		else:
+			count += 1
+	emit()
+
+	# Write it out.
+	file.write(f"static constexpr uint16_t compressed[] = {{\n")
+	for r in rle:
+		file.write(f"{r},\n")
+	file.write("};\n")
+
+	# Decompress function.
+	file.write(f"void {prefix}::decompress(uint8_t * output)")
+	file.write("""
+{
+[[	maybe_unused]] auto * begin = output;
+
+	constexpr uint32_t count = engine::utils::size(compressed);
+	static_assert((count & 1) == 0);
+
+	for (uint32_t i = 0; i < count; i += 2) {
+		uint16_t value = compressed[i];
+		if (value == 0xFFFF) value = engine::graphics::pal_transparent;
+		else value += pal_offset;
+
+		const uint16_t length = compressed[i + 1] + 1;
+		for (uint16_t j = 0; j < length; j++) {
+			*output++ = value;
+		}
+	}
+
+	ASSERT(output == begin + width * height);
+}
+""")
+
+
 def convert(filename :Path, out :Path):
 	print(f"Converting {filename} to {out}")
 	tiles, palette = _extract(filename)
@@ -121,12 +175,18 @@ def convert(filename :Path, out :Path):
 		output.write("#include \"images.h\"\n")
 		output.write("namespace game::images {\n")
 
-		# Tile data.
-		output.write(f"alignas(uint16_t) constexpr uint8_t {filename.stem}::data[{len(tiles)} * {tile_size} * {tile_size}] = {{\n")
-		for tile in tiles:
-			_write_tile(tile, output)
-			output.write("\n")
-		output.write("};\n")
+		if is_raw:
+			data = []
+			for tile in tiles:
+				data += tile
+			_write_rle(filename.stem, data, output)
+		else:
+			# Tile data.
+			output.write(f"alignas(uint16_t) constexpr uint8_t {filename.stem}::data[{len(tiles)} * {tile_size} * {tile_size}] = {{\n")
+			for tile in tiles:
+				_write_tile(tile, output)
+				output.write("\n")
+			output.write("};\n")
 
 		# Palette.
 		output.write(f"constexpr uint16_t {filename.stem}::palette[{len(palette)}] = {{\n")

@@ -471,9 +471,10 @@ void setup_bitmaps() {
         }
 
         // Copy data.
-        static_assert(engine::utils::size(images::skyline_raw::data) == skyline_width * skyline_height);
+        static_assert(images::skyline_raw::width == skyline_width);
+        static_assert(images::skyline_raw::height == skyline_height);
         uint8_t * data = VDP.BITMAP_VRAM_8BIT + skyline_start_y * SCREEN_WIDTH;
-        engine::utils::fast_memcpy(data, images::skyline_raw::data, skyline_width * skyline_height);
+        images::skyline_raw::decompress(data);
     }
 
     // Dome bitmap.
@@ -499,9 +500,10 @@ void setup_bitmaps() {
         }
 
         // Copy data.
-        static_assert(engine::utils::size(images::dome_raw::data) == dome_width * dome_height);
+        static_assert(images::dome_raw::width == dome_width);
+        static_assert(images::dome_raw::height == dome_height);
         uint8_t * data = VDP.BITMAP_VRAM_8BIT + dome_start_y * SCREEN_WIDTH;
-        engine::utils::fast_memcpy(data, images::dome_raw::data, dome_width * dome_height);
+        images::dome_raw::decompress(data);
     }
 }
 
