@@ -51,7 +51,7 @@ constexpr uint8_t cursor_tile_count = 1;
 constexpr uint8_t keypad_pal_start = pal_basic_end + 1;
 constexpr uint8_t keypad_pal_count = 0;
 constexpr uint8_t keypad_sprite_start = cursor_sprite_start + cursor_sprite_count;
-constexpr uint8_t keypad_sprite_count = 9; // 3x3 grid
+constexpr uint8_t keypad_sprite_count = 9*4; // 3x3 grid of 2x2 tiles
 constexpr uint8_t keypad_tile_start = cursor_tile_start + cursor_tile_count;
 constexpr uint8_t keypad_tile_count = 4;
 constexpr uint8_t keypad_tile_off = keypad_tile_start + 0;
@@ -374,7 +374,7 @@ struct alignas(uint16_t) ButtonPos {
     constexpr auto aabb() const {
         return engine::utils::AABB{
             x, y,
-            engine::graphics::bg_tile_size, engine::graphics::bg_tile_size,
+            engine::graphics::bg_tile_size * 2, engine::graphics::bg_tile_size * 2,
         };
     }
 };
@@ -384,8 +384,8 @@ constexpr auto button_positions = []{
     int idx = 0;
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
-            const uint8_t x = (SCREEN_WIDTH / 2) + i * (SCREEN_WIDTH / 3) - bg_tile_size / 2;
-            const uint8_t y = (SCREEN_HEIGHT / 2) + j * (SCREEN_HEIGHT / 3) - bg_tile_size / 2;
+            const uint8_t x = (SCREEN_WIDTH / 2) + i * (SCREEN_WIDTH / 3) - bg_tile_size;
+            const uint8_t y = (SCREEN_HEIGHT / 2) + j * (SCREEN_HEIGHT / 3) - bg_tile_size;
             butts[idx].x = x;
             butts[idx].y = y;
             idx++;
@@ -452,12 +452,16 @@ void keypad_show() {
     // Draw the buttons.
     ObjSprite sprite;
     sprite.set_tile_index(keypad_tile_off);
-    static_assert(button_positions.size() == keypad_sprite_count);
-    for (uint8_t i = 0; i < keypad_sprite_count; i++) {
+    static_assert(button_positions.size() * 4 == keypad_sprite_count);
+    for (uint8_t i = 0; i < button_positions.size(); i++) {
         const auto & butt = button_positions[i];
-        sprite.set_x(butt.x);
-        sprite.set_y(butt.y);
-        set_sprite(keypad_sprite_start + i, sprite);
+        for (uint8_t y = 0; y < 2; y++) {
+            for (uint8_t x = 0; x < 2; x++) {
+                sprite.set_x(butt.x + x * bg_tile_size);
+                sprite.set_y(butt.y + y * bg_tile_size);
+                set_sprite(keypad_sprite_start + 4 * i + 2 * y + x, sprite);
+            }
+        }
     }
 }
 
