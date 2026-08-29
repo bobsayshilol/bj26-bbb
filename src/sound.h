@@ -1,7 +1,6 @@
 #pragma once
 
-#include "loopy/bios.h"
-#include "loopy/extrafuncs.h"
+#include "loopy.h"
 #include "debug.h"
 
 namespace engine::sound {

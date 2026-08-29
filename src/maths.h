@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#if !WEB_BUILD
+
 namespace engine::maths {
 
 extern "C" int8_t sin_table[256];
@@ -18,3 +20,19 @@ inline int8_t cos(uint8_t angle) {
 }
 
 } // namespace engine::maths
+
+#else
+#include <cmath>
+
+namespace engine::maths {
+
+inline int8_t sin(uint8_t angle) {
+    return std::sin(2 * 3.14159 * angle / 256) * 127;
+}
+inline int8_t cos(uint8_t angle) {
+    return std::cos(2 * 3.14159 * angle / 256) * 127;
+}
+
+} // namespace engine::maths
+
+#endif

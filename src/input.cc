@@ -19,6 +19,7 @@ int16_t g_mouse_dx;
 int16_t g_mouse_dy;
 
 void update_inputs() {
+#if !WEB_BUILD
 	// Get the mouse XY deltas and buttons
 	int16_t mouseXB = VDP.IO_MOUSEX;
 	int16_t mouseY  = VDP.IO_MOUSEY;
@@ -31,6 +32,11 @@ void update_inputs() {
 
 	// Update button state from mouse and gamepad buttons
 	uint32_t buttonsNow = MOUSE_BUTTONS(mouseXB) | READ_GAMEPAD1_RAW;
+#else
+	g_mouse_dx = 0;
+	g_mouse_dy = 0;
+	uint32_t buttonsNow = web::update_input();
+#endif
 	g_buttons_pressed = buttonsNow & ~g_buttons_held;
 	g_buttons_held = buttonsNow;
 

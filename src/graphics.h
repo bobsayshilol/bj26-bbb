@@ -14,6 +14,8 @@ constexpr uint8_t pal_transparent = 0;
 
 void init();
 
+#if !WEB_BUILD
+
 // Backdrop is a solid colour.
 inline void set_backdrop_a(uint16_t rgb) { VDP.BACKDROP_A = rgb; }
 inline void set_backdrop_b(uint16_t rgb) { VDP.BACKDROP_B = rgb; }
@@ -21,10 +23,17 @@ inline void set_backdrop_b(uint16_t rgb) { VDP.BACKDROP_B = rgb; }
 // Use RGB555() for palette colours. 256 colours.
 inline void set_palette_colour(uint8_t idx, uint16_t rgb) { VDP.PALETTE[idx] = rgb; }
 
+#else
+void set_backdrop_a(uint16_t rgb);
+void set_backdrop_b(uint16_t rgb);
+void set_palette_colour(uint8_t idx, uint16_t rgb);
+#endif
+
 // Each Bitmap views a region of vram.
 template <uint8_t Index>
 struct Bitmap {
     static_assert(Index < 4);
+#if !WEB_BUILD
     static auto & position_x() { return VDP.BM_SCREENX[Index]; }
     static auto & position_y() { return VDP.BM_SCREENY[Index]; }
     static auto & scroll_x() { return VDP.BM_SCROLLX[Index]; }
@@ -34,7 +43,24 @@ struct Bitmap {
     static auto & latch() { return VDP.BM_COL_LATCH[Index]; } // maps to buffer_ctrl, not a latch?
     static void enable() { VDP.LAYER_CTRL |= uint16_t(LAYER_ENABLE_BM0) << Index; }
     static void disable() { VDP.LAYER_CTRL &= ~(uint16_t(LAYER_ENABLE_BM0) << Index); }
+#else
+    static uint16_t & position_x();
+    static uint16_t & position_y();
+    static uint16_t & scroll_x();
+    static uint16_t & scroll_y();
+    static uint16_t & width();
+    static uint16_t & height();
+    static uint16_t & latch();
+    static void enable();
+    static void disable();
+#endif
 };
+#if WEB_BUILD
+extern template struct Bitmap<0>;
+extern template struct Bitmap<1>;
+extern template struct Bitmap<2>;
+extern template struct Bitmap<3>;
+#endif
 constexpr inline Bitmap<0> bitmap_0;
 constexpr inline Bitmap<1> bitmap_1;
 constexpr inline Bitmap<2> bitmap_2;
@@ -172,6 +198,8 @@ static_assert(sizeof(BGSprite) == sizeof(uint16_t));
 
 
 
+#if !WEB_BUILD
+
 // Returns data for the given tile.
 // It's much more efficient to store to this 2 pixels at a time (uint16_t) rather than 1.
 // MAME says it's only legal to store uint16_t's too...
@@ -203,22 +231,47 @@ inline void set_bg_sprite(uint8_t x, uint8_t y, BGSprite const & sprite) {
     *bg = sprite.raw;
 }
 
+#else
+using Pixel2 = uint16_t;
+Pixel2 * get_tile_data(TileIndex idx);
+void set_sprite(uint8_t idx, ObjSprite const & sprite);
+void set_bg_sprite_(uint8_t BGx, uint8_t x, uint8_t y, BGSprite const & sprite);
+template <uint8_t BGx>
+void set_bg_sprite(uint8_t x, uint8_t y, BGSprite const & sprite) {
+    set_bg_sprite_(BGx, x, y, sprite);
+}
+#endif
+
 
 
 // Backgrounds are made of tiles (see above).
 template <uint8_t Index>
 struct Background {
     static_assert(Index <= 1);
+#if !WEB_BUILD
     static void enable() { VDP.LAYER_CTRL |= uint16_t(LAYER_ENABLE_BG0) << Index; }
     static void disable() { VDP.LAYER_CTRL &= ~(uint16_t(LAYER_ENABLE_BG0) << Index); };
+#else
+    static void enable();
+    static void disable();
+#endif
     static void set_sprite(uint8_t x, uint8_t y, const BGSprite & sprite) { set_bg_sprite<Index>(x, y, sprite); }
 };
+#if WEB_BUILD
+extern template struct Background<0>;
+extern template struct Background<1>;
+#endif
 constexpr inline Background<0> background_0;
 constexpr inline Background<1> background_1;
 
+#if !WEB_BUILD
 // For now only OBJ0 is displayed (OBJ1 requires tile index offsets).
 inline void enable_sprites() { VDP.LAYER_CTRL |= uint16_t(LAYER_ENABLE_OBJ0); }
 inline void disable_sprites() { VDP.LAYER_CTRL &= ~uint16_t(LAYER_ENABLE_OBJ0); }
+#else
+void enable_sprites();
+void disable_sprites();
+#endif
 
 template <uint8_t Count>
 inline void reset_sprites() {
@@ -231,8 +284,13 @@ inline void reset_sprites() {
 
 
 
+#if !WEB_BUILD
 // We need explicit barriers here otherwise GCC will assume that nothing has changed.
 inline void wait_until_line0() { while (VDP.VCOUNT != 0) __asm__ volatile ("":::"memory"); }
 inline void wait_until_line(uint16_t line) { while (VDP.VCOUNT < line) __asm__ volatile ("":::"memory"); }
+#else
+void wait_until_line0();
+void wait_until_line(uint16_t line);
+#endif
 
 } // namespace engine::graphics

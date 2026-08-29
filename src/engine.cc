@@ -8,11 +8,15 @@
 namespace engine::core {
 
 void init() {
+#if WEB_BUILD
+	web::init();
+#endif
 	// Init systems.
 	debug::init();
 	graphics::init();
 	sound::init();
 
+#if !WEB_BUILD
 	// The rest of this is copypasta'd.
 
 	// Turn off controller input
@@ -22,6 +26,10 @@ void init() {
 	// Requires that controller input was turned off for the last few frames
 	input::g_mouse_plugged = (MOUSE_DET != 0);
 	input::g_pad_plugged = DET_GAMEPAD1;
+#else
+	input::g_mouse_plugged = false;
+	input::g_pad_plugged = true;
+#endif
 }
 
 } // namespace engine::core

@@ -2,12 +2,23 @@
 
 #if ENABLE_DEBUGGING
 
+#if !WEB_BUILD
 #include "serial.h"
+#else
+#include <cstdio>
+#define serial_print puts
+#define serial_write putchar
+#endif
+
 #include "utils.h"
 
 namespace engine::debug {
 
-void init() { serial_begin(38400); }
+void init() {
+#if !WEB_BUILD
+    serial_begin(38400);
+#endif
+}
 
 namespace internal {
 

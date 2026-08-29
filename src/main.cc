@@ -21,9 +21,11 @@ void init() {
 
 	DEBUG_MSG("Booted");
 
+#if !WEB_BUILD
 	// Enable gamepad.
 	// TODO: move this
 	bios_vdpMode(CONTROL_MODE_GAMEPAD, VIDEO_HEIGHT_224P);
+#endif
 
 	engine::sound::set_lists(game::music::bgm_list, game::music::sfx_list);
 }

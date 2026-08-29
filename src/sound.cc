@@ -12,6 +12,7 @@ const uint8_t * const * s_bgm_tracks;
 } // namespace detail
 
 void init() {
+#if !WEB_BUILD
 	// Mostly copypasta'd.
 
 	// Setup sound hardware (takes a few frames)
@@ -26,6 +27,7 @@ void init() {
 	sys_setDmaEnabled(true);
 
 	biosvar_autoSoundState = &detail::g_sound_state;
+#endif
 }
 
 } // namespace engine::sound

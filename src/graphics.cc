@@ -20,6 +20,7 @@ namespace {
 }
 
 void init() {
+#if !WEB_BUILD
 	// 8bpp simplifies things, probably won't need 4bpp.
 	VDP.BM_CTRL = BM_MODE_8BPP_SHARED; // bitmap_ctrl
 
@@ -48,6 +49,7 @@ void init() {
 
 	// No tileset offset.
 	VDP.CHARBASE = 0;
+#endif
 
 	set_backdrop_a(RGB555(0, 0, 0));
 	set_backdrop_b(RGB555(0, 0, 0));

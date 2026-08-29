@@ -2,8 +2,6 @@
 
 #include <stdint.h>
 
-#include "loopy/constants.h"
-
 namespace engine::input {
 
 // Whether or not devices are plugged in.
