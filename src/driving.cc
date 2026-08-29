@@ -344,12 +344,6 @@ void level_advance(LevelState state);
 
 //
 
-// We need explicit barriers here otherwise GCC will assume that nothing has changed.
-void wait_until_line0() { while (VDP.VCOUNT != 0) __asm__ volatile ("":::"memory"); }
-void wait_until_line(uint16_t line) { while (VDP.VCOUNT < line) __asm__ volatile ("":::"memory"); }
-
-//
-
 void setup_tiles() {
     using namespace engine::graphics;
 
@@ -1491,7 +1485,7 @@ Entry loop() {
     // Wait for vblank to end.
     {
         PROFILE_SCOPE(rd_vsy);
-        wait_until_line0();
+        engine::graphics::wait_until_line0();
     }
 
     // Update gamepad/mouse input.

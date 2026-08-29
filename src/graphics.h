@@ -229,4 +229,10 @@ inline void reset_sprites() {
     }
 }
 
+
+
+// We need explicit barriers here otherwise GCC will assume that nothing has changed.
+inline void wait_until_line0() { while (VDP.VCOUNT != 0) __asm__ volatile ("":::"memory"); }
+inline void wait_until_line(uint16_t line) { while (VDP.VCOUNT < line) __asm__ volatile ("":::"memory"); }
+
 } // namespace engine::graphics

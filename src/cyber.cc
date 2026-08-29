@@ -95,11 +95,6 @@ static_assert(cover_pal_start + cover_pal_count <= font_pal_start);
 
 //
 
-void wait_until_line0() { while (VDP.VCOUNT != 0) __asm__ volatile ("":::"memory"); }
-void wait_until_line(uint16_t line) { while (VDP.VCOUNT < line) __asm__ volatile ("":::"memory"); }
-
-//
-
 enum class LevelState {
     Start,
     Reveal,
@@ -298,13 +293,13 @@ void bg_update() {
 
     switch (s_bg_style) {
         case BGStyle::Outside:
-            wait_until_line(engine::graphics::SCREEN_HEIGHT);
+            engine::graphics::wait_until_line(engine::graphics::SCREEN_HEIGHT);
             break;
 
         case BGStyle::OutsideWavy:
             // TODO: need a smooth state to bring this in
             for (uint8_t line = 4; line < engine::graphics::SCREEN_HEIGHT; line += 4) {
-                wait_until_line(line);
+                engine::graphics::wait_until_line(line);
                 uint16_t shift = engine::maths::sin(timer + line) / 4;
                 engine::graphics::bitmap_1.scroll_x() = shift;
             }
@@ -312,7 +307,7 @@ void bg_update() {
 
         case BGStyle::Inside:
             for (uint8_t line = 4; line < engine::graphics::SCREEN_HEIGHT; line += 4) {
-                wait_until_line(line);
+                engine::graphics::wait_until_line(line);
                 uint16_t shift = engine::maths::sin(timer + line) / 8;
                 engine::graphics::bitmap_1.scroll_x() = shift;
             }
@@ -332,7 +327,7 @@ void bg_update() {
                 static_cast<uint8_t>((g1 >> 24) & 0xFF),
             };
             for (uint8_t line = 4; line < engine::graphics::SCREEN_HEIGHT; line += 4) {
-                wait_until_line(line);
+                engine::graphics::wait_until_line(line);
                 uint16_t shift = engine::maths::sin(timer + line) / 8;
                 for (uint8_t glitch : glitch_lines) {
                     if (line == glitch) {
@@ -1252,7 +1247,7 @@ Entry loop() {
     // Wait for vsync.
     {
         PROFILE_SCOPE(vsync);
-        wait_until_line0();
+        engine::graphics::wait_until_line0();
     }
 
     // Update gamepad/mouse input.
