@@ -878,7 +878,7 @@ void draw_sprites() {
         bool hide_trees = true;
 
         const uint8_t road_pos = s_road_position.value();
-        if (road_pos > road_start) {
+        if (road_start <= road_pos && road_pos < road_start + road_length) {
             // Work out how far down the road we are.
             const uint8_t road_y = road_pos - road_start;
             const int16_t left_x = s_pavement_line_start[road_y] - bg_tile_size * 2;
