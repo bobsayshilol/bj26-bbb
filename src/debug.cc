@@ -6,8 +6,10 @@
 #include "serial.h"
 #else
 #include <cstdio>
-#define serial_print puts
-#define serial_write putchar
+#include <string>
+static std::string s_msg;
+#define serial_print(x) s_msg += x;
+#define serial_write(x) puts(s_msg.c_str()); s_msg.clear()
 #endif
 
 #include "utils.h"

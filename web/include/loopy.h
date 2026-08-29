@@ -10,10 +10,17 @@ uint32_t update_input();
 void draw();
 
 struct vdp {
-    uint8_t BITMAP_VRAM_8BIT[0x20000];
-    uint16_t PALETTE[0x100];
+    // These are intentionally static to catch reads/writes out of bounds.
+
+    alignas(uint16_t) static uint8_t BITMAP_VRAM_8BIT[0x20000];
+    static uint16_t PALETTE[0x100];
+    static uint32_t OAM[128];
+
+    static uint16_t tile_data[(0x10000 - 0x1000) / 2];
+    static uint16_t bg_sprite_data[32 * 32];
+    static bool sprites_enabled;
 };
-extern vdp VDP;
+inline constexpr vdp VDP;
 } // namespace web
 
 namespace loopy {

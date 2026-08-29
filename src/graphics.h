@@ -20,14 +20,13 @@ void init();
 inline void set_backdrop_a(uint16_t rgb) { VDP.BACKDROP_A = rgb; }
 inline void set_backdrop_b(uint16_t rgb) { VDP.BACKDROP_B = rgb; }
 
-// Use RGB555() for palette colours. 256 colours.
-inline void set_palette_colour(uint8_t idx, uint16_t rgb) { VDP.PALETTE[idx] = rgb; }
-
 #else
 void set_backdrop_a(uint16_t rgb);
 void set_backdrop_b(uint16_t rgb);
-void set_palette_colour(uint8_t idx, uint16_t rgb);
 #endif
+
+// Use RGB555() for palette colours. 256 colours.
+inline void set_palette_colour(uint8_t idx, uint16_t rgb) { VDP.PALETTE[idx] = rgb; }
 
 // Each Bitmap views a region of vram.
 template <uint8_t Index>
@@ -44,23 +43,18 @@ struct Bitmap {
     static void enable() { VDP.LAYER_CTRL |= uint16_t(LAYER_ENABLE_BM0) << Index; }
     static void disable() { VDP.LAYER_CTRL &= ~(uint16_t(LAYER_ENABLE_BM0) << Index); }
 #else
-    static uint16_t & position_x();
-    static uint16_t & position_y();
-    static uint16_t & scroll_x();
-    static uint16_t & scroll_y();
-    static uint16_t & width();
-    static uint16_t & height();
-    static uint16_t & latch();
-    static void enable();
-    static void disable();
+    static uint16_t px, py, sx, sy, w, h, l, show;
+    static uint16_t & position_x() { return px; }
+    static uint16_t & position_y() { return py; }
+    static uint16_t & scroll_x() { return sx; }
+    static uint16_t & scroll_y() { return sy; }
+    static uint16_t & width() { return w; }
+    static uint16_t & height() { return h; }
+    static uint16_t & latch() { return l; }
+    static void enable() { show = true; }
+    static void disable() { show = false; }
 #endif
 };
-#if WEB_BUILD
-extern template struct Bitmap<0>;
-extern template struct Bitmap<1>;
-extern template struct Bitmap<2>;
-extern template struct Bitmap<3>;
-#endif
 constexpr inline Bitmap<0> bitmap_0;
 constexpr inline Bitmap<1> bitmap_1;
 constexpr inline Bitmap<2> bitmap_2;
@@ -107,7 +101,9 @@ enum class Screen : uint8_t {
 
 // Movable object sprite.
 union ObjSprite {
+#if !WEB_BUILD
 private:
+#endif
     struct {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         uint32_t x : 9;
@@ -132,7 +128,12 @@ private:
 
 public:
     // Value must be read/written as u16x2 or u32x1 (according to MAME).
-    uint32_t raw = 0x0200; // default value in LoopyMSE and MAME, looks like x=256,y=256
+    uint32_t raw =
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        0x00400000; // reverse of below
+#else
+        0x00000200; // default value in LoopyMSE and MAME, looks like y=256
+#endif
 
     void set_x(uint16_t x_) {
         parts.x = x_;
@@ -159,7 +160,9 @@ static_assert(sizeof(ObjSprite) == sizeof(uint32_t));
 
 // BG tile sprite.
 union BGSprite {
+#if !WEB_BUILD
 private:
+#endif
     struct {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         uint16_t tile_index : 11;
@@ -198,20 +201,25 @@ static_assert(sizeof(BGSprite) == sizeof(uint16_t));
 
 
 
-#if !WEB_BUILD
-
 // Returns data for the given tile.
 // It's much more efficient to store to this 2 pixels at a time (uint16_t) rather than 1.
 // MAME says it's only legal to store uint16_t's too...
 using Pixel2 = uint16_t;
 inline Pixel2 * get_tile_data(TileIndex idx) {
-    ASSERT(idx < (0x10000 - sprite_tile_data_start) / (bg_tile_size * bg_tile_size));
+    constexpr TileIndex max_idx = (0x10000 - sprite_tile_data_start) / (bg_tile_size * bg_tile_size);
+    ASSERT(idx < max_idx);
     const uint32_t offset = idx * bg_tile_size * bg_tile_size;
+#if !WEB_BUILD
+    auto * data = VDP.TILE_VRAM;
+#else
+    static_assert(sizeof(VDP.tile_data) == max_idx * bg_tile_size * bg_tile_size);
+    auto * data = VDP.tile_data;
+#endif
     // |sprite_tile_data_start| and |offset| are both even so this is safe.
-    return VDP.TILE_VRAM + ((sprite_tile_data_start + offset) >> 1);
+    return data + ((sprite_tile_data_start + offset) >> 1);
 }
 
-// Get a sprite.
+// Set a sprite.
 inline void set_sprite(uint8_t idx, ObjSprite const & sprite) {
     ASSERT(idx < 128);
     VDP.OAM[idx] = sprite.raw;
@@ -222,25 +230,20 @@ template <uint8_t BGx>
 inline void set_bg_sprite(uint8_t x, uint8_t y, BGSprite const & sprite) {
     ASSERT(x < bg_tilemap_size);
     ASSERT(y < bg_tilemap_size);
+#if !WEB_BUILD
     static_assert(BGx == 0 || (BGx == 1 && !bg_shared_tilemap));
     auto * bg = VDP.TILE_VRAM;
+#else
+    static_assert(BGx == 0);
+    static_assert(sizeof(VDP.bg_sprite_data) == bg_tilemap_size * bg_tilemap_size * sizeof(uint16_t));
+    auto * bg = VDP.bg_sprite_data;
+#endif
     if constexpr (BGx == 1) {
         bg += bg_tilemap_size * bg_tilemap_size;
     }
     bg += y * bg_tilemap_size + x;
     *bg = sprite.raw;
 }
-
-#else
-using Pixel2 = uint16_t;
-Pixel2 * get_tile_data(TileIndex idx);
-void set_sprite(uint8_t idx, ObjSprite const & sprite);
-void set_bg_sprite_(uint8_t BGx, uint8_t x, uint8_t y, BGSprite const & sprite);
-template <uint8_t BGx>
-void set_bg_sprite(uint8_t x, uint8_t y, BGSprite const & sprite) {
-    set_bg_sprite_(BGx, x, y, sprite);
-}
-#endif
 
 
 
@@ -252,15 +255,12 @@ struct Background {
     static void enable() { VDP.LAYER_CTRL |= uint16_t(LAYER_ENABLE_BG0) << Index; }
     static void disable() { VDP.LAYER_CTRL &= ~(uint16_t(LAYER_ENABLE_BG0) << Index); };
 #else
-    static void enable();
-    static void disable();
+    static bool show;
+    static void enable() { show = true; }
+    static void disable() { show = false; }
 #endif
     static void set_sprite(uint8_t x, uint8_t y, const BGSprite & sprite) { set_bg_sprite<Index>(x, y, sprite); }
 };
-#if WEB_BUILD
-extern template struct Background<0>;
-extern template struct Background<1>;
-#endif
 constexpr inline Background<0> background_0;
 constexpr inline Background<1> background_1;
 
