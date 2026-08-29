@@ -51,7 +51,7 @@ std::unique_ptr<SDL_Surface, SDLDeleter> s_sprites_buffer;
 //
 
 void error() {
-    printf("Exiting due to error.");
+    printf("\nExiting\n");
     exit(EXIT_FAILURE);
 }
 
@@ -60,7 +60,7 @@ void error() {
 
 namespace web {
 
-uint8_t vdp::BITMAP_VRAM_8BIT[0x20000];
+alignas(uint16_t) uint8_t vdp::BITMAP_VRAM_8BIT[0x20000];
 uint16_t vdp::PALETTE[0x100];
 uint32_t vdp::OAM[128];
 uint16_t vdp::tile_data[(0x10000 - 0x1000) / 2];
@@ -123,14 +123,18 @@ void init() {
 uint32_t update_input() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+#ifndef __EMSCRIPTEN__
         if (event.type == SDL_EventType::SDL_EVENT_QUIT) {
             error();
         }
+#endif
     }
 
     auto *keys = SDL_GetKeyboardState(nullptr);
 
+#ifndef __EMSCRIPTEN__
     if (keys[SDL_Scancode::SDL_SCANCODE_ESCAPE]) error();
+#endif
 
     uint32_t bits = 0;
     if (keys[SDL_Scancode::SDL_SCANCODE_Z]) bits |= GAMEPAD_BTN_A;
@@ -225,16 +229,8 @@ void draw() {
     // Update the screen.
     SDL_UpdateWindowSurface(s_window.get());
 
-  // Fake 60fps.
-#ifndef __EMSCRIPTEN__
-    const auto now = std::chrono::system_clock::now();
-    static auto last_time = now;
-    const auto delay = std::chrono::duration_cast<std::chrono::milliseconds>((last_time + std::chrono::milliseconds(16) - now));
-    last_time = now;
-    if (delay > std::chrono::milliseconds(0)) {
-        SDL_Delay(delay.count());
-    }
-#endif
+    // Fake 60fps.
+    SDL_Delay(16);
 }
 
 } // namespace web
@@ -252,27 +248,6 @@ void set_backdrop_b(uint16_t rgb) {
     (void)rgb;
     UNIMPLEMENTED();
 }
-
-//
-
-#define DEFINE_BITMAP(N) \
-    template<> uint16_t Bitmap<N>::px = 0; \
-    template<> uint16_t Bitmap<N>::py = 0; \
-    template<> uint16_t Bitmap<N>::sx = 0; \
-    template<> uint16_t Bitmap<N>::sy = 0; \
-    template<> uint16_t Bitmap<N>::w = 0; \
-    template<> uint16_t Bitmap<N>::h = 0; \
-    template<> uint16_t Bitmap<N>::l = 0; \
-    template<> uint16_t Bitmap<N>::show = 0;
-DEFINE_BITMAP(0)
-DEFINE_BITMAP(1)
-DEFINE_BITMAP(2)
-DEFINE_BITMAP(3)
-
-//
-
-template<> bool Background<0>::show = false;
-template<> bool Background<1>::show = false;
 
 //
 

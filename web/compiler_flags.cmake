@@ -20,6 +20,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
     add_compile_options(
         # Warnings.
         -Wall -Wextra -Werror #-Wpedantic
+        -Wno-unused-const-variable
+        -Wno-c99-designator
         # Enable debug info.
         -g
     )
@@ -61,6 +63,9 @@ if (EMSCRIPTEN)
     add_link_options(
         # The linker also needs optimisations enabled.
         -O3
+
+        # Allow sleeping in the main loop.
+        -sASYNCIFY
 
         # Debug checks
         #-sSTACK_OVERFLOW_CHECK=2

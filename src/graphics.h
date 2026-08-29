@@ -55,6 +55,16 @@ struct Bitmap {
     static void disable() { show = false; }
 #endif
 };
+#if WEB_BUILD
+template <uint8_t Index> uint16_t Bitmap<Index>::px;
+template <uint8_t Index> uint16_t Bitmap<Index>::py;
+template <uint8_t Index> uint16_t Bitmap<Index>::sx;
+template <uint8_t Index> uint16_t Bitmap<Index>::sy;
+template <uint8_t Index> uint16_t Bitmap<Index>::w;
+template <uint8_t Index> uint16_t Bitmap<Index>::h;
+template <uint8_t Index> uint16_t Bitmap<Index>::l;
+template <uint8_t Index> uint16_t Bitmap<Index>::show;
+#endif
 constexpr inline Bitmap<0> bitmap_0;
 constexpr inline Bitmap<1> bitmap_1;
 constexpr inline Bitmap<2> bitmap_2;
@@ -261,6 +271,9 @@ struct Background {
 #endif
     static void set_sprite(uint8_t x, uint8_t y, const BGSprite & sprite) { set_bg_sprite<Index>(x, y, sprite); }
 };
+#if WEB_BUILD
+template <uint8_t Index> bool Background<Index>::show;
+#endif
 constexpr inline Background<0> background_0;
 constexpr inline Background<1> background_1;
 
