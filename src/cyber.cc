@@ -518,25 +518,34 @@ void cursor_update() {
     }
 
     // Pull the cursor towards the center.
-    // TODO: smoother drift
-    if ((s_bg_timer & 15) == 15) {
+    {
         constexpr uint8_t center_x = (SCREEN_WIDTH - bg_tile_size) / 2;
         constexpr uint8_t center_y = 160 - bg_tile_size / 2;
         const int16_t dx = s_cursor_cur.x - center_x;
         const int16_t dy = s_cursor_cur.y - center_y;
-        constexpr int16_t r = 16;
+        constexpr int16_t r = 32;
 
-        if (dx > r) s_cursor_cur.x -= 2;
-        else if (dx > 0) s_cursor_cur.x -= 1;
-        else if (dx < 0) s_cursor_cur.x += 1;
-        else if (dx < -r) s_cursor_cur.x += 2;
+        uint16_t tx = 0; // how often to change
+        int16_t ddx = 0; // which direction
+        if (dx > r)       { tx = 3; ddx = -1; }
+        else if (dx > 0)  { tx = 1; ddx = -1; }
+        else if (dx < -r) { tx = 3; ddx = 1; }
+        else if (dx < 0)  { tx = 1; ddx = 1; }
+        if (tx && (s_bg_timer & tx) == tx) {
+            s_cursor_cur.x += ddx;
+            changed = true;
+        }
 
-        if (dy > r) s_cursor_cur.y -= 2;
-        else if (dy > 0) s_cursor_cur.y -= 1;
-        else if (dy < 0) s_cursor_cur.y += 1;
-        else if (dy < -r) s_cursor_cur.y += 2;
-
-        changed = true;
+        uint16_t ty = 0;
+        int16_t ddy = 0;
+        if (dy > r)       { ty = 3; ddy = -1; }
+        else if (dy > 0)  { ty = 1; ddy = -1; }
+        else if (dy < -r) { ty = 3; ddy = 1; }
+        else if (dy < 0)  { ty = 1; ddy = 1; }
+        if (ty && (s_bg_timer & ty) == ty) {
+            s_cursor_cur.y += ddy;
+            changed = true;
+        }
     }
 
     // Clamp it.
