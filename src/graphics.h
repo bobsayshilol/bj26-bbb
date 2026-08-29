@@ -220,13 +220,13 @@ inline Pixel2 * get_tile_data(TileIndex idx) {
     ASSERT(idx < max_idx);
     const uint32_t offset = idx * bg_tile_size * bg_tile_size;
 #if !WEB_BUILD
-    auto * data = VDP.TILE_VRAM;
+    auto * data = VDP.TILE_VRAM + (sprite_tile_data_start >> 1);
 #else
     static_assert(sizeof(VDP.tile_data) == max_idx * bg_tile_size * bg_tile_size);
     auto * data = VDP.tile_data;
 #endif
-    // |sprite_tile_data_start| and |offset| are both even so this is safe.
-    return data + ((sprite_tile_data_start + offset) >> 1);
+    // |offset| is even so this is safe.
+    return data + (offset >> 1);
 }
 
 // Set a sprite.

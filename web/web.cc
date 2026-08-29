@@ -107,14 +107,8 @@ void init() {
             printf("Failed to set palette on a surface: %s", SDL_GetError());
             error();
         }
-    }
-
-    // Setup the default palette.
-    {
-        std::array<SDL_Color, MAX_PALETTE_SIZE> pal;
-        pal.fill({ .r = 0, .g = 0, .b = 0, .a = 0xFF });
-        if (!SDL_SetPaletteColors(s_palette.get(), pal.data(), 0, pal.size())) {
-            printf("Failed to set palette colours: %s", SDL_GetError());
+        if (!SDL_SetSurfaceColorKey(surface, true, 0)) {
+            printf("Failed to set transparency on a surface: %s", SDL_GetError());
             error();
         }
     }
@@ -209,9 +203,9 @@ void draw() {
 
     // Blit sprites.
     if (VDP.sprites_enabled) {
-        for (uint32_t raw : VDP.OAM) {
+        for (int i = engine::utils::size(VDP.OAM) - 1; i >= 0; i--) {
             ObjSprite sprite;
-            sprite.raw = raw;
+            sprite.raw = VDP.OAM[i];
             if (!sprite.parts.y_hi) {
                 SDL_Rect src {
                     0, sprite.parts.tile_index * static_cast<int>(bg_tile_size),
@@ -230,7 +224,13 @@ void draw() {
     SDL_UpdateWindowSurface(s_window.get());
 
     // Fake 60fps.
-    SDL_Delay(16);
+    const auto now = std::chrono::system_clock::now();
+    static auto last_time = now;
+    const auto delay = std::chrono::duration_cast<std::chrono::milliseconds>((last_time + std::chrono::milliseconds(16) - now));
+    last_time = now;
+    if (delay > std::chrono::milliseconds(0)) {
+        SDL_Delay(delay.count());
+    }
 }
 
 } // namespace web
@@ -263,6 +263,8 @@ void disable_sprites() {
 void wait_until_line0() {
     // TODO
     UNIMPLEMENTED();
+
+    web::draw();
 }
 void wait_until_line(uint16_t line) {
     // TODO
