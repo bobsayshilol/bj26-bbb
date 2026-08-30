@@ -35,6 +35,8 @@ constexpr inline uint16_t RGB555(uint8_t r, uint8_t g, uint8_t b) {
 
 inline void bios_vsync() { web::draw(); }
 
+inline int bios_print8bpp(uint8_t*, uint16_t*, bool) { return -1; }
+
 using web::VDP;
 
 //
