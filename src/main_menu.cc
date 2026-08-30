@@ -229,7 +229,8 @@ enum class MenuState {
     Main,
     LevelSelect,
     Options,
-    Credits,
+    Credits1,
+    Credits2,
 };
 MenuState s_menu_state;
 
@@ -250,7 +251,8 @@ enum class Action {
     MainMenu,
     LevelSelect,
     Options,
-    Credits,
+    Credits1,
+    Credits2,
 
     // Game levels.
     Start,
@@ -288,7 +290,7 @@ constexpr const Button main[] {
     Button("Start Game", engine::graphics::SCREEN_HEIGHT / 2, Action::Start),
     Button("Level Select", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 3, Action::LevelSelect),
     Button("Cheats", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 6, Action::Options),
-    Button("Credits", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 9, Action::Credits),
+    Button("Credits", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 9, Action::Credits1),
 };
 
 constexpr const Button level_select[] {
@@ -304,11 +306,23 @@ constexpr const Button options[] {
     Button("Volume Down", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 3, Action::VolDown),
 #endif
     Button("Unlock all levels", engine::graphics::SCREEN_HEIGHT / 2, Action::UnlockAll),
+    Button("Hold C and move to test MIDI", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 6, Action::None),
     Button("Back", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
 };
 
-constexpr const Button credits[] {
-    Button("yes", engine::graphics::SCREEN_HEIGHT / 2, Action::None),
+constexpr const Button credits1[] {
+    Button("Music  Writing  Code", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 2, Action::None),
+    Button("bob", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 4, Action::None),
+    Button("Inspiration", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 8, Action::None),
+    Button("Amiya and Buckos", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 10, Action::None),
+    Button("Next", engine::graphics::SCREEN_HEIGHT - font::CharWidth * 2, Action::Credits2),
+};
+
+constexpr const Button credits2[] {
+    Button("LoopyMSE", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 2, Action::None),
+    Button("MAME", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 5, Action::None),
+    Button("madsonweb", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 8, Action::None),
+    Button("neocomposer", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 11, Action::None),
     Button("Back", engine::graphics::SCREEN_HEIGHT - font::CharWidth * 2, Action::MainMenu),
 };
 
@@ -344,10 +358,15 @@ void menu_redraw() {
             butts = buttons::options;
             num_butts = engine::utils::size(buttons::options);
             break;
-        case MenuState::Credits:
+        case MenuState::Credits1:
             game::font::write_centered("Credits", engine::graphics::SCREEN_HEIGHT / 4);
-            butts = buttons::credits;
-            num_butts = engine::utils::size(buttons::credits);
+            butts = buttons::credits1;
+            num_butts = engine::utils::size(buttons::credits1);
+            break;
+        case MenuState::Credits2:
+            game::font::write_centered("Special thanks", engine::graphics::SCREEN_HEIGHT / 4);
+            butts = buttons::credits2;
+            num_butts = engine::utils::size(buttons::credits2);
             break;
     }
     for (uint32_t i = 0; i < num_butts; i++) {
@@ -444,9 +463,13 @@ Entry menu_update() {
                 butts = buttons::options;
                 num_butts = engine::utils::size(buttons::options);
                 break;
-            case MenuState::Credits:
-                butts = buttons::credits;
-                num_butts = engine::utils::size(buttons::credits);
+            case MenuState::Credits1:
+                butts = buttons::credits1;
+                num_butts = engine::utils::size(buttons::credits1);
+                break;
+            case MenuState::Credits2:
+                butts = buttons::credits2;
+                num_butts = engine::utils::size(buttons::credits2);
                 break;
         }
 
@@ -498,8 +521,12 @@ Entry menu_update() {
                     s_menu_state = MenuState::Options;
                     menu_redraw();
                     break;
-                case Action::Credits:
-                    s_menu_state = MenuState::Credits;
+                case Action::Credits1:
+                    s_menu_state = MenuState::Credits1;
+                    menu_redraw();
+                    break;
+                case Action::Credits2:
+                    s_menu_state = MenuState::Credits2;
                     menu_redraw();
                     break;
 
@@ -520,18 +547,19 @@ Entry menu_update() {
         }
     }
 
-    // Testing stuff on the credits menu.
-    if (s_menu_state == MenuState::Credits &&
+    // Testing stuff on the options menu.
+    if (s_menu_state == MenuState::Options &&
         (held & GAMEPAD_BTN_C) &&
         (pressed & (GAMEPAD_BTN_UP | GAMEPAD_BTN_DOWN | GAMEPAD_BTN_RIGHT | GAMEPAD_BTN_LEFT)))
     {
         // Make it easier to hear the notes.
         if (sys_bgmRunning()) {
             engine::sound::stop_bgm();
+            bios_vsync();
         }
 
-        static uint8_t voice = music::voices::drums;
-        static uint8_t note = music::notes::snare;
+        static uint8_t voice = 0x34;
+        static uint8_t note = 0x3F;
 
         // left/right for voice, up/down for note.
         if (pressed & GAMEPAD_BTN_UP) note++;
@@ -550,8 +578,11 @@ Entry menu_update() {
 
         // Redraw with the options.
         menu_redraw();
-        font::write_text(voice_str.data(), 0, 0);
-        font::write_text(note_str.data(), 0, font::CharHeight);
+        constexpr uint8_t padding = 5;
+        font::write_text("inst", padding, padding);
+        font::write_text(voice_str.data(), 5 * font::CharWidth + padding, padding);
+        font::write_text("note", padding, font::CharHeight + padding * 2);
+        font::write_text(note_str.data(), 5 * font::CharWidth + padding, font::CharHeight + padding * 2);
 
         // Make the noise.
         engine::sound::play_effect(game::music::SoundEffect::SE_Test);
