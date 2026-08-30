@@ -285,6 +285,7 @@ constexpr Speech text2_text[] {
     { UIC::Ami, "unattended for 2 days and" },
     { UIC::Ami, "they managed to get taken" },
     { UIC::Ami, "over by robots." },
+    { UIC::Ami, "What happened?" },
 
     // TODO: punchline - "aliens" ?
     { UIC::Bucko, "aliens" },
@@ -547,7 +548,8 @@ Entry loop() {
     }
 
     if (logic_update()) {
-        return Entry::MainMenu;
+        intertile::setup(intertile::Text::Won, Entry::MainMenu);
+        return Entry::Intertitle;
     }
     ui_update();
 

@@ -66,6 +66,12 @@ constexpr Lines s_dome[] = {
     "Outside the dome",
     nullptr,
 };
+constexpr Lines s_finished[] = {
+    "You win!",
+    "Thanks for playing!",
+    "Ami will return",
+    nullptr,
+};
 
 const Lines * s_text;
 uint16_t s_line;
@@ -164,6 +170,7 @@ void setup(Text text, Entry next) {
         case Text::Meanwhile: s_text = s_meanwhile; break;
         case Text::GameOver: s_text = s_game_over; break;
         case Text::Dome: s_text = s_dome; break;
+        case Text::Won: s_text = s_finished; break;
     }
     s_line = 0;
     s_next = next;
