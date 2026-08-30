@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <vector>
 
 #ifdef __EMSCRIPTEN__
 #include "emscripten.h"
@@ -47,6 +48,10 @@ std::unique_ptr<SDL_Window, SDLDeleter> s_window;
 std::unique_ptr<SDL_Palette, SDLDeleter> s_palette;
 std::unique_ptr<SDL_Surface, SDLDeleter> s_vram_buffer;
 std::unique_ptr<SDL_Surface, SDLDeleter> s_sprites_buffer;
+
+// Only sx tracked so far.
+struct BitmapChange { uint16_t line; uint16_t prev_sx; };
+std::vector<BitmapChange> s_bitmaps_states[4];
 
 //
 
@@ -96,7 +101,7 @@ void init() {
         error();
     }
     static_assert(sizeof(VDP.tile_data) == bg_tile_size * bg_tile_size * 960);
-    s_sprites_buffer.reset(SDL_CreateSurfaceFrom(8, bg_tile_size * bg_tile_size * 960, SDL_PIXELFORMAT_INDEX8, VDP.tile_data, 8));
+    s_sprites_buffer.reset(SDL_CreateSurfaceFrom(bg_tile_size, bg_tile_size * 960, SDL_PIXELFORMAT_INDEX8, VDP.tile_data, bg_tile_size));
     if (!s_sprites_buffer) {
         printf("Failed to create sprites surface: %s", SDL_GetError());
         error();
@@ -188,18 +193,52 @@ void draw() {
         }
     }
 
+    // Add last update.
+    s_bitmaps_states[0].push_back(BitmapChange{SCREEN_HEIGHT, Bitmap<0>::sx});
+    s_bitmaps_states[1].push_back(BitmapChange{SCREEN_HEIGHT, Bitmap<1>::sx});
+    s_bitmaps_states[2].push_back(BitmapChange{SCREEN_HEIGHT, Bitmap<2>::sx});
+    s_bitmaps_states[3].push_back(BitmapChange{SCREEN_HEIGHT, Bitmap<3>::sx});
+
     // Blit bitmaps.
-    auto blit_bitmap = [&](auto && bitmap) {
+    auto blit_bitmap = [&](auto && bitmap, std::vector<BitmapChange> & changes) {
+        // TODO
+        (void)changes;
+
         if (bitmap.show) {
-            SDL_Rect src {bitmap.sx, bitmap.sy, bitmap.w, bitmap.h};
-            SDL_Rect dst {bitmap.px * web_scale, bitmap.py * web_scale, bitmap.w * web_scale, bitmap.h * web_scale};
-            SDL_BlitSurfaceScaled(s_vram_buffer.get(), &src, window_surface, &dst, SDL_ScaleMode::SDL_SCALEMODE_NEAREST);
+            const uint16_t start_x = bitmap.sx % 256;
+            const uint16_t start_y = bitmap.sy % 512;
+
+            auto emit = [&](uint16_t ox, uint16_t oy, uint16_t w, uint16_t h) {
+                // Don't draw empty.
+                if (!w || !h) return;
+
+                SDL_Rect src {
+                    (start_x + ox) % 256, (start_y + oy) % 512,
+                    w, h
+                };
+                SDL_Rect dst {
+                    ((bitmap.px + ox) % SCREEN_WIDTH) * web_scale, ((bitmap.py + oy) % SCREEN_HEIGHT) * web_scale,
+                    w * web_scale, h * web_scale
+                };
+                SDL_BlitSurfaceScaled(s_vram_buffer.get(), &src, window_surface, &dst, SDL_ScaleMode::SDL_SCALEMODE_NEAREST);
+            };
+
+            // Split the quad into 2 parts if it crosses the boundary.
+            const uint16_t w = bitmap.w;
+            const uint16_t h = bitmap.h;
+            const uint16_t w0 = start_x + w > 256 ? 256 - start_x : 0;
+            const uint16_t h0 = start_y + h > 512 ? 512 - start_y : 0;
+            emit(0,   0, w0,     h0);
+            emit(w0,  0, w - w0, h0);
+            emit(0,  h0, w0,     h - h0);
+            emit(w0, h0, w - w0, h - h0);
         }
+        changes.clear();
     };
-    blit_bitmap(Bitmap<0>{});
-    blit_bitmap(Bitmap<1>{});
-    blit_bitmap(Bitmap<2>{});
-    blit_bitmap(Bitmap<3>{});
+    blit_bitmap(Bitmap<3>{}, s_bitmaps_states[3]);
+    blit_bitmap(Bitmap<2>{}, s_bitmaps_states[2]);
+    blit_bitmap(Bitmap<1>{}, s_bitmaps_states[1]);
+    blit_bitmap(Bitmap<0>{}, s_bitmaps_states[0]);
 
     // Blit sprites.
     if (VDP.sprites_enabled) {
@@ -215,7 +254,9 @@ void draw() {
                     sprite.parts.x * web_scale, sprite.parts.y_lo * web_scale,
                     bg_tile_size * web_scale, bg_tile_size * web_scale
                 };
+                if (sprite.parts.x_flip) SDL_FlipSurface(s_sprites_buffer.get(), SDL_FlipMode::SDL_FLIP_HORIZONTAL);
                 SDL_BlitSurfaceScaled(s_sprites_buffer.get(), &src, window_surface, &dst, SDL_ScaleMode::SDL_SCALEMODE_NEAREST);
+                if (sprite.parts.x_flip) SDL_FlipSurface(s_sprites_buffer.get(), SDL_FlipMode::SDL_FLIP_HORIZONTAL);
             }
         }
     }
@@ -261,15 +302,10 @@ void disable_sprites() {
 //
 
 void wait_until_line0() {
-    // TODO
-    UNIMPLEMENTED();
-
     web::draw();
 }
 void wait_until_line(uint16_t line) {
-    // TODO
-    (void)line;
-    UNIMPLEMENTED();
+    s_bitmaps_states[0].push_back(BitmapChange{line, Bitmap<0>::sx});
 }
 
 } // namespace engine::graphics
