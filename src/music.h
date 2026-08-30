@@ -49,6 +49,7 @@ constexpr uint8_t strings = 0x09;
 constexpr uint8_t beep = 0x0A; // anything lower than G3 is a pow noise
 constexpr uint8_t xylophone = 0x1E;
 constexpr uint8_t drums = 0x27;
+constexpr uint8_t beep2 = 0x62;
 } // namespace voices
 
 // Notes.
@@ -89,6 +90,18 @@ constexpr uint8_t F5 = 77;
 constexpr uint8_t Fs5 = 78;
 constexpr uint8_t G5 = 79;
 constexpr uint8_t Gs5 = 80;
+constexpr uint8_t A6 = 81;
+constexpr uint8_t As6 = 82;
+constexpr uint8_t B6 = 83;
+constexpr uint8_t C6 = 84;
+constexpr uint8_t Cs6 = 85;
+constexpr uint8_t D6 = 86;
+constexpr uint8_t Ds6 = 87;
+constexpr uint8_t E6 = 88;
+constexpr uint8_t F6 = 89;
+constexpr uint8_t Fs6 = 90;
+constexpr uint8_t G6 = 91;
+constexpr uint8_t Gs6 = 92;
 
 // Notes for drums that shared with standard MIDI:
 constexpr uint8_t bass  = 36; // 36 - C2 - Bass Drum 1

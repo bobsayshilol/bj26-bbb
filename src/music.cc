@@ -152,6 +152,29 @@ MIDI_MAKE_BGM(weird_bgm, 60,
     MIDI_EVT_REPEAT()
 );
 
+MIDI_MAKE_BGM(breakout_bgm, 60,
+    MIDI_PLAY_AFTER(0, // t = 0
+        MIDI_EVT_SET_PROG(0, voices::beep2)
+        MIDI_EVT_NOTE_ON(0, notes::C5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 1
+        MIDI_EVT_NOTE_OFF(0, notes::C5)
+        MIDI_EVT_NOTE_ON(0, notes::D5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 2
+        MIDI_EVT_NOTE_OFF(0, notes::D5)
+        MIDI_EVT_NOTE_ON(0, notes::C5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 3
+        MIDI_EVT_NOTE_OFF(0, notes::C5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 4
+        MIDI_EVT_NOTE_OFF(0, notes::C5)
+    )
+    MIDI_EVT_REPEAT()
+);
+
+
 MIDI_MAKE_BGM(bgm_startup, 400,
     MIDI_PLAY_AFTER(0, // t = 0
         MIDI_EVT_SET_PROG(0, 0x60)
@@ -189,10 +212,71 @@ MIDI_MAKE_BGM(bgm_startup, 400,
         MIDI_EVT_NOTE_ON(0, notes::G5)
         MIDI_EVT_NOTE_ON(1, notes::G5)
     )
-    MIDI_PLAY_AFTER(5, // t = 10
+//#if 1 // can't #if inside a macro
+    MIDI_PLAY_AFTER(1, // t = 6
         MIDI_EVT_NOTE_OFF(0, notes::G5)
         MIDI_EVT_NOTE_OFF(1, notes::G5)
+        MIDI_EVT_NOTE_ON(0, notes::As6)
+        MIDI_EVT_NOTE_ON(1, notes::As6)
     )
+    MIDI_PLAY_AFTER(1, // t = 7
+        MIDI_EVT_NOTE_OFF(0, notes::As6)
+        MIDI_EVT_NOTE_OFF(1, notes::As6)
+        MIDI_EVT_NOTE_ON(0, notes::G5)
+        MIDI_EVT_NOTE_ON(1, notes::G5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 8
+        MIDI_EVT_NOTE_OFF(0, notes::G5)
+        MIDI_EVT_NOTE_OFF(1, notes::G5)
+        MIDI_EVT_NOTE_ON(0, notes::Ds5)
+        MIDI_EVT_NOTE_ON(1, notes::Ds5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 9
+        MIDI_EVT_NOTE_OFF(0, notes::Ds5)
+        MIDI_EVT_NOTE_OFF(1, notes::Ds5)
+        MIDI_EVT_NOTE_ON(0, notes::As5)
+        MIDI_EVT_NOTE_ON(1, notes::As5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 10
+        MIDI_EVT_NOTE_OFF(0, notes::As5)
+        MIDI_EVT_NOTE_OFF(1, notes::As5)
+        MIDI_EVT_NOTE_ON(0, notes::As6)
+        MIDI_EVT_NOTE_ON(1, notes::As6)
+    )
+    MIDI_PLAY_AFTER(1, // t = 11
+        MIDI_EVT_NOTE_OFF(0, notes::As6)
+        MIDI_EVT_NOTE_OFF(1, notes::As6)
+        MIDI_EVT_NOTE_ON(0, notes::G5)
+        MIDI_EVT_NOTE_ON(1, notes::G5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 12
+        MIDI_EVT_NOTE_OFF(0, notes::G5)
+        MIDI_EVT_NOTE_OFF(1, notes::G5)
+        MIDI_EVT_NOTE_ON(0, notes::Ds5)
+        MIDI_EVT_NOTE_ON(1, notes::Ds5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 13
+        MIDI_EVT_NOTE_OFF(0, notes::Ds5)
+        MIDI_EVT_NOTE_OFF(1, notes::Ds5)
+        MIDI_EVT_NOTE_ON(0, notes::As5)
+        MIDI_EVT_NOTE_ON(1, notes::As5)
+    )
+    MIDI_PLAY_AFTER(1, // t = 14
+        MIDI_EVT_NOTE_OFF(0, notes::As5)
+        MIDI_EVT_NOTE_OFF(1, notes::As5)
+        MIDI_EVT_NOTE_ON(0, notes::Ds4)
+        MIDI_EVT_NOTE_ON(1, notes::Ds4)
+    )
+    MIDI_PLAY_AFTER(5,
+        MIDI_EVT_NOTE_OFF(0, notes::Ds4)
+        MIDI_EVT_NOTE_OFF(1, notes::Ds4)
+    )
+//#else
+//    MIDI_PLAY_AFTER(5, // t = 10
+//        MIDI_EVT_NOTE_OFF(0, notes::G5)
+//        MIDI_EVT_NOTE_OFF(1, notes::G5)
+//    )
+//#endif
     MIDI_EVT_END()
 );
 
@@ -215,7 +299,7 @@ const uint8_t * const bgm_list[] {
     [Bgm::Bgm_Startup] = bgm_startup,
     [Bgm::Bgm_MM_good] = main_menu_bgm_mid,
     [Bgm::Bgm_MM_bad] = main_menu_bgm2_mid,
-    [Bgm::Bgm_Breakout] = weird_bgm, // TODO
+    [Bgm::Bgm_Breakout] = breakout_bgm,
     [Bgm::Bgm_Driving] = driving_bgm_mid,
     [Bgm::Bgm_Tense] = tense_bgm,
     [Bgm::Bgm_Weird] = weird_bgm,
