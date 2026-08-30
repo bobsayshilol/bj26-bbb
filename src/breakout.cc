@@ -243,17 +243,20 @@ struct Lightning {
     uint16_t end;
     UIState next;
     static constexpr uint16_t rate = 3;
+    bool purple_only;
 
-    void reset(UIState ui, uint16_t frames) {
+    void reset(UIState ui, uint16_t frames, bool purple) {
         counter = 0;
         end = frames * rate;
         next = ui;
+        purple_only = purple;
     }
 
     bool tick() {
         counter += rate;
         const uint8_t g = engine::utils::max(31 - counter, 0);
-        engine::graphics::set_palette_colour(bg_pal_outer, RGB555(g, g, g));
+        const uint16_t rgb = purple_only ? RGB555(g, 0, g) : RGB555(g, g, g);
+        engine::graphics::set_palette_colour(bg_pal_outer, rgb);
         return counter >= end;
     }
 } s_lightning;
@@ -887,29 +890,29 @@ void ui_advance(UIState ui) {
     switch (ui) {
         case UIState::Win1_0:
             s_level_state = LevelState::Text;
-            s_lightning.reset(UIState::Win1_1, 10);
+            s_lightning.reset(UIState::Win1_1, 10, false);
             break;
         case UIState::Win1_1:
             s_level_state = LevelState::Text;
-            s_lightning.reset(UIState::Win1_2, 60);
+            s_lightning.reset(UIState::Win1_2, 60, false);
             break;
 
         case UIState::Win2_0:
             s_level_state = LevelState::Text;
-            s_lightning.reset(UIState::Win2_1, 10);
+            s_lightning.reset(UIState::Win2_1, 10, false);
             break;
         case UIState::Win2_1:
             s_level_state = LevelState::Text;
-            s_lightning.reset(UIState::Win2_2, 60);
+            s_lightning.reset(UIState::Win2_2, 60, false);
             break;
 
         case UIState::Win3_0:
             s_level_state = LevelState::Text;
-            s_lightning.reset(UIState::Win3_1, 10);
+            s_lightning.reset(UIState::Win3_1, 10, true);
             break;
         case UIState::Win3_1:
             s_level_state = LevelState::Text;
-            s_lightning.reset(UIState::Win3_2, 60);
+            s_lightning.reset(UIState::Win3_2, 60, true);
             break;
 
         case UIState::Intro_0:
