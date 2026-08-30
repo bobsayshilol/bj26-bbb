@@ -16,12 +16,35 @@ PROFILE_STORAGE(vsync);
 
 constexpr uint8_t pal_black = 1;
 constexpr uint8_t pal_white = 2;
+constexpr uint8_t pal_basic_end = 3;
 
 // font has highest prio.
 constexpr uint8_t font_sprite_start = 0;
 constexpr uint8_t font_sprite_count = font::font_max_sprites;
 constexpr uint8_t font_tile_start = 0;
 constexpr uint8_t font_tile_count = font::font_tile_count;
+
+// Empty space for palette up to 24.
+
+static_assert(pal_basic_end <= images::bucko_left::pal_offset);
+
+constexpr uint8_t voice_char_width = 3;
+constexpr uint8_t voice_char_height = 4;
+
+// Bit awkward, but bucko_left must be at a fixed offset (from breakout).
+constexpr uint8_t bucko_left_pal_start = images::bucko_left::pal_offset;
+constexpr uint8_t bucko_left_pal_count = 10;
+constexpr uint8_t bucko_left_sprite_start = font_sprite_start + font_sprite_count;
+constexpr uint8_t bucko_left_sprite_count = voice_char_width * voice_char_height;
+constexpr uint8_t bucko_left_tile_start = font_tile_start + font_tile_count;
+constexpr uint8_t bucko_left_tile_count = bucko_left_sprite_count;
+
+constexpr uint8_t ami_left_pal_start = bucko_left_pal_start + bucko_left_pal_count;
+constexpr uint8_t ami_left_pal_count = 10;
+constexpr uint8_t ami_left_sprite_start = bucko_left_sprite_start; // reuse the bucko sprites
+constexpr uint8_t ami_left_sprite_count = bucko_left_sprite_count;
+constexpr uint8_t ami_left_tile_start = bucko_left_tile_start + bucko_left_tile_count;
+constexpr uint8_t ami_left_tile_count = ami_left_sprite_count;
 
 //
 
@@ -31,10 +54,27 @@ constexpr uint16_t printout_height = 224;
 
 //
 
+enum class LevelState {
+    Text1,
+    Text1b,
+    Print,
+    Text2,
+    Finished,
+} s_level_state;
+
+void level_advance(LevelState state);
+
+//
+
+void bg_show_codes() {
+    engine::graphics::bitmap_0.enable();
+}
+
 void bg_setup() {
     using namespace engine::graphics;
 
-    // TODO: just visualisation atm
+    // Point bitmap0 at the text.
+    bitmap_0.disable();
     bitmap_0.position_x() = 0;
     bitmap_0.position_y() = 0;
     bitmap_0.width() = SCREEN_WIDTH - 1;
@@ -98,8 +138,220 @@ void bg_setup() {
 
 //
 
+// TODO: this is a dupe of the text from driving
+
+enum class UIC : uint8_t { None, Ami, Bucko, };
+void ui_character(UIC voice) {
+    using namespace engine::graphics;
+
+    // All characters have the same sprites.
+    static_assert(ami_left_sprite_start == bucko_left_sprite_start);
+    constexpr uint8_t sprite_start = ami_left_sprite_start;
+
+    constexpr uint8_t left_start_x = 0;
+    constexpr uint8_t left_start_y = SCREEN_HEIGHT - bg_tile_size * voice_char_height;
+    constexpr uint8_t right_start_x = SCREEN_WIDTH - bg_tile_size * voice_char_width;
+    constexpr uint8_t right_start_y = left_start_y;
+
+    ObjSprite sprite;
+    uint8_t sprite_idx = 0;
+    switch (voice) {
+        case UIC::None:
+            // No voice.
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = 0; x < voice_char_width; x++) {
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+        case UIC::Ami:
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = 0; x < voice_char_width; x++) {
+                    sprite.set_x(left_start_x + x * bg_tile_size);
+                    sprite.set_y(left_start_y + y * bg_tile_size);
+                    sprite.set_tile_index(ami_left_tile_start + sprite_idx);
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+        case UIC::Bucko:
+            // Tiles need a flip, and the x co-ord too.
+            for (int y = 0; y < voice_char_height; y++) {
+                for (int x = voice_char_width - 1; x >= 0; x--) {
+                    sprite.set_x(right_start_x + x * bg_tile_size);
+                    sprite.set_y(right_start_y + y * bg_tile_size);
+                    sprite.set_tile_index(bucko_left_tile_start + sprite_idx);
+                    sprite.set_x_flip(true);
+                    set_sprite(sprite_start + sprite_idx, sprite);
+                    sprite_idx++;
+                }
+            }
+            break;
+    }
+}
+
+struct Speech {
+    UIC uic;
+    uint8_t len;
+    const char * text;
+
+    template <uint8_t N>
+    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) { static_assert(N <= 27); }
+    constexpr Speech(decltype(nullptr)) : uic(UIC::None), len(0), text(nullptr) {}
+};
+
+//
+
+constexpr Speech text1_text[] {
+    { UIC::Bucko, "Ami!" },
+    { UIC::Bucko, "Welcome back!" },
+    { UIC::Bucko, "How was your trip" },
+    { UIC::Bucko, "into the W.E.B.?" },
+
+    { UIC::Ami, "I... don't remember." },
+
+    { UIC::Bucko, "That's normal for your" },
+    { UIC::Bucko, "first time." },
+    { UIC::Bucko, "And probably for the best." },
+    { UIC::Bucko, "I'd be on the chopping" },
+    { UIC::Bucko, "block if the other buckos" },
+    { UIC::Bucko, "knew that you'd seen" },
+    { UIC::Bucko, "inside the dome." },
+
+    { UIC::Ami, "I think I saw Gex." },
+    { UIC::Bucko, "..." },
+    { UIC::Ami, "And what was that whole" },
+    { UIC::Ami, "thing thing with the" },
+    { UIC::Bucko, "Well it's a shame that" },
+    { UIC::Bucko, "you don't remember" },
+    { UIC::Bucko, "anything from your trip!" },
+    { UIC::Ami, "But" },
+    { UIC::Bucko, "Not a single thing." },
+    { UIC::Bucko, "Such a shame." },
+    { UIC::Ami, "..." },
+
+    { UIC::Bucko, "Anyway." },
+    { UIC::Bucko, "Thanks to you the robuckos" },
+    { UIC::Bucko, "are no longer a problem!" },
+    { UIC::Bucko, "And Buckopia can go back" },
+    { UIC::Bucko, "to how it was before." },
+
+    // TODO: confetti
+    { UIC::None, "pretend that there's" },
+    { UIC::None, "confetti falling here." },
+
+    { UIC::Bucko, "The old scriptures for" },
+    { UIC::Bucko, "the W.E.B. are basically" },
+    { UIC::Bucko, "unreadable at this point." },
+    { UIC::Bucko, "So I saved the codes" },
+    { UIC::Bucko, "that you entered." },
+
+    nullptr,
+};
+
+constexpr Speech text1b_text[] {
+    { UIC::Bucko, "I'll have to ask" },
+    { UIC::Bucko, "the scribes what" },
+    { UIC::Bucko, "these moon runes" },
+    { UIC::Bucko, "could mean." },
+    { UIC::Ami, "..." },
+    { UIC::Bucko, "But in the meantime" },
+    { UIC::Bucko, "would you like a copy?" },
+
+// Prepare to receive a printout of the codes you entered.
+
+    nullptr,
+};
+
+constexpr Speech text2_text[] {
+    { UIC::Ami, "Hey Bucko?" },
+    { UIC::Bucko, "Yes Ami?" },
+    { UIC::Ami, "I still don't understand" },
+    { UIC::Ami, "how this all happened." },
+    { UIC::Ami, "I only left the buckos" },
+    { UIC::Ami, "unattended for 2 days and" },
+    { UIC::Ami, "they managed to get taken" },
+    { UIC::Ami, "over by robots." },
+
+    // TODO: punchline - "aliens" ?
+    { UIC::Bucko, "aliens" },
+
+    { UIC::Ami, "..." },
+
+    nullptr,
+};
+
+const Speech * s_current_speech;
+
+void ui_redraw() {
+    // Empty it out.
+    font::clear_text();
+
+    constexpr uint8_t speech_y = engine::graphics::SCREEN_HEIGHT * 2 / 3;
+    constexpr uint8_t speech_sky_y = engine::graphics::SCREEN_HEIGHT / 5;
+
+    // Show any speech if it's active.
+    const auto & speech = *s_current_speech;
+    ui_character(speech.uic);
+    if (speech.text) {
+        switch (speech.uic) {
+            case UIC::Ami:
+                font::write_left(speech.text, speech.len, 0, speech_y);
+                break;
+            case UIC::Bucko:
+                font::write_right(speech.text, speech.len, 0, speech_y);
+                break;
+            case UIC::None:
+                font::write_centered(speech.text, speech.len, speech_sky_y);
+                break;
+        }
+    }
+}
+
+void ui_update() {
+    PROFILE_SCOPE(ui_upd);
+
+    // Do nothing if we're not in a UI state.
+    LevelState next = s_level_state;
+    switch (s_level_state) {
+        case LevelState::Text1: next = LevelState::Text1b; break;
+        case LevelState::Text1b: next = LevelState::Print; break;
+        case LevelState::Text2: next = LevelState::Finished; break;
+        case LevelState::Print:
+        case LevelState::Finished:
+            // Not UI.
+            break;
+    }
+    if (next == s_level_state) return;
+
+    if (engine::input::g_buttons_pressed & GAMEPAD_BTN_A) {
+        // Advance to next line.
+        auto *speech = ++s_current_speech;
+        if (speech->text == nullptr) {
+            // We're finished, change state.
+            level_advance(next);
+        } else {
+            ui_redraw();
+        }
+    }
+}
+
 void ui_setup() {
-    // TODO
+    game::font::setup_tiles<font_tile_start, font_sprite_start>();
+
+    // Character sprites.
+    images::copy_tile_data<
+        bucko_left_pal_start, bucko_left_pal_count,
+        bucko_left_tile_start, bucko_left_tile_count,
+        images::bucko_left
+    >();
+    images::copy_tile_data<
+        ami_left_pal_start, ami_left_pal_count,
+        ami_left_tile_start, ami_left_tile_count,
+        images::ami_left
+    >();
 }
 
 //
@@ -108,12 +360,55 @@ bool logic_update() {
     bool finished = false;
 
     const auto pressed = engine::input::g_buttons_pressed;
-    if (pressed & GAMEPAD_BTN_A) {
-        // TODO: needs a warning that it's printing
-        //bios_print8bpp(VDP.BITMAP_VRAM_8BIT + printout_start, VDP.PALETTE, 1);
+
+    switch (s_level_state) {
+        case LevelState::Text1:
+        case LevelState::Text1b:
+        case LevelState::Text2:
+            // Event driven.
+            break;
+        case LevelState::Print:
+            // TODO
+            if (pressed) {
+                //bios_print8bpp(VDP.BITMAP_VRAM_8BIT + printout_start, VDP.PALETTE, 1);
+            }
+            break;
+        case LevelState::Finished:
+            finished = true;
+            break;
     }
 
     return finished;
+}
+
+//
+
+void level_advance(LevelState state) {
+    DEBUG_MSG("state:", AS_INT(state));
+    s_level_state = state;
+    switch (state) {
+        case LevelState::Text1:
+            s_current_speech = text1_text;
+            break;
+
+        case LevelState::Text1b:
+            s_current_speech = text1b_text;
+            bg_show_codes();
+            break;
+
+        case LevelState::Print:
+            // TODO
+            break;
+
+        case LevelState::Text2:
+            s_current_speech = text2_text;
+            break;
+
+        case LevelState::Finished:
+            // Logic will finish this off.
+            break;
+    }
+    ui_redraw();
 }
 
 } // namespace
@@ -124,14 +419,16 @@ void enter() {
     engine::graphics::set_palette_colour(pal_white, RGB555(31,31,31));
 
     // Setup the parts.
-    game::font::setup_tiles<font_tile_start, font_sprite_start>();
     bg_setup();
     ui_setup();
+
+    // Kick off state machine.
+    level_advance(LevelState::Text1);
 
     // This screen uses sprites and has a background.
     bios_vsync();
     engine::graphics::enable_sprites();
-    engine::graphics::bitmap_0.enable();
+    //engine::graphics::bitmap_0.enable(); // we'll enable this later
 
     // Kick off the bgm.
     //engine::sound::play_bgm(game::music::Bgm::???);
@@ -144,7 +441,7 @@ void leave() {
     bios_vsync();
     engine::graphics::disable_sprites();
     engine::graphics::bitmap_0.disable();
-    engine::graphics::reset_sprites<font_sprite_start + font_sprite_count>();
+    engine::graphics::reset_sprites<ami_left_sprite_start + ami_left_sprite_count>();
     font::clear_text();
 
     // Reset sound.
@@ -171,6 +468,7 @@ Entry loop() {
     if (logic_update()) {
         return Entry::MainMenu;
     }
+    ui_update();
 
     engine::profiler::print_timings();
     return next;
