@@ -58,11 +58,24 @@ enum class LevelState {
     Text1,
     Text1b,
     Print,
+    Printing,
+    Printed,
     Text2,
     Finished,
 } s_level_state;
 
 void level_advance(LevelState state);
+
+//
+
+// Stolen from LoopyMSE.
+constexpr static int PRINT_STATUS_SUCCESS = 0;
+constexpr static int PRINT_STATUS_GENERAL_FAILURE = 1;
+constexpr static int PRINT_STATUS_NO_SEAL_CART = 2;
+constexpr static int PRINT_STATUS_CANCELLED = 3;
+constexpr static int PRINT_STATUS_PAPER_JAM = 4;
+constexpr static int PRINT_STATUS_OVERHEAT = 5;
+int s_print_error = -1;
 
 //
 
@@ -77,10 +90,10 @@ void bg_setup() {
     bitmap_0.disable();
     bitmap_0.position_x() = 0;
     bitmap_0.position_y() = 0;
-    bitmap_0.width() = SCREEN_WIDTH - 1;
-    bitmap_0.height() = SCREEN_HEIGHT - 1;
+    bitmap_0.width() = printout_width - 1;
+    bitmap_0.height() = printout_height - 1;
     bitmap_0.scroll_x() = 0;
-    bitmap_0.scroll_y() = SCREEN_HEIGHT;
+    bitmap_0.scroll_y() = SCREEN_HEIGHT + printout_height / 8;
 
 #if 0
     cyber::g_lines_A[0] = { 0x24, 0xAE, 0x7C, 0x28, };
@@ -260,8 +273,6 @@ constexpr Speech text1b_text[] {
     { UIC::Bucko, "But in the meantime" },
     { UIC::Bucko, "would you like a copy?" },
 
-// Prepare to receive a printout of the codes you entered.
-
     nullptr,
 };
 
@@ -319,7 +330,10 @@ void ui_update() {
         case LevelState::Text1: next = LevelState::Text1b; break;
         case LevelState::Text1b: next = LevelState::Print; break;
         case LevelState::Text2: next = LevelState::Finished; break;
+
         case LevelState::Print:
+        case LevelState::Printing:
+        case LevelState::Printed:
         case LevelState::Finished:
             // Not UI.
             break;
@@ -356,6 +370,8 @@ void ui_setup() {
 
 //
 
+constexpr uint16_t printing_text_y = engine::graphics::SCREEN_HEIGHT * 2 / 3;
+
 bool logic_update() {
     bool finished = false;
 
@@ -367,12 +383,26 @@ bool logic_update() {
         case LevelState::Text2:
             // Event driven.
             break;
+
+        case LevelState::Printing:
+            font::clear_text();
+            font::write_centered("Attempting to print", printing_text_y + font::CharHeight * 0);
+            font::write_centered("This may take a while...", printing_text_y + font::CharHeight * 2);
+
+            // Try to print it.
+            s_print_error = bios_print8bpp(VDP.BITMAP_VRAM_8BIT + printout_start, VDP.PALETTE, 1);
+            level_advance(LevelState::Printed);
+            break;
+
         case LevelState::Print:
-            // TODO
-            if (pressed) {
-                //bios_print8bpp(VDP.BITMAP_VRAM_8BIT + printout_start, VDP.PALETTE, 1);
+        case LevelState::Printed:
+            if (pressed & GAMEPAD_BTN_B) {
+                level_advance(LevelState::Printing);
+            } else if (pressed & GAMEPAD_BTN_C) {
+                level_advance(LevelState::Text2);
             }
             break;
+
         case LevelState::Finished:
             finished = true;
             break;
@@ -386,6 +416,7 @@ bool logic_update() {
 void level_advance(LevelState state) {
     DEBUG_MSG("state:", AS_INT(state));
     s_level_state = state;
+    bool redraw = true;
     switch (state) {
         case LevelState::Text1:
             s_current_speech = text1_text;
@@ -397,7 +428,55 @@ void level_advance(LevelState state) {
             break;
 
         case LevelState::Print:
-            // TODO
+            // HACK: clean up UI code since we're doing it here
+            redraw = false;
+            font::clear_text();
+            ui_character(UIC::None);
+
+            font::write_centered("Press B to print a copy", printing_text_y + font::CharHeight * 0);
+            font::write_centered("Press C to skip", printing_text_y + font::CharHeight * 2);
+            font::write_centered("Hasn't been tested", printing_text_y + font::CharHeight * 4);
+            font::write_centered("on real hardware!", printing_text_y + font::CharHeight * 6);
+            break;
+
+        case LevelState::Printing:
+            // All logic.
+            break;
+
+        case LevelState::Printed:
+            // HACK: clean up UI code since we're doing it here
+            redraw = false;
+            font::clear_text();
+            ui_character(UIC::None);
+
+            // WARNING: there's a limit on text sprites so messages must be small
+            switch (s_print_error) {
+                case PRINT_STATUS_SUCCESS:
+                    font::write_centered("Printing successful", printing_text_y + font::CharHeight * 0);
+                    break;
+                default:
+                case PRINT_STATUS_GENERAL_FAILURE:
+                    font::write_centered("Printing failed for", printing_text_y + font::CharHeight * 0);
+                    font::write_centered("an unknown reason", printing_text_y + font::CharHeight * 2);
+                    break;
+                case PRINT_STATUS_NO_SEAL_CART:
+                    font::write_centered("Cannot print since no", printing_text_y + font::CharHeight * 0);
+                    font::write_centered("seal cart was found", printing_text_y + font::CharHeight * 2);
+                    break;
+                case PRINT_STATUS_CANCELLED:
+                    font::write_centered("Printing was cancelled", printing_text_y + font::CharHeight * 0);
+                    break;
+                case PRINT_STATUS_PAPER_JAM:
+                    font::write_centered("Printer jammed", printing_text_y + font::CharHeight * 0);
+                    font::write_centered("Unjam and try again", printing_text_y + font::CharHeight * 2);
+                    break;
+                case PRINT_STATUS_OVERHEAT:
+                    font::write_centered("Printer overheated", printing_text_y + font::CharHeight * 0);
+                    font::write_centered("Wait and try again", printing_text_y + font::CharHeight * 2);
+                    break;
+            }
+            font::write_centered("B to print again", printing_text_y + font::CharHeight * 4);
+            font::write_centered("C to continue", printing_text_y + font::CharHeight * 6);
             break;
 
         case LevelState::Text2:
@@ -408,7 +487,9 @@ void level_advance(LevelState state) {
             // Logic will finish this off.
             break;
     }
-    ui_redraw();
+    if (redraw) {
+        ui_redraw();
+    }
 }
 
 } // namespace
