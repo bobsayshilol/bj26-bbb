@@ -134,6 +134,15 @@ constexpr engine::utils::FixedU88 s_ball_speeds[] = {
 
 //
 
+constexpr uint8_t grid_start_y = wall_padding_y * 2;
+
+constexpr uint8_t grid_3_y_spacing = 4;
+constexpr uint8_t grid_3_y_above = 3;
+constexpr uint16_t grid_3_trapped_x_start = engine::graphics::SCREEN_WIDTH / 2 - engine::graphics::bg_tile_size;
+constexpr uint16_t grid_3_trapped_y_start = grid_start_y + (block_height + grid_3_y_spacing) * grid_3_y_above;
+
+//
+
 constexpr uint32_t paddle_speed = 1;
 constexpr uint32_t paddle_width = 32;
 constexpr uint32_t paddle_height = 8;
@@ -320,6 +329,20 @@ void ball_draw() {
         sprite.set_tile_index(ball_tile_start + ((rot_frame + i) % ball_tile_count));
         set_sprite(ball_sprite_start + i, sprite);
     }
+
+    if (s_ui_state == UIState::Playing3) {
+        // Rotate the bucko too.
+        static_assert(ball_tile_count == trapped_sprite_count * 8);
+        const uint8_t rot = ((g_frame_count / 16) & 7) * 4;
+        for (uint8_t i = 0; i < trapped_sprite_count; i++) {
+            const uint16_t dx = (i & 1) ? engine::graphics::bg_tile_size : 0;
+            const uint16_t dy = (i & 2) ? engine::graphics::bg_tile_size : 0;
+            sprite.set_x(grid_3_trapped_x_start + dx);
+            sprite.set_y(grid_3_trapped_y_start + dy);
+            sprite.set_tile_index(ball_tile_start + i + rot);
+            set_sprite(trapped_sprite_start + i, sprite);
+        }
+    }
 }
 
 void ball_reset_to_paddle() {
@@ -394,8 +417,6 @@ void blocks_setup() {
     }
 }
 
-constexpr uint8_t grid_start_y = wall_padding_y * 2;
-
 struct BlockDef { uint8_t x, y, tile; };
 constexpr auto make_grid_1() {
     engine::utils::Array<BlockDef, block_sprite_count> grid{};
@@ -446,15 +467,13 @@ constexpr auto make_grid_2() {
 }
 constexpr auto grid_layout_2 = make_grid_2();
 
-constexpr uint8_t grid_3_y_spacing = 4;
-constexpr uint16_t grid_3_trapped_x_start = engine::graphics::SCREEN_WIDTH / 2 - engine::graphics::bg_tile_size;
-constexpr uint16_t grid_3_trapped_y_start = grid_start_y + (block_height + grid_3_y_spacing) * 2;
 constexpr auto make_grid_3() {
-    const uint8_t widths[] = { 6, 6, 2, 2, 2, 2 };
-    constexpr uint8_t total = 40;
+    const uint8_t widths[] = { 5, 5, 5, 1, 1, 1 };
+    constexpr uint8_t lines = grid_3_y_above + 3 + grid_3_y_above;
+    constexpr uint8_t total = 36;
     static_assert(block_sprite_count >= total, "Need to redesign shape");
 
-    engine::utils::Array<BlockDef, 40> grid{};
+    engine::utils::Array<BlockDef, total> grid{};
 
     uint8_t sprite_id = 0;
     for (uint8_t j = 0; j < engine::utils::size(widths); j++) {
@@ -463,7 +482,7 @@ constexpr auto make_grid_3() {
         const uint8_t row_len = widths[j];
         const uint8_t start_x = engine::graphics::SCREEN_WIDTH / 2 - widths[0] * (block_width + block_x_spacing) / 2;
         const uint8_t end_x = start_x + (widths[0] - 1) * (block_width + block_x_spacing);
-        constexpr uint8_t end_y = grid_start_y + 7 * (block_height + block_y_spacing);
+        constexpr uint8_t end_y = grid_start_y + (lines - 1) * (block_height + block_y_spacing);
         for (uint8_t i = 0; i < row_len; i++) {
             const uint8_t x = start_x + i * (block_width + block_x_spacing);
             const uint8_t y = grid_start_y + j * (block_height + block_y_spacing);
