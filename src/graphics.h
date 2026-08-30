@@ -216,7 +216,7 @@ static_assert(sizeof(BGSprite) == sizeof(uint16_t));
 // MAME says it's only legal to store uint16_t's too...
 using Pixel2 = uint16_t;
 inline Pixel2 * get_tile_data(TileIndex idx) {
-    constexpr TileIndex max_idx = (0x10000 - sprite_tile_data_start) / (bg_tile_size * bg_tile_size);
+    [[maybe_unused]] constexpr TileIndex max_idx = (0x10000 - sprite_tile_data_start) / (bg_tile_size * bg_tile_size);
     ASSERT(idx < max_idx);
     const uint32_t offset = idx * bg_tile_size * bg_tile_size;
 #if !WEB_BUILD
