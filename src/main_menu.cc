@@ -225,12 +225,13 @@ void background_setup() {
 //
 
 enum class MenuState {
+    Warning,
     Main,
     LevelSelect,
     Options,
     Credits,
 };
-MenuState s_menu_state = MenuState::Main;
+MenuState s_menu_state;
 
 struct MousePos {
     int16_t x;
@@ -276,6 +277,13 @@ struct Button {
     int16_t y() const { return aabb.y; }
 };
 
+constexpr const Button warning[] {
+    Button("Mouse detected", engine::graphics::SCREEN_HEIGHT / 2, Action::None),
+    Button("This game must be played", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 3, Action::None),
+    Button("with a controller", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 6, Action::None),
+    Button("Continue", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
+};
+
 constexpr const Button main[] {
     Button("Start Game", engine::graphics::SCREEN_HEIGHT / 2, Action::Start),
     Button("Level Select", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 3, Action::LevelSelect),
@@ -312,6 +320,11 @@ void menu_redraw() {
     const buttons::Button * butts = nullptr;
     uint32_t num_butts = 0;
     switch (s_menu_state) {
+        case MenuState::Warning:
+            game::font::write_centered("Warning", engine::graphics::SCREEN_HEIGHT / 4);
+            butts = buttons::warning;
+            num_butts = engine::utils::size(buttons::warning);
+            break;
         case MenuState::Main:
             game::font::write_centered("Big Bucko Breakout", engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::main;
@@ -350,7 +363,7 @@ void menu_setup() {
     game::font::setup_tiles<font_tile_start, font_sprite_start>();
 
     // Title screen.
-    s_menu_state = MenuState::Main;
+    s_menu_state = engine::input::g_mouse_plugged ? MenuState::Warning : MenuState::Main;
     menu_redraw();
 
     // Mouse bits.
@@ -368,7 +381,7 @@ Entry menu_update() {
 
     // Mouse input.
     const auto held = engine::input::g_buttons_held;
-    if (engine::input::g_mouse_plugged) {
+    if (false && engine::input::g_mouse_plugged) { // TODO: mouse support in all parts
         s_mouse_pos.x += engine::input::g_mouse_dx;
         s_mouse_pos.y += engine::input::g_mouse_dy;
     } else {
@@ -415,6 +428,10 @@ Entry menu_update() {
         const buttons::Button * butts = nullptr;
         uint32_t num_butts = 0;
         switch (s_menu_state) {
+            case MenuState::Warning:
+                butts = buttons::warning;
+                num_butts = engine::utils::size(buttons::warning);
+                break;
             case MenuState::Main:
                 butts = buttons::main;
                 num_butts = engine::utils::size(buttons::main);
