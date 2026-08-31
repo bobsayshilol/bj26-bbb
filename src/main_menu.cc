@@ -311,7 +311,7 @@ constexpr const Button options[] {
 };
 
 constexpr const Button credits1[] {
-    Button("Music  Writing  Code", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 2, Action::None),
+    Button("Art  Code  Music", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 2, Action::None),
     Button("bob", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 4, Action::None),
     Button("Inspiration", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 8, Action::None),
     Button("Amiya and Buckos", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 10, Action::None),
