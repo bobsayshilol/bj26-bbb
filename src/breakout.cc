@@ -334,9 +334,11 @@ void ball_draw() {
     }
 
     if (s_ui_state == UIState::Playing3) {
+        const uint16_t t = g_frame_count;
+
         // Rotate the bucko too.
         static_assert(ball_tile_count == trapped_sprite_count * 8);
-        const uint8_t rot = ((g_frame_count / 16) & 7) * 4;
+        const uint8_t rot = ((t / 16) & 7) * 4;
         for (uint8_t i = 0; i < trapped_sprite_count; i++) {
             const uint16_t dx = (i & 1) ? engine::graphics::bg_tile_size : 0;
             const uint16_t dy = (i & 2) ? engine::graphics::bg_tile_size : 0;
@@ -345,6 +347,13 @@ void ball_draw() {
             sprite.set_tile_index(ball_tile_start + i + rot);
             set_sprite(trapped_sprite_start + i, sprite);
         }
+
+        // And fade the cage.
+        const int8_t st = engine::maths::sin(t * 3);
+        const uint8_t r1 = static_cast<uint16_t>(13 * 16 + st) / 16;
+        const uint8_t r2 = static_cast<uint16_t>(13 * 16 - st) / 16;
+        engine::graphics::set_palette_colour(block_pal_start + 0, RGB555(r1, 5, 5));
+        engine::graphics::set_palette_colour(block_pal_start + 1, RGB555(r2, 5, 5));
     }
 }
 
@@ -359,7 +368,8 @@ void ball_reset_to_paddle() {
 
 void ball_launch() {
     int16_t angle = engine::utils::g_rng() & 0x3F; // 1 quadrant
-    angle -= 0x20; // rotate to point up
+    angle &= 0b110000; // only 4 directions
+    angle -= 0x18; // rotate to point up
     s_ball.vx = engine::utils::FixedS1616::div(engine::maths::sin(angle), 128);
     s_ball.vy = engine::utils::FixedS1616::div(engine::maths::cos(angle), 128);
 }
@@ -491,7 +501,7 @@ constexpr auto make_grid_3() {
             const uint8_t y = grid_start_y + j * (block_height + block_y_spacing);
             const uint8_t rx = end_x - i * (block_width + block_x_spacing);
             const uint8_t ry = end_y - j * (block_height + block_y_spacing);
-            const uint8_t tile_id = block_tile_start;
+            const uint8_t tile_id = block_tile_start + ((i + j) & 1);
             grid[sprite_id++] = {x, y, tile_id};
             grid[sprite_id++] = {rx, ry, tile_id}; // rotated version
         }
