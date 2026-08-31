@@ -154,7 +154,7 @@ engine::utils::FixedS1616 s_road_speed;
 
 uint8_t get_current_max_speed() {
     static constexpr uint8_t max_road_speeds[8+1] = {
-        2, 4, 8, 16, 16, 8, 4, 2,
+        2, 4, 6, 8, 8, 6, 4, 2,
         2, // extra in case of xpos=1
     };
     const int16_t idx = 4 + (s_xpos * 4).value(); // 4 + [-4, 4]
@@ -798,7 +798,7 @@ void update_physics() {
     else if (held & GAMEPAD_BTN_RIGHT) { s_xpos += dx_per_frame; }
 
     // The curvature moves us too.
-    const auto curvature = (s_road_rotation * 64).value() * (s_road_speed * road_speed_scale).value() / 64;
+    const auto curvature = (s_road_rotation * 64).value() * ((s_road_speed * road_speed_scale).value() + 1) / 64;
     s_xpos += engine::utils::FixedS1616::div(curvature, 128);
 
     // Clamp position.
@@ -965,7 +965,8 @@ void draw_sprites() {
 
         // Should really be checking that max speed is number of tiles.
         static_assert(road_speed_scale + 1 == gauge_tile_count);
-        const uint8_t speed_idx = s_road_speed.value();
+        const uint8_t speed_idx = (s_road_speed * 2).value();
+        ASSERT(speed_idx < gauge_tile_count);
 
         ObjSprite sprite;
         sprite.set_x(x_pos);
@@ -994,7 +995,7 @@ void draw_bg() {
     PROFILE_SCOPE(bg_upd);
 
     // Scroll the skyline.
-    const auto scroll = (s_road_rotation * 64).value() * (s_road_speed * road_speed_scale).value() / 64;
+    const auto scroll = (s_road_rotation * 64).value() * ((s_road_speed * road_speed_scale).value() + 1) / 64;
     engine::graphics::bitmap_2.scroll_x() -= scroll;
 
     // Make the dome rise.
