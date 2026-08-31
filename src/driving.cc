@@ -1259,6 +1259,18 @@ constexpr Speech win1_text[] {
     //{ UIC::Bucko, "And not because the" },
     //{ UIC::Bucko, "dev ran out of time" },
 
+    { UIC::Ami, "The dome?" },
+    { UIC::Ami, "You mean..." },
+    { UIC::Bucko, "Indeed." },
+    { UIC::Bucko, "Most think that it's" },
+    { UIC::Bucko, "just a place for" },
+    { UIC::Bucko, "fun and games and..." },
+    { UIC::Bucko, "other things..." },
+    { UIC::Ami, "..." },
+    { UIC::Bucko, "But where better to hide" },
+    { UIC::Bucko, "something important than" },
+    { UIC::Bucko, "in plain sight." },
+
     { UIC::Bucko, "Look out!" },
     { UIC::Bucko, "The road ahead gets" },
     { UIC::Bucko, "a bit twisty." },
@@ -1268,11 +1280,11 @@ constexpr Speech win1_text[] {
 
 constexpr Speech curves_text[] {
     { UIC::Bucko, "If you're not careful" },
-    { UIC::Bucko, "you'll get pushed away" },
-    { UIC::Bucko, "from the centre." },
+    { UIC::Bucko, "you'll get pushed" },
+    { UIC::Bucko, "off the road." },
 
     { UIC::Bucko, "It's a good thing that" },
-    { UIC::Bucko, "the roads are so wide." },
+    { UIC::Bucko, "our roads are so wide." },
 
     { UIC::Ami, "I thought that my car" },
     { UIC::Ami, "was just small." },
@@ -1312,8 +1324,8 @@ constexpr Speech win2_text[] {
     { UIC::Bucko, "because buckos are..." },
 #endif
     { UIC::Ami, "No!" },
-    { UIC::Ami, "We're not calling it" },
-    { UIC::Ami, "operation H.A.W.C." },
+    { UIC::Ami, "We're not calling this" },
+    { UIC::Ami, "operation H.A.W.C. too!" },
     { UIC::Ami, "That was last year's joke." },
     { UIC::BuckoTroll, "" },
 
@@ -1326,7 +1338,7 @@ constexpr Speech win3_text[] {
     { UIC::Ami, "How can you tell?" },
     { UIC::Bucko, "Rule of 3." },
     { UIC::Ami, "..." },
-    { UIC::Bucko, "And we're approaching" },
+    { UIC::Bucko, "Also we're approaching" },
     { UIC::Bucko, "the dome." },
 
     nullptr,
