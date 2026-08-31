@@ -15,6 +15,7 @@ constexpr uint16_t CharHeight = engine::graphics::bg_tile_size;
 namespace detail {
 extern uint16_t s_tile_start;
 extern uint16_t s_sprite_start;
+extern bool s_glitch;
 } // namespace detail
 
 // Setup tile data for the font.
@@ -63,5 +64,8 @@ inline void write_right(const char (&text)[N], uint8_t padding, uint16_t y) {
 
 // Clear any existing text.
 void clear_text();
+
+// Make next text glitchy.
+inline void glitch_it() { detail::s_glitch = true; }
 
 } // namespace game::font

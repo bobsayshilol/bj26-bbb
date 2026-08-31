@@ -1,5 +1,6 @@
 #include "font.h"
 #include "graphics.h"
+#include "utils.h"
 
 namespace game::font {
 
@@ -38,11 +39,14 @@ uint32_t char_to_idx(uint8_t ch) {
 namespace detail {
 uint16_t s_tile_start;
 uint16_t s_sprite_start;
+bool s_glitch;
 } // namespace detail
 
 void write_text(const char *text, uint16_t x, uint16_t y) {
     const uint16_t sprite_start = detail::s_sprite_start;
     const uint16_t tile_start = detail::s_tile_start;
+    const bool glitch = detail::s_glitch;
+    auto & rng = engine::utils::g_rng;
     const uint16_t x0 = x;
     uint16_t used = s_sprites_used;
 
@@ -64,13 +68,22 @@ void write_text(const char *text, uint16_t x, uint16_t y) {
             continue;
         }
 
+        // Apply a glitch if it's enabled.
+        int8_t dx = 0;
+        if (glitch) {
+            const uint32_t d = rng();
+                         dx = (((d >>  0) & 15) == 15) ? 1 : 0;
+            const int8_t dy = (((d >> 16) & 15) == 15) ? 1 : 0;
+            sprite.set_y(y + dy);
+        }
+
         // Lookup the tile.
         const uint32_t tile_idx = tile_start + char_to_idx(ch);
         sprite.set_tile_index(tile_idx);
 
         // Check it's in bounds.
         if (x > engine::graphics::SCREEN_WIDTH) break;
-        sprite.set_x(x);
+        sprite.set_x(x + dx);
 
         // Assign the next sprite to it.
         const uint32_t sprite_idx = sprite_start + used;
@@ -98,6 +111,8 @@ void clear_text() {
     for (uint16_t i = 0; i < used; i++) {
         engine::graphics::set_sprite(sprite_start + i, sprite);
     }
+
+    detail::s_glitch = false;
 }
 
 } // namespace game::font
