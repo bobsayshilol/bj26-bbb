@@ -14,6 +14,10 @@
 
 #define ENABLE_DEBUGGING 0
 
+#if WEB_BUILD
+#include <cassert>
+#endif
+
 namespace engine::debug {
 
 #if ENABLE_DEBUGGING
@@ -25,7 +29,11 @@ void init();
 // Converting to int is much slower than hex, so default to hex.
 #define AS_INT(x) engine::debug::internal::as_int{.v = (int32_t)(x)}
 
+#if WEB_BUILD
+#define ASSERT(x) assert(x)
+#else
 #define ASSERT(x) if (!(x)) { DEBUG_MSG(__FILE__, ":", AS_INT(__LINE__), ": assert failed: ", #x); while(true); }
+#endif
 
 namespace internal {
 
