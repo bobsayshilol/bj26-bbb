@@ -85,7 +85,7 @@ void splash() {
 	engine::sound::play_bgm(game::music::Bgm::Bgm_Startup);
 
 	const int fps = 60;
-	const int seconds = 5;
+	const int seconds = 4;
 	for (int frame = 0; frame < seconds * fps; frame++) {
 		const int speed = 4;
 		bitmap_0.scroll_x() -= speed;

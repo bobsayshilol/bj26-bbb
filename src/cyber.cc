@@ -540,7 +540,8 @@ void cursor_update() {
 
         uint16_t tx = 1; // how often to change
         uint16_t &ty = tx;
-        if (adx + ady > r) tx = 3;
+        if (adx + ady > r * 3) tx = 7;
+        else if (adx + ady > r) tx = 3;
 
         int16_t ddx = 0; // which direction
         if (dx > 0) ddx = -1; else ddx = 1;
@@ -971,7 +972,7 @@ constexpr Speech code_T_text[] {
     { UIC::Bucko, "I can't tell what" },
     { UIC::Bucko, "this one is meant" },
     { UIC::Bucko, "to be." },
-    { UIC::Bucko, "Maybe a plus sign" },
+    { UIC::Bucko, "Maybe a tall plus sign" },
     { UIC::Bucko, "but without the top?" },
 #endif
 
@@ -980,9 +981,11 @@ constexpr Speech code_T_text[] {
 
 constexpr Speech code_E_text[] {
     { UIC::Bucko, "It's hard to tell" },
-    { UIC::Bucko, "but this might be a" },
-    { UIC::Bucko, "wide number three" },
-    { UIC::Bucko, "facing the wrong way." },
+    { UIC::Bucko, "what this might be." },
+    { UIC::Bucko, "Could be a wide '3' with" },
+    { UIC::Bucko, "all lines the same length." },
+    { UIC::Bucko, "But it's facing" },
+    { UIC::Bucko, "the wrong way?" },
 
     nullptr,
 };
@@ -1006,7 +1009,8 @@ constexpr Speech inside_text[] {
     { UIC::Bucko, "We're in!" },
 #if !SKIP_STUFF
     { UIC::Bucko, "Well you are." },
-    { UIC::Bucko, "I'm still on the radio." },
+    { UIC::Bucko, "I'm still out here." },
+    { UIC::Bucko, "But you're in there." },
     { UIC::Bucko, "What's it like in there?" },
     { UIC::Bucko, "Do they have cake?" },
 
@@ -1060,10 +1064,6 @@ void ui_redraw() {
     // Empty it out.
     font::clear_text();
 
-    if (s_level_state == LevelState::InsideGlitchy) {
-        font::glitch_it();
-    }
-
     constexpr uint8_t speech_y = engine::graphics::SCREEN_HEIGHT * 2 / 3;
     constexpr uint8_t speech_sky_y = engine::graphics::SCREEN_HEIGHT / 5;
 
@@ -1071,6 +1071,11 @@ void ui_redraw() {
     const auto & speech = *s_current_speech;
     ui_character(speech.uic);
     if (speech.text) {
+        // Only glitch sprite text.
+        if (s_level_state == LevelState::InsideGlitchy && speech.uic != UIC::None) {
+            font::glitch_it();
+        }
+
         switch (speech.uic) {
             case UIC::Ami:
                 font::write_left(speech.text, speech.len, 4, speech_y);

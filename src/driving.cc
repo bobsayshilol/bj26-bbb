@@ -1268,8 +1268,8 @@ constexpr Speech win1_text[] {
     { UIC::Bucko, "other things..." },
     { UIC::Ami, "..." },
     { UIC::Bucko, "But where better to hide" },
-    { UIC::Bucko, "something important than" },
-    { UIC::Bucko, "in plain sight." },
+    { UIC::Bucko, "something important" },
+    { UIC::Bucko, "than in plain sight." },
 
     { UIC::Bucko, "Look out!" },
     { UIC::Bucko, "The road ahead gets" },

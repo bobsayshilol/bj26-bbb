@@ -199,6 +199,7 @@ enum class LevelState {
 enum class UIState {
     Intro_0,
     Intro_1,
+    Intro_2,
     Playing1,
 
     Win1_0,
@@ -799,6 +800,10 @@ void ui_redraw() {
             game::font::write_centered("Press D to reset in", SCREEN_HEIGHT / 2);
             game::font::write_centered("case anything breaks", SCREEN_HEIGHT / 2 + text_padding);
             break;
+        case UIState::Intro_2:
+            game::font::write_centered("Press START to return", SCREEN_HEIGHT / 2);
+            game::font::write_centered("to the main menu", SCREEN_HEIGHT / 2 + text_padding);
+            break;
 
         case UIState::Win1_0:
         case UIState::Win1_1:
@@ -935,6 +940,7 @@ void ui_advance(UIState ui) {
 
         case UIState::Intro_0:
         case UIState::Intro_1:
+        case UIState::Intro_2:
         case UIState::Win1_2:
         case UIState::Win1_3:
         case UIState::Win1_4:
@@ -989,7 +995,8 @@ Entry ui_update() {
     if (pressed & GAMEPAD_BTN_A) {
         switch (s_ui_state) {
             case UIState::Intro_0: ui_advance(UIState::Intro_1); break;
-            case UIState::Intro_1: ui_advance(UIState::Playing1); break;
+            case UIState::Intro_1: ui_advance(UIState::Intro_2); break;
+            case UIState::Intro_2: ui_advance(UIState::Playing1); break;
 
             case UIState::Win1_0: break; // timed below
             case UIState::Win1_1: break; // timed below
