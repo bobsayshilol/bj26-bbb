@@ -172,7 +172,7 @@ void bg_pallete_update() {
             }
             if (timer & worm_enter) {
                 for (uint8_t y = 0; y < 8; y++) {
-                    engine::utils::rotate_right<1>(s_bg_pallete + y * 8, s_bg_pallete + (y + 1) * 8);
+                    engine::utils::rotate_left<1>(s_bg_pallete + y * 8, s_bg_pallete + (y + 1) * 8);
                 }
             }
             if (timer & worm_spin) {
