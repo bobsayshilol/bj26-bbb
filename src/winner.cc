@@ -16,7 +16,8 @@ PROFILE_STORAGE(vsync);
 
 constexpr uint8_t pal_black = 1;
 constexpr uint8_t pal_white = 2;
-constexpr uint8_t pal_basic_end = 3;
+constexpr uint8_t pal_purple = 3;
+constexpr uint8_t pal_basic_end = 4;
 
 // font has highest prio.
 constexpr uint8_t font_sprite_start = 0;
@@ -91,9 +92,9 @@ void bg_setup() {
     bitmap_0.position_x() = 0;
     bitmap_0.position_y() = 0;
     bitmap_0.width() = printout_width - 1;
-    bitmap_0.height() = printout_height - 1;
+    bitmap_0.height() = printout_height - 1 - printout_height / 8;
     bitmap_0.scroll_x() = 0;
-    bitmap_0.scroll_y() = SCREEN_HEIGHT + printout_height / 8;
+    bitmap_0.scroll_y() = printout_height / 8;
 
 #if 0
     cyber::g_lines_A[0] = { 0x24, 0xAE, 0x7C, 0x28, };
@@ -125,15 +126,37 @@ void bg_setup() {
 #endif
 
     // Clear out the printout state.
+    uint8_t * const display_data = VDP.BITMAP_VRAM_8BIT;
     uint8_t * const printout_data = VDP.BITMAP_VRAM_8BIT + printout_start;
-    engine::utils::fast_memset8(printout_data, pal_transparent, printout_width * printout_height);
+    engine::utils::fast_memset8(display_data, pal_transparent, printout_width * printout_height);
+    engine::utils::fast_memset8(printout_data, pal_white, printout_width * printout_height);
 
     // Draw the lines
     constexpr uint8_t letters_scale = 4;
     const auto draw_lines = [&](const auto& lines, uint8_t x, uint8_t y) {
         for (const auto & line : lines) {
+            // For printing.
+#if 0
+            static constexpr struct { int16_t dx, dy; } pairs[] {
+                {0, -1}, {-1, 0}, {1, 0}, {0, 1}, // border
+                {0, 0}, // center
+            };
+            for (auto [dx, dy] : pairs)
+#else
+            for (int dy = 0; dy < 2; dy++) for (int dx = 0; dx < 2; dx++)
+#endif
+            {
+                engine::utils::draw_line(
+                    printout_data, printout_width,
+                    x + dx + line.x0 / letters_scale, y + dy + line.y0 / letters_scale,
+                    x + dx + line.x1 / letters_scale, y + dy + line.y1 / letters_scale,
+                    pal_purple
+                );
+            }
+
+            // For display.
             engine::utils::draw_line(
-                printout_data, printout_width,
+                display_data, printout_width,
                 x + line.x0 / letters_scale, y + line.y0 / letters_scale,
                 x + line.x1 / letters_scale, y + line.y1 / letters_scale,
                 pal_white
@@ -499,6 +522,10 @@ void enter() {
     // Setup palette.
     engine::graphics::set_palette_colour(pal_black, RGB555(0,0,0));
     engine::graphics::set_palette_colour(pal_white, RGB555(31,31,31));
+    //engine::graphics::set_palette_colour(pal_purple, RGB555(244 * 31 / 255, 192 * 31 / 255, 238 * 31 / 255));
+    engine::graphics::set_palette_colour(pal_purple, RGB555(137 * 31 / 255, 54 * 31 / 255, 180 * 31 / 255));
+
+    engine::graphics::set_backdrop_a(RGB555(0,0,0));
 
     // Setup the parts.
     bg_setup();
