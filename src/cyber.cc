@@ -32,7 +32,8 @@ constexpr uint8_t pal_red = 3;
 constexpr uint8_t pal_green = 4;
 constexpr uint8_t pal_blue = 5;
 constexpr uint8_t pal_grey = 6;
-constexpr uint8_t pal_basic_end = 7;
+constexpr uint8_t pal_good_bad = 7;
+constexpr uint8_t pal_basic_end = 8;
 
 // font has highest prio.
 constexpr uint8_t font_sprite_start = 0;
@@ -102,6 +103,8 @@ enum class LevelState {
     KeypadShown,
     OutsideTalk,
     OutsideCode,
+    OutsideGood,
+    OutsideBad,
     OutsideFinished,
     Entering,
     Inside,
@@ -585,6 +588,72 @@ void cursor_update() {
     set_sprite(cursor_sprite_start, sprite);
 }
 
+uint8_t s_keypad_fade;
+void keypad_fade_draw(uint8_t pal) {
+    auto undraw = [pal](const auto& lines) {
+        for (auto & line : lines) {
+            draw_web_line(line.x0, line.y0, line.x1, line.y1, pal);
+        }
+    };
+    switch (s_code_state) {
+        case CodeState::CodeA: undraw(g_lines_A); break;
+        case CodeState::CodeM: undraw(g_lines_M); break;
+        case CodeState::CodeI: undraw(g_lines_I); break;
+        case CodeState::CodeC: undraw(g_lines_C); break;
+        case CodeState::CodeU: undraw(g_lines_U); break;
+        case CodeState::CodeT: undraw(g_lines_T); break;
+        case CodeState::CodeE: undraw(g_lines_E); break;
+
+        case CodeState::CodeMid: ASSERT(false); break;
+    }
+}
+void keypad_fade_enter() {
+    s_keypad_fade = 0;
+
+    // Redraw the lines as the fade palette.
+    keypad_fade_draw(pal_good_bad);
+}
+void keypad_fade_result(bool success) {
+    const uint8_t t = s_keypad_fade++;
+    if (t < 60) {
+        // Fade the colour.
+        const uint8_t c = (60 - t) / 2;
+        const uint16_t rgb = success ? RGB555(0, c, 0) : RGB555(c, 0, 0);
+        engine::graphics::set_palette_colour(pal_good_bad, rgb);
+        return;
+    }
+
+    // Undraw the lines.
+    keypad_fade_draw(engine::graphics::pal_transparent);
+
+    if (success) {
+        // Advance to next stage.
+        switch (s_code_state) {
+            case CodeState::CodeA:
+            case CodeState::CodeM:
+            case CodeState::CodeI:
+            case CodeState::CodeC:
+            case CodeState::CodeU:
+            case CodeState::CodeT:
+                if (s_code_state == CodeState::CodeI) {
+                    s_wormhole_speed = WormSpeed::SpinSlow;
+                }
+                s_code_state = static_cast<CodeState>((uint8_t)s_code_state + 1);
+                level_advance(LevelState::OutsideTalk);
+                break;
+            case CodeState::CodeE:
+                s_wormhole_speed = WormSpeed::SpinFast;
+                level_advance(LevelState::OutsideFinished);
+                break;
+
+            case CodeState::CodeMid: ASSERT(false); break;
+        }
+    } else {
+        // Repeat the help.
+        level_advance(LevelState::OutsideTalk);
+    }
+}
+
 void keypad_update() {
     cursor_update();
 
@@ -593,54 +662,13 @@ void keypad_update() {
 
     // Don't trigger a solve while A is pressed or it'll skip to the next line of speech.
     if (used_all_lines && !pressed_a) {
-        // Undraw the lines.
-        auto undraw = [](const auto& lines) {
-            for (auto & line : lines) {
-                draw_web_line(line.x0, line.y0, line.x1, line.y1, engine::graphics::pal_transparent);
-            }
-        };
-        switch (s_code_state) {
-            case CodeState::CodeA: undraw(g_lines_A); break;
-            case CodeState::CodeM: undraw(g_lines_M); break;
-            case CodeState::CodeI: undraw(g_lines_I); break;
-            case CodeState::CodeC: undraw(g_lines_C); break;
-            case CodeState::CodeU: undraw(g_lines_U); break;
-            case CodeState::CodeT: undraw(g_lines_T); break;
-            case CodeState::CodeE: undraw(g_lines_E); break;
-
-            case CodeState::CodeMid: ASSERT(false); break;
-        }
-
         DEBUG_MSG("Total matched: ", s_keypad_lines_matched);
         if (s_keypad_current_masks_size == s_keypad_lines_matched) {
-            // Advance to next stage.
-            switch (s_code_state) {
-                case CodeState::CodeA:
-                case CodeState::CodeM:
-                case CodeState::CodeI:
-                case CodeState::CodeC:
-                case CodeState::CodeU:
-                case CodeState::CodeT:
-                    if (s_code_state == CodeState::CodeI) {
-                        s_wormhole_speed = WormSpeed::SpinSlow;
-                    }
-                    s_code_state = static_cast<CodeState>((uint8_t)s_code_state + 1);
-                    level_advance(LevelState::OutsideTalk);
-                    break;
-                case CodeState::CodeE:
-                    s_wormhole_speed = WormSpeed::SpinFast;
-                    level_advance(LevelState::OutsideFinished);
-                    break;
-
-                case CodeState::CodeMid: ASSERT(false); break;
-            }
-
+            level_advance(LevelState::OutsideGood);
         } else {
-            // Repeat the help.
-            // TODO: another state to flash lines red?
-            level_advance(LevelState::OutsideTalk);
-            return;
+            level_advance(LevelState::OutsideBad);
         }
+        return;
     }
 
     if (pressed_a && !used_all_lines) {
@@ -828,18 +856,18 @@ constexpr Speech revealed_text[] {
     { UIC::Bucko, "really important to" },
     { UIC::Bucko, "everything in buckopia." },
     { UIC::Bucko, "Every time I ask the" },
-    { UIC::Bucko, "other buckos about it" },
+    { UIC::Bucko, "elder buckos about it" },
     { UIC::Bucko, "they start talking about" },
     { UIC::Bucko, "lawn mowers and" },
     { UIC::Bucko, "mainframes." },
     { UIC::Ami, "..." },
     { UIC::Bucko, "Anyway." },
     { UIC::Bucko, "You'll need to get in" },
-    { UIC::Bucko, "there and reboot it." },
+    { UIC::Bucko, "there and reboot! it." },
     { UIC::Bucko, "That should reset" },
     { UIC::Bucko, "the robuckos!" },
     { UIC::Ami, "OK." },
-    { UIC::Ami, "What do I need to do?" },
+    { UIC::Ami, "How do I do that?" },
 #endif
 
     nullptr,
@@ -864,11 +892,12 @@ constexpr Speech keypad_text[] {
 };
 
 constexpr Speech code_A_text[] {
-    { UIC::Bucko, "It looks like the" },
+    { UIC::Bucko, "It looks like the first" },
 #if !SKIP_STUFF
-    { UIC::Bucko, "first one has three lines" },
-    { UIC::Bucko, "in the shape of a 'V'" },
-    { UIC::Bucko, "with a line through it." },
+    { UIC::Bucko, "one is formed of 3 lines." },
+    { UIC::Bucko, "They're in the shape of a" },
+    { UIC::Bucko, "'V' that's been" },
+    { UIC::Bucko, "crossed out." },
     { UIC::Bucko, "Oh!" },
     { UIC::Bucko, "It could be upside down." },
 #endif
@@ -877,13 +906,15 @@ constexpr Speech code_A_text[] {
 };
 
 constexpr Speech code_M_text[] {
-    { UIC::Bucko, "This one is clearly" },
+    { UIC::Bucko, "Attagirl!" },
 #if !SKIP_STUFF
-    { UIC::Bucko, "4 lines in the shape" },
-    { UIC::Bucko, "of a 'W'." },
+    { UIC::Bucko, "That was it!" },
+    { UIC::Bucko, "The next one is clearly" },
+    { UIC::Bucko, "4 lines in the shape of" },
+    { UIC::Bucko, "a 'W'." },
     { UIC::Bucko, "..." },
     { UIC::Bucko, "Wait!" },
-    { UIC::Bucko, "This one is upside" },
+    { UIC::Bucko, "This one's upside" },
     { UIC::Bucko, "down too!" },
 #endif
 
@@ -893,7 +924,8 @@ constexpr Speech code_M_text[] {
 constexpr Speech code_I_text[] {
     { UIC::Bucko, "I think the next one" },
     { UIC::Bucko, "is a number?" },
-    { UIC::Bucko, "But it's only one line." },
+    { UIC::Bucko, "But it only has" },
+    { UIC::Bucko, "one line." },
 
     nullptr,
 };
@@ -909,16 +941,18 @@ constexpr Speech code_mid_text[] {
 };
 
 constexpr Speech code_C_text[] {
-    { UIC::Bucko, "The next one is clearly" },
-    { UIC::Bucko, "a big box that's missing" },
-    { UIC::Bucko, "one of its sides." },
+    { UIC::Bucko, "This next one looks like" },
+    { UIC::Bucko, "a big square" },
+    { UIC::Bucko, "but the front" },
+    { UIC::Bucko, "has fallen off." },
 
     nullptr,
 };
 
 constexpr Speech code_U_text[] {
-    { UIC::Bucko, "The box has been" },
-    { UIC::Bucko, "pushed onto its back." },
+    { UIC::Bucko, "Another big square" },
+    { UIC::Bucko, "but this one" },
+    { UIC::Bucko, "has no roof." },
 
     nullptr,
 };
@@ -931,17 +965,18 @@ constexpr Speech code_T_text[] {
     { UIC::Bucko, "I can't tell what" },
     { UIC::Bucko, "this one is meant" },
     { UIC::Bucko, "to be." },
-    { UIC::Bucko, "But it has two" },
-    { UIC::Bucko, "perpendicular lines." },
+    { UIC::Bucko, "Maybe a plus sign" },
+    { UIC::Bucko, "but without the top?" },
 #endif
 
     nullptr,
 };
 
 constexpr Speech code_E_text[] {
-    { UIC::Bucko, "It's hard to tell but" },
-    { UIC::Bucko, "there's 1 vertical and" },
-    { UIC::Bucko, "and 3 horizontal lines." },
+    { UIC::Bucko, "It's hard to tell" },
+    { UIC::Bucko, "but this might be a" },
+    { UIC::Bucko, "wide number three" },
+    { UIC::Bucko, "facing the wrong way." },
 
     nullptr,
 };
@@ -949,7 +984,7 @@ constexpr Speech code_E_text[] {
 constexpr Speech code_finished_text[] {
     { UIC::None, "Stage 2 emitters activated" },
 #if !SKIP_STUFF
-    { UIC::Bucko, "Attagirl Ami!" },
+    { UIC::Bucko, "Attagirl!" },
     { UIC::Bucko, "Time to jump in!" },
     { UIC::Ami, "That looks scary." },
     { UIC::Bucko, "Don't worry!" },
@@ -1026,6 +1061,8 @@ void ui_update() {
             break;
         case LevelState::Reveal:
         case LevelState::OutsideCode:
+        case LevelState::OutsideGood:
+        case LevelState::OutsideBad:
         case LevelState::Entering:
         case LevelState::Finished:
             break;
@@ -1089,6 +1126,13 @@ bool update_logic() {
 
         case LevelState::OutsideCode:
             keypad_update();
+            break;
+
+        case LevelState::OutsideGood:
+            keypad_fade_result(true);
+            break;
+        case LevelState::OutsideBad:
+            keypad_fade_result(false);
             break;
 
         case LevelState::Entering:
@@ -1169,6 +1213,11 @@ void level_advance(LevelState state) {
             s_keypad_lines_used = 0;
             s_keypad_lines_matched = 0;
             s_keypad_total_line_mask = 0;
+            break;
+
+        case LevelState::OutsideGood:
+        case LevelState::OutsideBad:
+            keypad_fade_enter();
             break;
 
         case LevelState::OutsideFinished:
