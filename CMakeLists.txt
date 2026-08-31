@@ -23,6 +23,7 @@ add_executable(bbb
     src/data_dome_raw.png.cc
     src/data_driving_bgm.mid.cc
     src/data_gauge.png.cc
+    src/data_heart.png.cc
     src/data_main_menu_bgm2.mid.cc
     src/data_main_menu_bgm.mid.cc
     src/data_mm_bouncer.png.cc

@@ -117,6 +117,12 @@ void init() {
             error();
         }
     }
+
+    // Reset OAM.
+    for (uint32_t & raw : VDP.OAM) {
+        ObjSprite sprite;
+        raw = sprite.raw;
+    }
 }
 
 uint32_t update_input() {
@@ -145,6 +151,8 @@ uint32_t update_input() {
     if (keys[SDL_Scancode::SDL_SCANCODE_LEFT]) bits |= GAMEPAD_BTN_LEFT;
     if (keys[SDL_Scancode::SDL_SCANCODE_RIGHT]) bits |= GAMEPAD_BTN_RIGHT;
     if (keys[SDL_Scancode::SDL_SCANCODE_KP_ENTER]) bits |= GAMEPAD_BTN_START;
+    if (keys[SDL_Scancode::SDL_SCANCODE_RETURN]) bits |= GAMEPAD_BTN_START;
+    if (keys[SDL_Scancode::SDL_SCANCODE_RETURN2]) bits |= GAMEPAD_BTN_START;
     return bits;
 }
 
