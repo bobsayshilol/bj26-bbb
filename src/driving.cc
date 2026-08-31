@@ -1494,7 +1494,7 @@ void level_advance(LevelState state) {
 
 void enter() {
     // Setup colours.
-    engine::graphics::set_backdrop_a(RGB555(0, 0, 31));
+    engine::graphics::set_backdrop_a(RGB555(0, 0, 15));
 
     // Draw the parts of the screen.
     setup_tiles();
