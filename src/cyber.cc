@@ -1006,18 +1006,49 @@ constexpr Speech inside_text[] {
     { UIC::Bucko, "We're in!" },
 #if !SKIP_STUFF
     { UIC::Bucko, "Well you are." },
+    { UIC::Bucko, "I'm still on the radio." },
     { UIC::Bucko, "What's it like in there?" },
     { UIC::Bucko, "Do they have cake?" },
 
-    { UIC::Ami, "I... no." },
+    { UIC::Ami, "..." },
+
+    { UIC::Bucko, "Right. The robuckos." },
+    { UIC::Bucko, "There should be" },
+    { UIC::Bucko, "an interface to" },
+    { UIC::Bucko, "the central terminal" },
+    { UIC::Bucko, "around here somewhere." },
+    { UIC::Bucko, "That'll give you the" },
+    { UIC::Bucko, "freedom to access" },
+    { UIC::Bucko, "any part of" },
 #endif
 
     nullptr,
 };
 
 constexpr Speech glitchy_text[] {
-    { UIC::Bucko, "Somethings off." },
-    { UIC::Bucko, "Somethings off" },
+    { UIC::Bucko, "Buckopia." },
+#if !SKIP_STUFF
+    { UIC::Bucko, "..." },
+    { UIC::Ami, "What's happening?!" },
+    { UIC::Bucko, "Something's wrong." },
+    { UIC::Bucko, "Everything's glitching." },
+    { UIC::Bucko, "Even our words." },
+    { UIC::None, "LOOPY CORRUPTION DETECTED" },
+    { UIC::Bucko, "Oh that'll be it." },
+    { UIC::Bucko, "Did you pirate this game?" },
+    { UIC::Ami, "It's a buckojam game." },
+    { UIC::Bucko, "I wonder what broke then." },
+    { UIC::None, "WEB LEVEL MISSING FROM ROM" },
+    { UIC::Bucko, "That's a lie." },
+    { UIC::Bucko, "I think the dev" },
+    { UIC::Bucko, "was just lazy." },
+    { UIC::None, "SHUSH YOU" },
+    //{ UIC::None, "I RAN OUT OF TIME" },
+    { UIC::Bucko, "..." },
+    { UIC::Ami, "..." },
+    { UIC::Bucko, "..." },
+    { UIC::None, "SKIPPING TO FINAL SEQUENCE" },
+#endif
 
     nullptr,
 };
