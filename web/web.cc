@@ -48,6 +48,7 @@ std::unique_ptr<SDL_Window, SDLDeleter> s_window;
 std::unique_ptr<SDL_Palette, SDLDeleter> s_palette;
 std::unique_ptr<SDL_Surface, SDLDeleter> s_vram_buffer;
 std::unique_ptr<SDL_Surface, SDLDeleter> s_sprites_buffer;
+Uint32 s_clear_colour;
 
 // Only sx tracked so far.
 struct BitmapChange { uint16_t line; uint16_t prev_sx; };
@@ -123,6 +124,8 @@ void init() {
         ObjSprite sprite;
         raw = sprite.raw;
     }
+
+    set_backdrop_a(RGB555(0, 0, 0));
 }
 
 uint32_t update_input() {
@@ -168,7 +171,7 @@ void draw() {
 
     // Clear the screen.
     SDL_Surface * window_surface = SDL_GetWindowSurface(s_window.get());
-    SDL_FillSurfaceRect(window_surface, nullptr, 0);
+    SDL_FillSurfaceRect(window_surface, nullptr, s_clear_colour);
 
     // Blit background.
     if (VDP.sprites_enabled) {
@@ -223,8 +226,8 @@ void draw() {
             };
 
             // Split the quad into 2 parts if it crosses the boundary.
-            const uint16_t w = bitmap.w;
-            const uint16_t h = bitmap.h;
+            const uint16_t w = bitmap.w + 1;
+            const uint16_t h = bitmap.h + 1;
             const uint16_t w0 = start_x + w > 256 ? 256 - start_x : 0;
             const uint16_t h0 = start_y + h > 512 ? 512 - start_y : 0;
             emit(0,   0, w0,     h0);
@@ -287,9 +290,12 @@ void draw() {
 namespace engine::graphics {
 
 void set_backdrop_a(uint16_t rgb) {
-    // TODO
-    (void)rgb;
-    UNIMPLEMENTED();
+    SDL_Surface * window_surface = SDL_GetWindowSurface(s_window.get());
+    const auto * details = SDL_GetPixelFormatDetails(window_surface->format);
+    const uint8_t r = ((rgb >> 10) & 31) * 255 / 31;
+    const uint8_t g = ((rgb >>  5) & 31) * 255 / 31;
+    const uint8_t b = ((rgb >>  0) & 31) * 255 / 31;
+    s_clear_colour = SDL_MapRGB(details, nullptr, r, g, b);
 }
 
 void set_backdrop_b(uint16_t rgb) {
