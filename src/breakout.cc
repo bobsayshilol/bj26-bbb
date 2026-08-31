@@ -143,11 +143,12 @@ constexpr uint16_t grid_3_trapped_y_start = grid_start_y + (block_height + grid_
 
 //
 
-constexpr uint32_t paddle_speed = 1;
+constexpr uint32_t paddle_speed = 2;
 constexpr uint32_t paddle_width = 32;
 constexpr uint32_t paddle_height = 8;
 constexpr uint8_t paddle_y = engine::graphics::SCREEN_HEIGHT - wall_padding_y - 4; // - paddle_height;
-constexpr auto paddle_hit_boost = engine::utils::FixedS1616::div(1, 3);
+constexpr auto paddle_hit_boost_x = engine::utils::FixedS1616::div(1, 3);
+constexpr auto paddle_hit_boost_y = engine::utils::FixedS1616::div(1, 30);
 
 struct Paddle {
     uint8_t x;
@@ -637,10 +638,15 @@ void blocks_update() {
 
     if (s_ui_state == UIState::Playing3) {
         constexpr engine::utils::AABB trapped_aabb{
-            grid_3_trapped_x_start, grid_3_trapped_y_start,
-            ball_width, ball_height,
+            grid_3_trapped_x_start + ball_width / 4, grid_3_trapped_y_start + ball_height / 4,
+            ball_width / 2, ball_height / 2,
         };
         if (ball_aabb.intersects(trapped_aabb)) {
+            // Release the bucko.
+            for (uint8_t i = 0; i < trapped_sprite_count; i++) {
+                engine::graphics::set_sprite(trapped_sprite_start + i, {});
+            }
+
             ui_advance(UIState::Win3_0);
         }
     }
@@ -721,11 +727,13 @@ void paddle_update() {
                 s_ball.bounce_y(false);
 
                 // Add some speed to the ball.
-                if (held & GAMEPAD_BTN_LEFT) {
-                    s_ball.vx -= paddle_hit_boost;
-                } else if (held & GAMEPAD_BTN_RIGHT) {
-                    s_ball.vx += paddle_hit_boost;
+                const auto vx = (s_ball.vx * 64).value();
+                if ((held & GAMEPAD_BTN_LEFT) && (vx < 0)) {
+                    s_ball.vx -= paddle_hit_boost_x;
+                } else if ((held & GAMEPAD_BTN_RIGHT) && (vx > 0)) {
+                    s_ball.vx += paddle_hit_boost_x;
                 }
+                s_ball.vy -= paddle_hit_boost_y; // -ve is up
             }
 
             if (pressed & GAMEPAD_BTN_D) {
