@@ -380,12 +380,13 @@ struct alignas(uint16_t) ButtonPos {
 constexpr auto button_positions = []{
     using namespace engine::graphics;
     engine::utils::Array<ButtonPos, 9> butts{};
+    const int x_offset = -5; // to make it harder to drag down the middle.
     int idx = 0;
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
             const uint8_t x = (SCREEN_WIDTH / 2) + i * (SCREEN_WIDTH / 3) - bg_tile_size;
             const uint8_t y = (SCREEN_HEIGHT / 2) + j * (SCREEN_HEIGHT / 3) - bg_tile_size;
-            butts[idx].x = x;
+            butts[idx].x = x + x_offset;
             butts[idx].y = y;
             idx++;
         }
@@ -526,27 +527,25 @@ void cursor_update() {
         constexpr uint8_t center_y = 160 - bg_tile_size / 2;
         const int16_t dx = s_cursor_cur.x - center_x;
         const int16_t dy = s_cursor_cur.y - center_y;
+        const auto adx = engine::utils::abs(dx);
+        const auto ady = engine::utils::abs(dy);
         constexpr int16_t r = 32;
 
-        uint16_t tx = 0; // how often to change
+        uint16_t tx = 1; // how often to change
+        uint16_t &ty = tx;
+        if (adx + ady > r) tx = 3;
+
         int16_t ddx = 0; // which direction
-        if (dx > r)       { tx = 3; ddx = -1; }
-        else if (dx > 0)  { tx = 1; ddx = -1; }
-        else if (dx < -r) { tx = 3; ddx = 1; }
-        else if (dx < 0)  { tx = 1; ddx = 1; }
+        if (dx > 0) ddx = -1; else if (dx < 0) ddx = 1;
         if (tx && (s_bg_timer & tx) == tx) {
-            s_cursor_cur.x += ddx;
+            s_cursor_cur.x -= ddx;
             changed = true;
         }
 
-        uint16_t ty = 0;
         int16_t ddy = 0;
-        if (dy > r)       { ty = 3; ddy = -1; }
-        else if (dy > 0)  { ty = 1; ddy = -1; }
-        else if (dy < -r) { ty = 3; ddy = 1; }
-        else if (dy < 0)  { ty = 1; ddy = 1; }
+        if (dy > 0) ddy = -1; else if (dy < 0) ddy = 1;
         if (ty && (s_bg_timer & ty) == ty) {
-            s_cursor_cur.y += ddy;
+            s_cursor_cur.y -= ddy;
             changed = true;
         }
     }
