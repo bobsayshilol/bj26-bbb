@@ -80,8 +80,14 @@ static const uint8_t data[5 * TileSize];
 static const uint16_t palette[10];
 };
 
-struct skyline_raw {
+struct heart {
 static constexpr uint8_t pal_offset = 84;
+static const uint8_t data[1 * TileSize];
+static const uint16_t palette[10];
+};
+
+struct skyline_raw {
+static constexpr uint8_t pal_offset = 94;
 static constexpr uint16_t width = 256;
 static constexpr uint16_t height = 64;
 static void decompress(uint8_t * output);
@@ -89,7 +95,7 @@ static const uint16_t palette[16];
 };
 
 struct dome_raw {
-static constexpr uint8_t pal_offset = 100;
+static constexpr uint8_t pal_offset = 110;
 static constexpr uint16_t width = 256;
 static constexpr uint16_t height = 64;
 static void decompress(uint8_t * output);
