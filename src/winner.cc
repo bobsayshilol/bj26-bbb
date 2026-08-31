@@ -569,11 +569,6 @@ Entry loop() {
     // Update gamepad/mouse input.
     engine::input::update_inputs();
 
-    // Return to the main menu if requested.
-    if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
-        return Entry::MainMenu;
-    }
-
     if (logic_update()) {
         intertile::setup(intertile::Text::Won, Entry::MainMenu);
         return Entry::Intertitle;

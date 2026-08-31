@@ -1,6 +1,7 @@
 #include "engine.h"
 #include "graphics.h"
 #include "debug.h"
+#include "input.h"
 #include "music.h"
 #include "sound.h"
 #include "game.h"
@@ -140,6 +141,11 @@ int main() {
 				case game::Entry::Winner: next = game::winner::loop(); break;
 			}
 			game::g_frame_count++;
+
+			// Return to the main menu if requested.
+			if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
+				next = game::Entry::MainMenu;
+			}
 		}
 
 		// Leave the old state.

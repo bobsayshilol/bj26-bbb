@@ -1179,11 +1179,6 @@ Entry loop() {
     // Update gamepad/mouse input.
     engine::input::update_inputs();
 
-    // Return to the main menu if requested.
-    if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
-        return Entry::MainMenu;
-    }
-
     if (s_level_state == LevelState::Text) {
         next = ui_update();
     } else {

@@ -1492,11 +1492,6 @@ Entry loop() {
     // Update gamepad/mouse input.
     engine::input::update_inputs();
 
-    // Return to the main menu if requested.
-    if (engine::input::g_buttons_pressed & GAMEPAD_BTN_START) {
-        return Entry::MainMenu;
-    }
-
     // Print the last frame's timings before updating logic since we don't seem to have enough time after.
 #if PRINT_PROFILING
     engine::profiler::print_timings();
