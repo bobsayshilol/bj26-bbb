@@ -32,8 +32,9 @@ constexpr uint8_t pal_red = 3;
 constexpr uint8_t pal_green = 4;
 constexpr uint8_t pal_blue = 5;
 constexpr uint8_t pal_grey = 6;
-constexpr uint8_t pal_good_bad = 7;
-constexpr uint8_t pal_basic_end = 8;
+constexpr uint8_t pal_purple = 7;
+constexpr uint8_t pal_good_bad = 8;
+constexpr uint8_t pal_basic_end = 9;
 
 // font has highest prio.
 constexpr uint8_t font_sprite_start = 0;
@@ -386,7 +387,7 @@ struct alignas(uint16_t) ButtonPos {
 constexpr auto button_positions = []{
     using namespace engine::graphics;
     engine::utils::Array<ButtonPos, 9> butts{};
-    const int x_offset = -5; // to make it harder to drag down the middle.
+    const int x_offset = 0; // to make it harder to drag down the middle.
     int idx = 0;
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
@@ -542,14 +543,14 @@ void cursor_update() {
         if (adx + ady > r) tx = 3;
 
         int16_t ddx = 0; // which direction
-        if (dx > 0) ddx = -1; else if (dx < 0) ddx = 1;
+        if (dx > 0) ddx = -1; else ddx = 1;
         if (tx && (s_bg_timer & tx) == tx) {
             s_cursor_cur.x -= ddx;
             changed = true;
         }
 
         int16_t ddy = 0;
-        if (dy > 0) ddy = -1; else if (dy < 0) ddy = 1;
+        if (dy > 0) ddy = -1; else ddy = 1;
         if (ty && (s_bg_timer & ty) == ty) {
             s_cursor_cur.y -= ddy;
             changed = true;
@@ -581,7 +582,7 @@ void cursor_update() {
         draw_web_line(
             s_cursor_start.x, s_cursor_start.y,
             s_cursor_cur.x, s_cursor_cur.y,
-            pal_grey
+            pal_purple
         );
     }
 
@@ -1274,6 +1275,7 @@ void enter() {
     engine::graphics::set_palette_colour(pal_green, RGB555(0,31,0));
     engine::graphics::set_palette_colour(pal_blue, RGB555(0,0,31));
     engine::graphics::set_palette_colour(pal_grey, RGB555(20,20,20));
+    engine::graphics::set_palette_colour(pal_purple, RGB555(244 * 31 / 255, 192 * 31 / 255, 238 * 31 / 255));
 
     // Draw bits.
     bg_setup();
