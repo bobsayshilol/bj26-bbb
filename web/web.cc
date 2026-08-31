@@ -267,13 +267,7 @@ void draw() {
     SDL_UpdateWindowSurface(s_window.get());
 
     // Fake 60fps.
-    const auto now = std::chrono::system_clock::now();
-    static auto last_time = now;
-    const auto delay = std::chrono::duration_cast<std::chrono::milliseconds>((last_time + std::chrono::milliseconds(16) - now));
-    last_time = now;
-    if (delay > std::chrono::milliseconds(0)) {
-        SDL_Delay(delay.count());
-    }
+    SDL_Delay(10);
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
