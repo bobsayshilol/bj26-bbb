@@ -138,12 +138,7 @@ private:
 
 public:
     // Value must be read/written as u16x2 or u32x1 (according to MAME).
-    uint32_t raw =
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        0x00400000; // reverse of below
-#else
-        0x00000200; // default value in LoopyMSE and MAME, looks like y=256
-#endif
+    uint32_t raw = 0x00000200; // default value in LoopyMSE and MAME, looks like y=256
 
     void set_x(uint16_t x_) {
         parts.x = x_;
