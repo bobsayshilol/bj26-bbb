@@ -669,8 +669,8 @@ void paddle_setup() {
     bitmap.position_y() = paddle_y;
     bitmap.scroll_x() = 0;
     bitmap.scroll_y() = 0;
-    bitmap.width() = paddle_width;
-    bitmap.height() = paddle_height;
+    bitmap.width() = paddle_width - 1;
+    bitmap.height() = paddle_height - 1;
     bitmap.latch() = 0;
 
     // Reset paddle position.
