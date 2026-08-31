@@ -319,10 +319,11 @@ constexpr const Button credits1[] {
 };
 
 constexpr const Button credits2[] {
-    Button("LoopyMSE", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 2, Action::None),
-    Button("MAME", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 5, Action::None),
-    Button("madsonweb", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 8, Action::None),
-    Button("neocomposer", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 11, Action::None),
+    Button("LoopyMSE", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 1, Action::None),
+    Button("MAME", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 4, Action::None),
+    Button("kasamikona", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 7, Action::None),
+    Button("madsonweb", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 10, Action::None),
+    Button("neocomposer", engine::graphics::SCREEN_HEIGHT / 3 + font::CharWidth * 13, Action::None),
     Button("Back", engine::graphics::SCREEN_HEIGHT - font::CharWidth * 2, Action::MainMenu),
 };
 
