@@ -1037,13 +1037,20 @@ constexpr Speech glitchy_text[] {
     { UIC::Bucko, "Something's wrong." },
     { UIC::Bucko, "Everything's glitching." },
     { UIC::Bucko, "Even our words." },
-    { UIC::None, "LOOPY CORRUPTION DETECTED" },
-    { UIC::Bucko, "Oh that'll be it." },
+    { UIC::None, "ROM CORRUPTION DETECTED" },
+    { UIC::Bucko, "That doesn't sound good." },
     { UIC::Bucko, "Did you pirate this game?" },
-    { UIC::Ami, "It's a buckojam game." },
+    { UIC::Bucko, "Did you coopy that floopy?" },
+#if 1
+    { UIC::None, "WEB LEVEL MISSING FROM ROM" },
+    { UIC::Bucko, "Oh." },
+    { UIC::Bucko, "The dev probably" },
+    { UIC::Bucko, "just ran out of time." },
+#else
+    { UIC::Ami, "It's a free buckojam game." },
     { UIC::Bucko, "I wonder what broke then." },
     { UIC::None, "WEB LEVEL MISSING FROM ROM" },
-    { UIC::Bucko, "That's a lie." },
+    { UIC::Bucko, "Nah." },
     { UIC::Bucko, "I think the dev" },
     { UIC::Bucko, "was just lazy." },
     { UIC::None, "SHUSH YOU" },
@@ -1051,6 +1058,7 @@ constexpr Speech glitchy_text[] {
     { UIC::Bucko, "..." },
     { UIC::Ami, "..." },
     { UIC::Bucko, "..." },
+#endif
     { UIC::None, "SKIPPING TO FINAL SEQUENCE" },
 #endif
 
