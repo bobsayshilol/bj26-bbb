@@ -156,14 +156,20 @@ void bg_pallete_update() {
     switch (s_bg_style) {
         case BGStyle::Outside:
         case BGStyle::OutsideWavy: {
-            // TODO: this is just for testing atm
-
-            // Update palette locally.
             static_assert(bg_pal_count == 8 * 8);
 
             const uint8_t worm_enter = s_wormhole_speed;
             const uint8_t worm_spin = s_wormhole_speed >> 8;
 
+            // If we're not spinning then make the space fade in/out.
+            if (!worm_spin && !worm_enter) {
+                const uint8_t g = (3 * static_cast<uint16_t>(128 + engine::maths::cos((timer * 3) / 2))) / 64;
+                for (uint8_t y = 1; y < 8; y++) {
+                    for (uint8_t x = 1; x < 8; x++) {
+                        s_bg_pallete[y * 8 + x] = RGB555(0,0,g);
+                    }
+                }
+            }
             if (timer & worm_enter) {
                 for (uint8_t y = 0; y < 8; y++) {
                     engine::utils::rotate_right<1>(s_bg_pallete + y * 8, s_bg_pallete + (y + 1) * 8);
