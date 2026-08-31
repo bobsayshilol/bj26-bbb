@@ -112,13 +112,20 @@ constexpr uint8_t gauge_sprite_count = 1;
 constexpr uint8_t gauge_tile_start = ufo_tile_start + ufo_tile_count;
 constexpr uint8_t gauge_tile_count = 5;
 
+constexpr uint8_t heart_pal_start = gauge_pal_start + gauge_pal_count;
+constexpr uint8_t heart_pal_count = 10;
+constexpr uint8_t heart_sprite_start = gauge_sprite_start + gauge_sprite_count;
+constexpr uint8_t heart_sprite_count = 5; // 5 lives
+constexpr uint8_t heart_tile_start = gauge_tile_start + gauge_tile_count;
+constexpr uint8_t heart_tile_count = 1;
+
 // Reuses the basic palette above.
-constexpr uint8_t transparent_sprite_start = gauge_sprite_start + gauge_sprite_count;
+constexpr uint8_t transparent_sprite_start = heart_sprite_start + heart_sprite_count;
 constexpr uint8_t transparent_sprite_count = SPRITES_FOR_ROAD ? 3 : 0; // max 3 road splits
-constexpr uint8_t transparent_tile_start = gauge_tile_start + gauge_tile_count;
+constexpr uint8_t transparent_tile_start = heart_tile_start + heart_tile_count;
 constexpr uint8_t transparent_tile_count = SPRITES_FOR_ROAD ? 1 : 0;
 
-constexpr uint8_t skyline_pal_start = gauge_pal_start + gauge_pal_count;
+constexpr uint8_t skyline_pal_start = heart_pal_start + heart_pal_count;
 constexpr uint8_t skyline_pal_count = 16;
 constexpr uint8_t dome_pal_start = skyline_pal_start + skyline_pal_count;
 constexpr uint8_t dome_pal_count = 16;
@@ -145,6 +152,10 @@ constexpr int16_t get_car_x() {
     return (s_xpos * car_x_scale).value() + engine::graphics::SCREEN_WIDTH / 2 - engine::graphics::bg_tile_size;
 }
 constexpr int16_t car_y = engine::graphics::SCREEN_HEIGHT - engine::graphics::bg_tile_size - 40;
+
+// Collision state.
+uint8_t s_health;
+uint8_t s_spinout;
 
 // How fast we move through the road.
 constexpr uint8_t road_speed_scale = 4;
@@ -396,6 +407,25 @@ void setup_tiles() {
         gauge_tile_start, gauge_tile_count,
         images::gauge
     >();
+    images::copy_tile_data<
+        heart_pal_start, heart_pal_count,
+        heart_tile_start, heart_tile_count,
+        images::heart
+    >();
+
+    // Draw the heart sprites.
+    {
+        constexpr uint8_t x_pos = SCREEN_WIDTH - bg_tile_size - 3;
+        constexpr uint8_t y_pos = SCREEN_HEIGHT / 3;
+
+        ObjSprite sprite;
+        sprite.set_y(y_pos);
+        sprite.set_tile_index(heart_tile_start);
+        for (int i = 0; i < heart_sprite_count; i++) {
+            sprite.set_x(x_pos - i * bg_tile_size);
+            set_sprite(heart_sprite_start + i, sprite);
+        }
+    }
 
 #if SPRITES_FOR_ROAD
     // Transparent line split tiles.
@@ -472,7 +502,6 @@ void setup_bitmaps() {
     }
 
     // Dome bitmap.
-    // TODO: compress (even RLE) would save huge space here
     {
         // Dome comes after the road.
         constexpr uint16_t dome_start_y = road_start + road_length;
@@ -751,17 +780,43 @@ Entry update_logic() {
             next = Entry::Intertitle;
             break;
         case LevelState::GameOver2:
-            next = Entry::MainMenu;
+            intertile::setup(intertile::Text::GameOver, Entry::MainMenu);
+            next = Entry::Intertitle;
             break;
     }
 
     return next;
 }
 
+void car_hit() {
+    if (s_spinout) return;
+    s_spinout = 60; // ~1s
+
+    // Play an effect.
+    engine::sound::play_effect(game::music::SoundEffect::SE_Driving_Hit);
+
+    // Take damage.
+    const uint8_t new_health = --s_health;
+
+    // Remove a heart.
+    engine::graphics::set_sprite(heart_sprite_start + new_health, {});
+
+    if (new_health) {
+        // Reset speed.
+        s_road_speed = engine::utils::FixedS1616::div(min_road_speed, road_speed_scale);
+
+    } else {
+        // Game over.
+        level_advance(LevelState::GameOver);
+    }
+}
+
 void update_physics() {
     PROFILE_SCOPE(rd_phy);
 
-    const uint16_t held = engine::input::g_buttons_held;
+    // No input if we've spun out.
+    const uint8_t spinout = s_spinout ? s_spinout-- : 0;
+    const uint16_t held = spinout ? 0 : engine::input::g_buttons_held;
 
     //
 
@@ -830,10 +885,7 @@ void update_physics() {
             remove = true;
         } else if (car_aabb.intersects(bomb.aabb())) {
             remove = true;
-
-            engine::sound::play_effect(game::music::SoundEffect::SE_Driving_Hit);
-            // TODO
-            DEBUG_MSG("car hit");
+            car_hit();
         }
 
         // Remove this one, otherwise jump to next.
@@ -855,9 +907,11 @@ void draw_sprites() {
     {
         static_assert(car_sprite_count == 4);
 
-        const uint16_t held = engine::input::g_buttons_held;
+        const uint8_t spinout = s_spinout;
+        const uint16_t held = spinout ? 0 : engine::input::g_buttons_held;
         const uint8_t is_turning = (held & (GAMEPAD_BTN_LEFT | GAMEPAD_BTN_RIGHT)) ? 4 : 0;
         const bool x_flipped = held & GAMEPAD_BTN_LEFT;
+        const bool visible = (s_health > 0) && !(spinout & 16);
 
         // Car sprite.
         const auto car_x = get_car_x();
@@ -866,7 +920,7 @@ void draw_sprites() {
             const uint16_t dx = ((idx & 1) ^ x_flipped) ? engine::graphics::bg_tile_size : 0;
             const uint16_t dy = (idx & 2) ? engine::graphics::bg_tile_size : 0;
             sprite.set_x(car_x + dx);
-            sprite.set_y(car_y + dy);
+            sprite.set_y(visible ? car_y + dy : 256);
             sprite.set_tile_index(car_tile_start + idx + is_turning);
             sprite.set_x_flip(x_flipped);
             set_sprite(car_sprite_start + idx, sprite);
@@ -1449,6 +1503,8 @@ void enter() {
 
     // Initial game state.
     s_road_speed = engine::utils::FixedS1616::div(min_road_speed, road_speed_scale);
+    s_spinout = 0;
+    s_health = heart_sprite_count;
     s_dome_y = engine::utils::FixedS1616::from(0);
     s_ufo.reset();
     level_advance(LevelState::Intro1);
