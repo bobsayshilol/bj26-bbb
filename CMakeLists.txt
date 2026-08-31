@@ -50,9 +50,9 @@ add_executable(bbb
     web/web.cc
 )
 target_link_libraries(bbb SDL3::SDL3-static)
-if (EMSCRIPTEN AND FALSE) # TODO
-    target_link_options(aaa PRIVATE
-        --embed-file "${CMAKE_SOURCE_DIR}/data@/aaa"
-        --shell-file "${CMAKE_SOURCE_DIR}/web_sources/shell_minimal.html"
+if (EMSCRIPTEN)
+    target_link_options(bbb PRIVATE
+        #--embed-file "${CMAKE_SOURCE_DIR}/data@/aaa"
+        --shell-file "${CMAKE_SOURCE_DIR}/web/shell_minimal.html"
     )
 endif()
