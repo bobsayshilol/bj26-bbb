@@ -51,7 +51,7 @@ void leave();
 } // namespace driving
 
 namespace intertile {
-enum class Text { Intro, Meanwhile, Dome, GameOver, Won, };
+enum class Text { Intro, Meanwhile, Dome, GameOver, Final, Won, };
 void setup(Text text, Entry next);
 void enter();
 Entry loop();

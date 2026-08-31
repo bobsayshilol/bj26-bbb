@@ -1029,6 +1029,10 @@ void ui_redraw() {
     // Empty it out.
     font::clear_text();
 
+    if (s_level_state == LevelState::InsideGlitchy) {
+        font::glitch_it();
+    }
+
     constexpr uint8_t speech_y = engine::graphics::SCREEN_HEIGHT * 2 / 3;
     constexpr uint8_t speech_sky_y = engine::graphics::SCREEN_HEIGHT / 5;
 
@@ -1038,10 +1042,10 @@ void ui_redraw() {
     if (speech.text) {
         switch (speech.uic) {
             case UIC::Ami:
-                font::write_left(speech.text, speech.len, 0, speech_y);
+                font::write_left(speech.text, speech.len, 4, speech_y);
                 break;
             case UIC::Bucko:
-                font::write_right(speech.text, speech.len, 0, speech_y);
+                font::write_right(speech.text, speech.len, 4, speech_y);
                 break;
             case UIC::None:
                 font::write_centered(speech.text, speech.len, speech_sky_y);
@@ -1115,8 +1119,12 @@ bool update_logic() {
         case LevelState::OutsideTalk:
         case LevelState::OutsideFinished:
         case LevelState::Inside:
-        case LevelState::InsideGlitchy:
             // Event driven logic.
+            break;
+
+        case LevelState::InsideGlitchy:
+            // Keep redrawing the UI so it glitches.
+            ui_redraw();
             break;
 
         case LevelState::Reveal: {
@@ -1326,7 +1334,8 @@ Entry loop() {
     }
 
     if (update_logic()) {
-        return Entry::Winner;
+        intertile::setup(intertile::Text::Final, Entry::Winner);
+        return Entry::Intertitle;
     }
 
     bg_update();

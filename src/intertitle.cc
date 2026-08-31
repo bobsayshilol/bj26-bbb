@@ -66,6 +66,10 @@ constexpr Lines s_dome[] = {
     "Outside the dome",
     nullptr,
 };
+constexpr Lines s_final[] = {
+    "Outside the dome\0Again",
+    nullptr,
+};
 constexpr Lines s_finished[] = {
     "You win!",
     "Thanks for playing!",
@@ -170,6 +174,7 @@ void setup(Text text, Entry next) {
         case Text::Meanwhile: s_text = s_meanwhile; break;
         case Text::GameOver: s_text = s_game_over; break;
         case Text::Dome: s_text = s_dome; break;
+        case Text::Final: s_text = s_final; break;
         case Text::Won: s_text = s_finished; break;
     }
     s_line = 0;
@@ -177,6 +182,8 @@ void setup(Text text, Entry next) {
 }
 
 void enter() {
+    engine::graphics::set_backdrop_a(RGB555(0,0,0));
+
     // Load the sprites.
     font::setup_tiles<font_tile_start, font_sprite_start>();
 
