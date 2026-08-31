@@ -126,15 +126,6 @@ void init() {
 }
 
 uint32_t update_input() {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-#ifndef __EMSCRIPTEN__
-        if (event.type == SDL_EventType::SDL_EVENT_QUIT) {
-            error();
-        }
-#endif
-    }
-
     auto *keys = SDL_GetKeyboardState(nullptr);
 
 #ifndef __EMSCRIPTEN__
@@ -279,6 +270,15 @@ void draw() {
     last_time = now;
     if (delay > std::chrono::milliseconds(0)) {
         SDL_Delay(delay.count());
+    }
+
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+#ifndef __EMSCRIPTEN__
+        if (event.type == SDL_EventType::SDL_EVENT_QUIT) {
+            error();
+        }
+#endif
     }
 }
 
