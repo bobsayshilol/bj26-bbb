@@ -107,7 +107,7 @@ def _write_tile(tile :list[int], file :TextIOWrapper):
 			file.write("engine::graphics::pal_transparent,")
 		else:
 			file.write(f"pal_offset + 0x{b:x},")
-		if (i % 15) == 15:
+		if (i & 15) == 15:
 			file.write("\n")
 
 
@@ -139,8 +139,10 @@ def _write_rle(prefix :str, data :list[int], file :TextIOWrapper):
 
 	# Write it out.
 	file.write(f"alignas(uint16_t) static constexpr uint8_t compressed[] = {{\n")
-	for r in rle:
-		file.write(f"{r},\n")
+	for i,r in enumerate(rle):
+		file.write(f"{r}, ")
+		if (i & 15) == 15:
+			file.write("\n")
 	file.write("};\n")
 
 	# Decompress function.
