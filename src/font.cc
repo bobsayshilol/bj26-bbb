@@ -49,6 +49,8 @@ void write_text(const char *text, uint16_t x, uint16_t y) {
     auto & rng = engine::utils::g_rng;
     const uint16_t x0 = x;
     uint16_t used = s_sprites_used;
+    [[maybe_unused]] uint16_t line_used = 0;
+    [[maybe_unused]] const char *const orig_text = text;
 
     // Add each character.
     engine::graphics::ObjSprite sprite;
@@ -60,6 +62,7 @@ void write_text(const char *text, uint16_t x, uint16_t y) {
         if (ch == '\n') {
             x = x0;
             y += CharHeight;
+            line_used = 0;
             sprite.set_y(y);
             continue;
         } else if (ch == ' ') {
@@ -93,6 +96,13 @@ void write_text(const char *text, uint16_t x, uint16_t y) {
         // Advance to the next character.
         x += CharWidth;
         used++;
+
+#if ENABLE_DEBUGGING
+        if (++line_used > 16) {
+            DEBUG_MSG("Text too long: ", orig_text);
+            ASSERT(false);
+        }
+#endif
     }
 
     s_sprites_used = used;
