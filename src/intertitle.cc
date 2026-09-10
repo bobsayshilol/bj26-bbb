@@ -24,8 +24,11 @@ struct Lines {
     const char *text;
     template <uint8_t N>
     constexpr Lines(const char (&str)[N]) : count(0), text(str) {
+        uint8_t line_count = 0;
         for (char ch : str) {
-            if (ch == '\0') count++;
+            if (ch == '\0') { count++; line_count = 0; }
+            else if (ch != ' ') line_count++;
+            ASSERT(line_count <= 16);
         }
         ASSERT(count <= max_splits);
     }
@@ -35,10 +38,10 @@ struct Lines {
 constexpr Lines s_intro[] = {
     "Years in the future",
     "But not that many",
-    "Things have happened",
+    "Things have happen",
     "Lots of things",
     "Like so many things",
-    "It would take hours to\0explain them all",
+    "It would take hours\0to explain them all",
     "Maybe even days",
     "A week if you took\0breaks",
     "Not more than a\0month though",
@@ -46,12 +49,12 @@ constexpr Lines s_intro[] = {
     "...",
     "Anyway",
     "The year is 20XX",
-    "The buckos have been\0left unattended\0for too long",
+    "Buckos have been\0left unattended\0for too long",
     //"In that time they somehow\0invented robobuckos",
-    "Now Buckopia has been\0overtaken by\0evil robobuckos!",
-    "Or are they robuckos?",
-    "But enough exposition",
-    "Here's a breakout clone",
+    "Now Buckopia has\0been overtaken by\0evil robobuckos!",
+    "Or are they\0robuckos?",
+    "But enough\0exposition",
+    "Take this\0breakout clone",
     nullptr,
 };
 constexpr Lines s_meanwhile[] = {
@@ -72,7 +75,7 @@ constexpr Lines s_final[] = {
 };
 constexpr Lines s_finished[] = {
     "You win!",
-    "Thanks for playing!",
+    "Thanks for playing",
     "Ami will return",
     nullptr,
 };
