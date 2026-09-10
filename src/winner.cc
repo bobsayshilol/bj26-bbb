@@ -234,7 +234,11 @@ struct Speech {
     const char * text;
 
     template <uint8_t N>
-    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) { static_assert(N <= 27); }
+    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) {
+        int line_counter = 0;
+        for (char ch : str) { if (ch != ' ' && ch != '\0') line_counter++; }
+        ASSERT(line_counter <= 16);
+    }
     constexpr Speech(decltype(nullptr)) : uic(UIC::None), len(0), text(nullptr) {}
 };
 
@@ -246,24 +250,30 @@ constexpr Speech text1_text[] {
     { UIC::Bucko, "How was your trip" },
     { UIC::Bucko, "into the W.E.B.?" },
 
-    { UIC::Ami, "I... don't remember." },
+    { UIC::Ami, "I... " },
+    { UIC::Ami, "don't remember." },
 
-    { UIC::Bucko, "That's normal for your" },
-    { UIC::Bucko, "first time." },
-    { UIC::Bucko, "And probably for the best." },
-    { UIC::Bucko, "I'd be on the chopping" },
-    { UIC::Bucko, "block if the other buckos" },
-    { UIC::Bucko, "knew that you'd seen" },
-    { UIC::Bucko, "inside the dome." },
+    { UIC::Bucko, "That's normal for" },
+    { UIC::Bucko, "your first time." },
+    { UIC::Bucko, "And probably for" },
+    { UIC::Bucko, "the best." },
+    { UIC::Bucko, "I'd be on the" },
+    { UIC::Bucko, "chopping block if" },
+    { UIC::Bucko, "the other buckos" },
+    { UIC::Bucko, "knew that you'd" },
+    { UIC::Bucko, "seen inside" },
+    { UIC::Bucko, "the dome." },
 
     { UIC::Ami, "I think I met Gex." },
     { UIC::Bucko, "..." },
-    { UIC::Ami, "And what was that" },
-    { UIC::Ami, "whole thing with the" },
+    { UIC::Ami, "And what was" },
+    { UIC::Ami, "that whole thing" },
+    { UIC::Ami, "with the" },
     //{ UIC::None, "loud cough" },
-    { UIC::Bucko, "Well it's a shame that" },
-    { UIC::Bucko, "you don't remember" },
-    { UIC::Bucko, "anything from your trip!" },
+    { UIC::Bucko, "Well it's a shame" },
+    { UIC::Bucko, "that you don't" },
+    { UIC::Bucko, "remember anything" },
+    { UIC::Bucko, "from your trip!" },
     { UIC::Ami, "But" },
     //{ UIC::None, "louder cough" },
     { UIC::Bucko, "Not a single thing." },
@@ -271,22 +281,27 @@ constexpr Speech text1_text[] {
     { UIC::Ami, "..." },
 
     { UIC::Bucko, "Anyway." },
-    { UIC::Bucko, "Thanks to you the robuckos" },
-    { UIC::Bucko, "are no longer a problem!" },
-    { UIC::Bucko, "And Buckopia can go back" },
-    { UIC::Bucko, "to how it was before." },
-    { UIC::Bucko, "We can't thank you enough" },
-    { UIC::Bucko, "for doing all of this to" },
-    { UIC::Bucko, "break out the buckos!" },
+    { UIC::Bucko, "Thanks to you the" },
+    { UIC::Bucko, "robuckos are no" },
+    { UIC::Bucko, "longer a problem!" },
+    { UIC::Bucko, "And Buckopia can go" },
+    { UIC::Bucko, "back to how it was." },
+    { UIC::Bucko, "We can't thank you" },
+    { UIC::Bucko, "enough for doing" },
+    { UIC::Bucko, "all of this to" },
+    { UIC::Bucko, "break out t' buckos" },
 
     // TODO: confetti
-    { UIC::None, "name drop" },
-    { UIC::None, "pretend that there's" },
+    { UIC::None, "title drop" },
+    { UIC::None, "pretend that" },
+    { UIC::None, "there's" },
     { UIC::None, "confetti falling" },
 
-    { UIC::Bucko, "The old scriptures for" },
-    { UIC::Bucko, "the W.E.B. are basically" },
-    { UIC::Bucko, "unreadable at this point." },
+    { UIC::Bucko, "The old scriptures" },
+    { UIC::Bucko, "for the W.E.B." },
+    { UIC::Bucko, "are basically" },
+    { UIC::Bucko, "unreadable at this" },
+    { UIC::Bucko, "this point." },
     { UIC::Bucko, "So I saved the codes" },
     { UIC::Bucko, "that you entered." },
 
@@ -300,7 +315,8 @@ constexpr Speech text1b_text[] {
     { UIC::Bucko, "could mean." },
     { UIC::Ami, "..." },
     { UIC::Bucko, "But in the meantime" },
-    { UIC::Bucko, "would you like a copy?" },
+    { UIC::Bucko, "would you like" },
+    { UIC::Bucko, "a copy?" },
 
     nullptr,
 };
@@ -308,12 +324,15 @@ constexpr Speech text1b_text[] {
 constexpr Speech text2_text[] {
     { UIC::Ami, "Hey Bucko?" },
     { UIC::Bucko, "Yes Ami?" },
-    { UIC::Ami, "I still don't understand" },
-    { UIC::Ami, "how this all happened." },
-    { UIC::Ami, "I only left the buckos" },
-    { UIC::Ami, "unattended for 2 days and" },
-    { UIC::Ami, "they managed to get taken" },
-    { UIC::Ami, "over by robots." },
+    { UIC::Ami, "I still don't" },
+    { UIC::Ami, "understand how" },
+    { UIC::Ami, "this all happened." },
+    { UIC::Ami, "I only left the" },
+    { UIC::Ami, "buckos unattended" },
+    { UIC::Ami, "for 2 days and they" },
+    { UIC::Ami, "managed to get" },
+    { UIC::Ami, "taken over by" },
+    { UIC::Ami, "robots." },
     { UIC::Ami, "What happened?" },
 
     // TODO: punchline - "aliens" ?

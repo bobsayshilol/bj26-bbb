@@ -824,29 +824,38 @@ struct Speech {
     const char * text;
 
     template <uint8_t N>
-    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) { static_assert(N <= 27); }
+    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) {
+        int line_counter = 0;
+        for (char ch : str) { if (ch != ' ' && ch != '\0') line_counter++; }
+        ASSERT(line_counter <= 16);
+    }
     constexpr Speech(decltype(nullptr)) : uic(UIC::None), len(0), text(nullptr) {}
 };
 
 constexpr Speech start_text[] {
     { UIC::Bucko, "Ami!" },
 #if !SKIP_STUFF
-    { UIC::Bucko, "Can you still hear me?" },
-    { UIC::Bucko, "The reception near the" },
-    { UIC::Bucko, "dome has gotten worse" },
-    { UIC::Bucko, "since the takeover." },
+    { UIC::Bucko, "Can you still" },
+    { UIC::Bucko, "hear me?" },
+    { UIC::Bucko, "The reception near" },
+    { UIC::Bucko, "the dome has" },
+    { UIC::Bucko, "gotten worse since" },
+    { UIC::Bucko, "the takeover." },
     { UIC::Ami, "All clear here." },
     { UIC::Bucko, "Great!" },
-    { UIC::Bucko, "Near your location there" },
-    { UIC::Bucko, "should be an unassuming" },
-    { UIC::Bucko, "and well hidden vent." },
-    { UIC::Bucko, "It might be hidden behind" },
-    { UIC::Bucko, "a poorly drawn fence." },
+    { UIC::Bucko, "Near your location" },
+    { UIC::Bucko, "there should be an" },
+    { UIC::Bucko, "unassuming and" },
+    { UIC::Bucko, "well hidden vent." },
+    { UIC::Bucko, "It might be hidden" },
+    { UIC::Bucko, "behind a poorly" },
+    { UIC::Bucko, "drawn fence." },
     { UIC::Bucko, "Do you see it?" },
     { UIC::Ami, "..." },
     { UIC::Ami, "I see it." },
     { UIC::Bucko, "Great!" },
-    { UIC::Bucko, "I'll open it from here." },
+    { UIC::Bucko, "I'll open it" },
+    { UIC::Bucko, "from here." },
 #endif
 
     nullptr,
@@ -859,18 +868,22 @@ constexpr Speech revealed_text[] {
     { UIC::Bucko, "The W.E.B." },
     { UIC::Bucko, "I don't know what it" },
     { UIC::Bucko, "stands for." },
-    { UIC::Bucko, "But apparently it's" },
-    { UIC::Bucko, "really important to" },
-    { UIC::Bucko, "everything in buckopia." },
+    { UIC::Bucko, "But apparently" },
+    { UIC::Bucko, "it's really" },
+    { UIC::Bucko, "important" },
+    { UIC::Bucko, "to everything" },
+    { UIC::Bucko, "in buckopia." },
     { UIC::Bucko, "Every time I ask the" },
-    { UIC::Bucko, "elder buckos about it" },
-    { UIC::Bucko, "they start talking about" },
+    { UIC::Bucko, "elder buckos about" },
+    { UIC::Bucko, "it they start" },
+    { UIC::Bucko, "talking about" },
     { UIC::Bucko, "lawn mowers and" },
     { UIC::Bucko, "mainframes." },
     { UIC::Ami, "..." },
     { UIC::Bucko, "Anyway." },
-    { UIC::Bucko, "You'll need to get in" },
-    { UIC::Bucko, "there and reboot! it." },
+    { UIC::Bucko, "You'll need to" },
+    { UIC::Bucko, "get in there" },
+    { UIC::Bucko, "and reboot! it." },
     { UIC::Bucko, "That should reset" },
     { UIC::Bucko, "the robuckos!" },
     { UIC::Ami, "OK." },
@@ -884,29 +897,34 @@ constexpr Speech keypad_text[] {
     { UIC::Bucko, "Do you see a keypad" },
 #if !SKIP_STUFF
     { UIC::Bucko, "with 9 buttons?" },
-    { UIC::Ami, "I see 9... somethings." },
-    { UIC::Bucko, "They're probably it." },
-    { UIC::Bucko, "It looks like you need" },
-    { UIC::Bucko, "to join them together" },
-    { UIC::Bucko, "in certain patterns." },
-    { UIC::Bucko, "I have the codes here" },
-    { UIC::Bucko, "but they're written in" },
-    { UIC::Bucko, "an older script which" },
-    { UIC::Bucko, "is difficult to read." },
+    { UIC::Ami, "I see 9..." },
+    { UIC::Ami, "somethings." },
+    { UIC::Bucko, "It looks like you" },
+    { UIC::Bucko, "need to join" },
+    { UIC::Bucko, "them together in" },
+    { UIC::Bucko, "certain patterns." },
+    { UIC::Bucko, "I have the codes" },
+    { UIC::Bucko, "here but they're" },
+    { UIC::Bucko, "written in an older" },
+    { UIC::Bucko, "script which is" },
+    { UIC::Bucko, "difficult to read." },
 #endif
 
     nullptr,
 };
 
 constexpr Speech code_A_text[] {
-    { UIC::Bucko, "It looks like the first" },
+    { UIC::Bucko, "It looks like the" },
 #if !SKIP_STUFF
-    { UIC::Bucko, "one is formed of 3 lines." },
-    { UIC::Bucko, "They're in the shape of a" },
-    { UIC::Bucko, "'V' that's been" },
+    { UIC::Bucko, "first one is formed" },
+    { UIC::Bucko, "of 3 lines." },
+    { UIC::Bucko, "They're in the" },
+    { UIC::Bucko, "shape of a 'V'" },
+    { UIC::Bucko, "that's been" },
     { UIC::Bucko, "crossed out." },
     { UIC::Bucko, "Oh!" },
-    { UIC::Bucko, "It could be upside down." },
+    { UIC::Bucko, "It could be" },
+    { UIC::Bucko, "upside down." },
 #endif
 
     nullptr,
@@ -916,8 +934,9 @@ constexpr Speech code_M_text[] {
     { UIC::Bucko, "Attagirl!" },
 #if !SKIP_STUFF
     { UIC::Bucko, "That was it!" },
-    { UIC::Bucko, "The next one is clearly" },
-    { UIC::Bucko, "4 lines in the shape of" },
+    { UIC::Bucko, "The next one is" },
+    { UIC::Bucko, "clearly 4 lines" },
+    { UIC::Bucko, "in the shape of" },
     { UIC::Bucko, "a 'W'." },
     { UIC::Bucko, "..." },
     { UIC::Bucko, "Wait!" },
@@ -938,18 +957,20 @@ constexpr Speech code_I_text[] {
 };
 
 constexpr Speech code_mid_text[] {
-    { UIC::None, "Stage 1 emitters online" },
-    { UIC::Ami, "What's happening?!" },
-    { UIC::Bucko, "You're entering access" },
-    { UIC::Bucko, "codes into a machine." },
+    { UIC::None, "Stage 1 emitters" },
+    { UIC::None, "online" },
+    { UIC::Ami, "What's happening?" },
+    { UIC::Bucko, "You're entering" },
+    { UIC::Bucko, "access codes" },
+    { UIC::Bucko, "into a machine." },
     { UIC::Ami, "..." },
 
     nullptr,
 };
 
 constexpr Speech code_C_text[] {
-    { UIC::Bucko, "This next one looks like" },
-    { UIC::Bucko, "a big square" },
+    { UIC::Bucko, "This next one looks" },
+    { UIC::Bucko, "like a big square" },
     { UIC::Bucko, "but the front" },
     { UIC::Bucko, "has fallen off." },
 
@@ -965,15 +986,17 @@ constexpr Speech code_U_text[] {
 };
 
 constexpr Speech code_T_text[] {
-    { UIC::Bucko, "Some bucko took a bite" },
+    { UIC::Bucko, "Some bucko took" },
 #if !SKIP_STUFF
-    { UIC::Bucko, "out of the remaining" },
+    { UIC::Bucko, "a bite out of" },
+    { UIC::Bucko, "the remaining" },
     { UIC::Bucko, "pages!" },
     { UIC::Bucko, "I can't tell what" },
     { UIC::Bucko, "this one is meant" },
     { UIC::Bucko, "to be." },
-    { UIC::Bucko, "Maybe a tall plus sign" },
-    { UIC::Bucko, "but without the top?" },
+    { UIC::Bucko, "Maybe a tall" },
+    { UIC::Bucko, "plus sign but" },
+    { UIC::Bucko, "without the top?" },
 #endif
 
     nullptr,
@@ -982,8 +1005,9 @@ constexpr Speech code_T_text[] {
 constexpr Speech code_E_text[] {
     { UIC::Bucko, "It's hard to tell" },
     { UIC::Bucko, "what this might be." },
-    { UIC::Bucko, "Could be a wide '3' with" },
-    { UIC::Bucko, "all lines the same length." },
+    { UIC::Bucko, "Could be a wide '3'" },
+    { UIC::Bucko, "with all the lines" },
+    { UIC::Bucko, "the same length." },
     { UIC::Bucko, "But it's facing" },
     { UIC::Bucko, "the wrong way?" },
 
@@ -991,14 +1015,16 @@ constexpr Speech code_E_text[] {
 };
 
 constexpr Speech code_finished_text[] {
-    { UIC::None, "Stage 2 emitters activated" },
+    { UIC::None, "Stage 2 emitters" },
+    { UIC::None, "activated" },
 #if !SKIP_STUFF
     { UIC::Bucko, "Attagirl!" },
     { UIC::Bucko, "Time to jump in!" },
     { UIC::Ami, "That looks scary." },
     { UIC::Bucko, "Don't worry!" },
-    { UIC::Bucko, "It's a powerful vortex" },
-    { UIC::Bucko, "that will pull you in" },
+    { UIC::Bucko, "It's a powerful" },
+    { UIC::Bucko, "vortex that will" },
+    { UIC::Bucko, "pull you in" },
     { UIC::Bucko, "even if you..." },
 #endif
 
@@ -1010,20 +1036,23 @@ constexpr Speech inside_text[] {
 #if !SKIP_STUFF
     { UIC::Bucko, "Well you are." },
     { UIC::Bucko, "I'm still out here." },
-    { UIC::Bucko, "But you're in there." },
-    { UIC::Bucko, "What's it like in there?" },
+    { UIC::Bucko, "But you're in there" },
+    { UIC::Bucko, "What's it like" },
+    { UIC::Bucko, "in there?" },
     { UIC::Bucko, "Do they have cake?" },
 
     { UIC::Ami, "..." },
 
-    { UIC::Bucko, "Right. The robuckos." },
+    { UIC::Bucko, "Right. " },
+    { UIC::Bucko, "The robuckos." },
     { UIC::Bucko, "There should be" },
     { UIC::Bucko, "an interface to" },
-    { UIC::Bucko, "the central terminal" },
-    { UIC::Bucko, "around here somewhere." },
-    { UIC::Bucko, "That'll give you the" },
-    { UIC::Bucko, "freedom to access" },
-    { UIC::Bucko, "any part of" },
+    { UIC::Bucko, "the central" },
+    { UIC::Bucko, "terminal around" },
+    { UIC::Bucko, "here somewhere." },
+    { UIC::Bucko, "That'll give you" },
+    { UIC::Bucko, "the freedom to" },
+    { UIC::Bucko, "access any part of" },
 #endif
 
     nullptr,
@@ -1033,19 +1062,25 @@ constexpr Speech glitchy_text[] {
     { UIC::Bucko, "Buckopia." },
 #if !SKIP_STUFF
     { UIC::Bucko, "..." },
-    { UIC::Ami, "What's happening?!" },
-    { UIC::Bucko, "Something's wrong." },
-    { UIC::Bucko, "Everything's glitching." },
+    { UIC::Ami, "What's happening?" },
+    { UIC::Bucko, "Something's." },
+    { UIC::Bucko, "wrong." },
+    { UIC::Bucko, "Everything is" },
+    { UIC::Bucko, "glitching." },
     { UIC::Bucko, "Even our words." },
-    { UIC::None, "ROM CORRUPTION DETECTED" },
-    { UIC::Bucko, "That doesn't sound good." },
-    { UIC::Bucko, "Did you pirate this game?" },
-    { UIC::Bucko, "Did you coopy that floopy?" },
+    { UIC::None, "ROM CORRUPTION" },
+    { UIC::None, "DETECTED" },
+    { UIC::Bucko, "That doesn't" },
+    { UIC::Bucko, "sound good." },
+    { UIC::Bucko, "Did you pirate" },
+    { UIC::Bucko, "this game?" },
+    { UIC::Bucko, "Did you coopy" },
+    { UIC::Bucko, "that floopy?" },
 #if 1
-    { UIC::None, "WEB LEVEL MISSING FROM ROM" },
+    { UIC::None, "WEB LEVEL MISSING" },
     { UIC::Bucko, "Oh." },
     { UIC::Bucko, "The dev probably" },
-    { UIC::Bucko, "just ran out of time." },
+    { UIC::Bucko, "ran out of time." },
 #else
     { UIC::Ami, "It's a free buckojam game." },
     { UIC::Bucko, "I wonder what broke then." },
@@ -1059,7 +1094,8 @@ constexpr Speech glitchy_text[] {
     { UIC::Ami, "..." },
     { UIC::Bucko, "..." },
 #endif
-    { UIC::None, "SKIPPING TO FINAL SEQUENCE" },
+    { UIC::None, "SKIPPING TO" },
+    { UIC::None, "FINAL SEQUENCE" },
 #endif
 
     nullptr,

@@ -1194,7 +1194,11 @@ struct Speech {
     const char * text;
 
     template <uint8_t N>
-    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) { static_assert(N <= 27); }
+    constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) {
+        int line_counter = 0;
+        for (char ch : str) { if (ch != ' ' && ch != '\0') line_counter++; }
+        ASSERT(line_counter <= 16);
+    }
     constexpr Speech(decltype(nullptr)) : uic(UIC::None), len(0), text(nullptr) {}
 };
 
@@ -1202,39 +1206,45 @@ constexpr Speech intro1_text[] {
     { UIC::NoneRight, "bzzt" },
     { UIC::Bucko, "Ami!" },
     { UIC::Bucko, "It worked!" },
-    { UIC::Bucko, "That unsuspecting bucko" },
-    { UIC::Bucko, "did the important thing!" },
+    { UIC::Bucko, "That unsuspecting" },
+    { UIC::Bucko, "bucko did the" },
+    { UIC::Bucko, "important thing!" },
 
     { UIC::Ami, "Good job bucko!" },
-    { UIC::Ami, "That's one less outpost" },
-    { UIC::Ami, "under robucko control." },
+    { UIC::Ami, "That's one less" },
+    { UIC::Ami, "outpost under" },
+    { UIC::Ami, "robucko control." },
     { UIC::Ami, "But it won't be long" },
     { UIC::Ami, "before the other" },
     { UIC::Ami, "outposts notice." },
 
-    { UIC::Bucko, "You need to get to them" },
-    { UIC::Bucko, "quickly then!" },
+    { UIC::Bucko, "You need to get to" },
+    { UIC::Bucko, "them quickly then!" },
     { UIC::Bucko, "Use the up and down" },
-    { UIC::Bucko, "buttons to control your" },
-    { UIC::Bucko, "speed." },
-    { UIC::Bucko, "The closer to the centre" },
-    { UIC::Bucko, "you are the faster" },
-    { UIC::Bucko, "you can go." },
+    { UIC::Bucko, "buttons to control" },
+    { UIC::Bucko, "your speed." },
+    { UIC::Bucko, "The closer to the" },
+    { UIC::Bucko, "centre you are the" },
+    { UIC::Bucko, "faster you can go." },
 
     nullptr,
 };
 
 constexpr Speech intro2_text[] {
     { UIC::Robucko, "Halt!" },
-    { UIC::Robucko, "We have you surrounded" },
-    { UIC::Robucko, "at least from this sky!" },
+    { UIC::Robucko, "We have you" },
+    { UIC::Robucko, "surrounded!" },
+    { UIC::Robucko, "At least from" },
+    { UIC::Robucko, "this sky!" },
 
     { UIC::Bucko, "Look out!" },
-    { UIC::Bucko, "That's a highly armoured" },
+    { UIC::Bucko, "That's a" },
+    { UIC::Bucko, "highly armoured" },
     { UIC::Bucko, "flying robucko!"},
-    { UIC::Bucko, "And it's about to start" },
-    { UIC::Bucko, "dropping bombs!" },
-    { UIC::Bucko, "Evasive maneuvers!" },
+    { UIC::Bucko, "And it's about to" },
+    { UIC::Bucko, "start dropping" },
+    { UIC::Bucko, "bombs!" },
+    { UIC::Bucko, "Evasive maneuvers" },
 
     nullptr,
 };
@@ -1246,30 +1256,36 @@ constexpr Speech win1_text[] {
     { UIC::Bucko, "and flew away." },
     { UIC::Bucko, "You saved us Ami!" },
     { UIC::Ami, "..." },
-    { UIC::Ami, "Don't you think that" },
-    { UIC::Ami, "it'll come back after" },
+    { UIC::Ami, "Don't you think" },
+    { UIC::Ami, "that it'll" },
+    { UIC::Ami, "come back after" },
     { UIC::Ami, "it's restocked?" },
     { UIC::Bucko, "Oh." },
-    { UIC::Bucko, "I didn't think about that." },
+    { UIC::Bucko, "I didn't think" },
+    { UIC::Bucko, "about that." },
     { UIC::Ami, "..." },
 
-    { UIC::Bucko, "Then you should skip the" },
-    { UIC::Bucko, "other outposts and head" },
-    { UIC::Bucko, "straight to the dome." },
+    { UIC::Bucko, "Then you should" },
+    { UIC::Bucko, "skip the other" },
+    { UIC::Bucko, "outposts and head" },
+    { UIC::Bucko, "straight to." },
+    { UIC::Bucko, "the dome." },
     //{ UIC::Bucko, "And not because the" },
     //{ UIC::Bucko, "dev ran out of time" },
 
     { UIC::Ami, "The dome?" },
     { UIC::Ami, "You mean..." },
     { UIC::Bucko, "Indeed." },
-    { UIC::Bucko, "Most think that it's" },
-    { UIC::Bucko, "just a place for" },
-    { UIC::Bucko, "fun and games and..." },
+    { UIC::Bucko, "Most think that" },
+    { UIC::Bucko, "it's just a place" },
+    { UIC::Bucko, "for fun and" },
+    { UIC::Bucko, "games and..." },
     { UIC::Bucko, "other things..." },
     { UIC::Ami, "..." },
-    { UIC::Bucko, "But where better to hide" },
-    { UIC::Bucko, "something important" },
-    { UIC::Bucko, "than in plain sight." },
+    { UIC::Bucko, "But where better to" },
+    { UIC::Bucko, "hide something" },
+    { UIC::Bucko, "important than in" },
+    { UIC::Bucko, "plain sight." },
 
     { UIC::Bucko, "Look out!" },
     { UIC::Bucko, "The road ahead gets" },
@@ -1279,15 +1295,17 @@ constexpr Speech win1_text[] {
 };
 
 constexpr Speech curves_text[] {
-    { UIC::Bucko, "If you're not careful" },
-    { UIC::Bucko, "you'll get pushed" },
+    { UIC::Bucko, "If you're not" },
+    { UIC::Bucko, "careful you'll" },
+    { UIC::Bucko, "get pushed" },
     { UIC::Bucko, "off the road." },
 
-    { UIC::Bucko, "It's a good thing that" },
-    { UIC::Bucko, "our roads are so wide." },
+    { UIC::Bucko, "It's a good thing" },
+    { UIC::Bucko, "that our roads" },
+    { UIC::Bucko, "are so wide." },
 
-    { UIC::Ami, "I thought that my car" },
-    { UIC::Ami, "was just small." },
+    { UIC::Ami, "I thought that my" },
+    { UIC::Ami, "car was just small." },
 
 #if 0
     { UIC::Ami, "Hey bucko?" },
@@ -1308,14 +1326,16 @@ constexpr Speech win2_text[] {
     { UIC::Bucko, "Ami!" },
     { UIC::Ami, "Yes?" },
 #if 1
-    { UIC::Bucko, "Since you're part Irish" },
-    { UIC::Bucko, "would you say that buckos" },
-    { UIC::Bucko, "are wee creatures?" },
+    { UIC::Bucko, "Since you're part" },
+    { UIC::Bucko, "Irish would you say" },
+    { UIC::Bucko, "that buckos are" },
+    { UIC::Bucko, "wee creatures?" },
     { UIC::Ami, "Where are you going" },
     { UIC::Ami, "with this?" },
     { UIC::Bucko, "Well you could name" },
     { UIC::Bucko, "this operation" },
-    { UIC::Bucko, "help all t' wee creatures!" },
+    { UIC::Bucko, "  help  all  t'  " },
+    { UIC::Bucko, "  wee  creatures." },
 #else
     { UIC::Bucko, "I think you should name" },
     { UIC::Bucko, "this operation" },
@@ -1324,9 +1344,11 @@ constexpr Speech win2_text[] {
     { UIC::Bucko, "because buckos are..." },
 #endif
     { UIC::Ami, "No!" },
-    { UIC::Ami, "We're not calling this" },
-    { UIC::Ami, "operation H.A.W.C. too!" },
-    { UIC::Ami, "That was last year's joke." },
+    { UIC::Ami, "We're not calling" },
+    { UIC::Ami, "this operation" },
+    { UIC::Ami, "H.A.W.C. too!" },
+    { UIC::Ami, "That was" },
+    { UIC::Ami, "last year's joke." },
     { UIC::BuckoTroll, "" },
 
     nullptr,
@@ -1338,7 +1360,8 @@ constexpr Speech win3_text[] {
     { UIC::Ami, "How can you tell?" },
     { UIC::Bucko, "Rule of 3." },
     { UIC::Ami, "..." },
-    { UIC::Bucko, "Also we're approaching" },
+    { UIC::Bucko, "Also we're" },
+    { UIC::Bucko, "approaching" },
     { UIC::Bucko, "the dome." },
 
     nullptr,
