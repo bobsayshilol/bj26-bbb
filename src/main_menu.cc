@@ -268,6 +268,10 @@ struct Button {
 
     template <uint8_t N>
     constexpr Button(const char (&str)[N], int16_t y, Action act) : aabb{}, text(str), action(act) {
+        int line_counter = 0;
+        for (char ch : str) { if (ch != ' ' && ch != '\0') line_counter++; }
+        ASSERT(line_counter <= 16);
+
         const uint16_t x = engine::graphics::SCREEN_WIDTH / 2 - (N - 1) * font::CharWidth / 2;
         aabb.x = x;
         aabb.y = y;
@@ -281,8 +285,9 @@ struct Button {
 
 constexpr const Button warning[] {
     Button("Mouse detected", engine::graphics::SCREEN_HEIGHT / 2, Action::None),
-    Button("This game must be played", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 3, Action::None),
-    Button("with a controller", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 6, Action::None),
+    Button("This game must be", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 3, Action::None),
+    Button("played with a", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 6, Action::None),
+    Button("controller", engine::graphics::SCREEN_HEIGHT / 2 + font::CharWidth * 8, Action::None),
     Button("Continue", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
 };
 
@@ -306,7 +311,8 @@ constexpr const Button options[] {
     Button("Volume Down", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 3, Action::VolDown),
 #endif
     Button("Unlock all levels", engine::graphics::SCREEN_HEIGHT / 2, Action::UnlockAll),
-    Button("Hold C and move to test MIDI", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 6, Action::None),
+    Button("Hold C and move", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 6, Action::None),
+    Button("to test MIDI", engine::graphics::SCREEN_HEIGHT / 2 + game::font::CharWidth * 8, Action::None),
     Button("Back", engine::graphics::SCREEN_HEIGHT - game::font::CharWidth * 2, Action::MainMenu),
 };
 
