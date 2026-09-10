@@ -30,13 +30,22 @@ inline void setup_tiles() {
     detail::s_sprite_start = SpriteStart;
 }
 
+template <uint16_t N>
+constexpr void check_line(const char (&text)[N]) {
+#if ENABLE_DEBUGGING
+    int line_counter = 0;
+    for (char ch : text) { if (ch != ' ' && ch != '\0') line_counter++; }
+    ASSERT(line_counter <= 16); // max 16 sprites per line
+#endif
+}
+
 // Write a line of text somewhere on screen.
 // x,y are screen co-ords.
 // These will stay around until cleared!
 // Limit of font_max_sprites chars, including those off-screen!
 void write_text(const char *text, uint16_t x, uint16_t y);
 
-// Note: doesn't work with newlines.
+// Note: none of these work correctly with newlines!
 inline void write_centered(const char *text, uint16_t N, uint16_t y) {
     const uint16_t x = engine::graphics::SCREEN_WIDTH / 2 - (N - 1) * CharWidth / 2;
     write_text(text, x, y);

@@ -825,9 +825,7 @@ struct Speech {
 
     template <uint8_t N>
     constexpr Speech(UIC c, const char (&str)[N]) : uic(c), len(N), text(str) {
-        int line_counter = 0;
-        for (char ch : str) { if (ch != ' ' && ch != '\0') line_counter++; }
-        ASSERT(line_counter <= 16);
+        font::check_line(str);
     }
     constexpr Speech(decltype(nullptr)) : uic(UIC::None), len(0), text(nullptr) {}
 };

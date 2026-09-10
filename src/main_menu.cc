@@ -268,9 +268,7 @@ struct Button {
 
     template <uint8_t N>
     constexpr Button(const char (&str)[N], int16_t y, Action act) : aabb{}, text(str), action(act) {
-        int line_counter = 0;
-        for (char ch : str) { if (ch != ' ' && ch != '\0') line_counter++; }
-        ASSERT(line_counter <= 16);
+        font::check_line(str);
 
         const uint16_t x = engine::graphics::SCREEN_WIDTH / 2 - (N - 1) * font::CharWidth / 2;
         aabb.x = x;
