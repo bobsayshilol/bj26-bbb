@@ -35,7 +35,7 @@ constexpr inline uint16_t RGB555(uint8_t r, uint8_t g, uint8_t b) {
 
 inline void bios_vsync() { web::draw(); }
 
-inline int bios_print8bpp(uint8_t*, uint16_t*, bool) { return -1; }
+int bios_print8bpp(uint8_t*, uint16_t*, bool);
 
 using web::VDP;
 
@@ -45,11 +45,11 @@ using web::VDP;
 
 struct soundstate_t {};
 
-inline void bios_playBgm(soundstate_t *, uint8_t, uint16_t, const uint8_t *const *) {}
-inline void bios_playSfx(soundstate_t *, uint8_t, uint16_t, const uint8_t *const *) {}
-inline void sys_stopBgm(soundstate_t *) {}
-inline void bios_soundVolume(int, int) {}
-inline bool sys_bgmRunning() { return false; }
+void bios_playBgm(soundstate_t *, uint8_t, uint16_t, const uint8_t *const *);
+void bios_playSfx(soundstate_t *, uint8_t, uint16_t, const uint8_t *const *);
+void sys_stopBgm(soundstate_t *);
+void bios_soundVolume(int, int);
+bool sys_bgmRunning();
 
 //
 // Maffs.

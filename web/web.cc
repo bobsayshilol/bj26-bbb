@@ -23,6 +23,7 @@
 #endif
 
 #define UNIMPLEMENTED() printf("Unimplemented: %s\n", __func__)
+#define UNIMPLEMENTED_(msg) printf("Unimplemented: %s\n", msg)
 
 
 namespace {
@@ -62,6 +63,33 @@ void error() {
 }
 
 } // namespace
+
+
+namespace loopy {
+
+int bios_print8bpp(uint8_t*, uint16_t*, bool) {
+    UNIMPLEMENTED();
+    return -1;
+}
+
+void bios_playBgm(soundstate_t *, uint8_t, uint16_t, const uint8_t *const *) {
+    UNIMPLEMENTED();
+}
+void bios_playSfx(soundstate_t *, uint8_t, uint16_t, const uint8_t *const *) {
+    UNIMPLEMENTED();
+}
+void sys_stopBgm(soundstate_t *) {
+    UNIMPLEMENTED();
+}
+void bios_soundVolume(int, int) {
+    UNIMPLEMENTED();
+}
+bool sys_bgmRunning() {
+    UNIMPLEMENTED();
+    return false;
+}
+
+} // namespace loopy
 
 
 namespace web {
@@ -204,7 +232,12 @@ void draw() {
     // Blit bitmaps.
     auto blit_bitmap = [&](auto && bitmap, std::vector<BitmapChange> & changes) {
         // TODO
-        (void)changes;
+        static uint8_t warn_occasionally = 0;
+        if (changes.size() != 1) {
+            if (warn_occasionally++ == 0) {
+                UNIMPLEMENTED_("draw scrolling");
+            }
+        }
 
         if (bitmap.show) {
             const uint16_t start_x = bitmap.sx % 256;
