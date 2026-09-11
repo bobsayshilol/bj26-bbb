@@ -436,7 +436,8 @@ struct BlockDef { uint8_t x, y, tile; };
 constexpr auto make_grid_1() {
     engine::utils::Array<BlockDef, block_sprite_count> grid{};
     uint8_t sprite_id = 0;
-    for (uint8_t j = 0; j < block_pal_count; j++) { // one row per colour
+    // Higher sprites come after lower ones (by sprite ID) so that we can overlap more than 16 at once.
+    for (int j = block_pal_count - 1; j >= 0; j--) {
         constexpr uint8_t block_x_spacing = 2;
         constexpr uint8_t block_y_spacing = 2;
         constexpr uint8_t row_len = block_sprite_count / block_pal_count;
@@ -445,7 +446,7 @@ constexpr auto make_grid_1() {
             const uint8_t x = start_x + i * (block_width + block_x_spacing);
             const uint8_t y = grid_start_y + j * (block_height + block_y_spacing);
             static_assert(block_tile_count == block_pal_count);
-            const uint8_t tile_id = block_tile_start + j;
+            const uint8_t tile_id = block_tile_start + j; // one row per colour
             grid[sprite_id++] = {x, y, tile_id};
         }
     }
