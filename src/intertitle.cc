@@ -24,7 +24,7 @@ struct Lines {
     const char *text;
     template <uint8_t N>
     constexpr Lines(const char (&str)[N]) : count(0), text(str) {
-        uint8_t line_count = 0;
+        [[maybe_unused]] uint8_t line_count = 0;
         for (char ch : str) {
             if (ch == '\0') { count++; line_count = 0; }
             else if (ch != ' ') line_count++;
