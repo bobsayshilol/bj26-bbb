@@ -57,6 +57,7 @@ constexpr uint16_t printout_height = 224;
 
 enum class LevelState {
     Text1,
+    Text1a,
     Text1b,
     Print,
     Printing,
@@ -279,6 +280,11 @@ constexpr Speech text1_text[] {
     { UIC::Ami, "..." },
 
     { UIC::Bucko, "Anyway." },
+
+    nullptr,
+};
+
+constexpr Speech text1a_text[] {
     { UIC::Bucko, "Thanks to you the" },
     { UIC::Bucko, "robuckos are no" },
     { UIC::Bucko, "longer a problem!" },
@@ -374,7 +380,8 @@ void ui_update() {
     // Do nothing if we're not in a UI state.
     LevelState next = s_level_state;
     switch (s_level_state) {
-        case LevelState::Text1: next = LevelState::Text1b; break;
+        case LevelState::Text1: next = LevelState::Text1a; break;
+        case LevelState::Text1a: next = LevelState::Text1b; break;
         case LevelState::Text1b: next = LevelState::Print; break;
         case LevelState::Text2: next = LevelState::Finished; break;
 
@@ -426,6 +433,7 @@ bool logic_update() {
 
     switch (s_level_state) {
         case LevelState::Text1:
+        case LevelState::Text1a:
         case LevelState::Text1b:
         case LevelState::Text2:
             // Event driven.
@@ -436,6 +444,12 @@ bool logic_update() {
             font::write_centered(FONT_LINE("Printing..."), printing_text_y + font::CharHeight * 0);
             font::write_centered(FONT_LINE("This will take"), printing_text_y + font::CharHeight * 2);
             font::write_centered(FONT_LINE("a while..."), printing_text_y + font::CharHeight * 4);
+
+            // Turn off BGM and wait a bit before printing.
+            engine::sound::stop_bgm();
+            for (int i = 0; i < 30; i++) {
+                bios_vsync();
+            }
 
             // Try to print it.
             s_print_error = bios_print8bpp(VDP.BITMAP_VRAM_8BIT + printout_start, VDP.PALETTE, 1);
@@ -468,6 +482,11 @@ void level_advance(LevelState state) {
     switch (state) {
         case LevelState::Text1:
             s_current_speech = text1_text;
+            break;
+
+        case LevelState::Text1a:
+            s_current_speech = text1a_text;
+            engine::sound::play_bgm(game::music::Bgm::Bgm_MM_good);
             break;
 
         case LevelState::Text1b:
@@ -526,6 +545,8 @@ void level_advance(LevelState state) {
             }
             font::write_centered(FONT_LINE("B to print again"), printing_text_y + font::CharHeight * 4);
             font::write_centered(FONT_LINE("C to continue"), printing_text_y + font::CharHeight * 6);
+
+            engine::sound::play_bgm(game::music::Bgm::Bgm_MM_good);
             break;
 
         case LevelState::Text2:
