@@ -1091,7 +1091,8 @@ void draw_road() {
     uint8_t road_pos = s_road_position.value();
     uint8_t road_section = 0;
     for (uint16_t line = road_start; line < SCREEN_HEIGHT; line += scanlines_per_section, road_pos++, road_section++) {
-        wait_until_line(line);
+        // HACK: give us 2 lines of leway to write the data. This shifts things up a bit, but not noticable
+        wait_until_line(line - 2);
 
         const int8_t dx = road_curvature_at_section(road_rot, xpos, road_section);
         bitmap_0.scroll_x() = dx;
