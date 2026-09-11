@@ -300,7 +300,19 @@ void draw() {
     SDL_UpdateWindowSurface(s_window.get());
 
     // Fake 60fps.
-    SDL_Delay(10);
+    // TODO: why does this run too fast?
+    {
+        const auto now = std::chrono::system_clock::now();
+        static auto last = now;
+        const auto delta = now - last;
+        const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::milliseconds(1000) / 60 - delta).count();
+        last = now;
+        if (remaining > 0) {
+            SDL_Delay(remaining);
+        } else {
+            SDL_Delay(0);
+        }
+    }
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
