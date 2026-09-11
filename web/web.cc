@@ -398,7 +398,13 @@ void wait_until_line0() {
     web::draw();
 }
 void wait_until_line(uint16_t line) {
-    s_bitmaps_states[0].push_back(BitmapChange{line, Bitmap<0>::sx});
+    auto update_bitmap = [line](auto & states, auto & bitmap){
+        states.push_back(BitmapChange{line, bitmap.sx});
+    };
+    update_bitmap(s_bitmaps_states[0], bitmap_0);
+    update_bitmap(s_bitmaps_states[1], bitmap_1);
+    update_bitmap(s_bitmaps_states[2], bitmap_2);
+    update_bitmap(s_bitmaps_states[3], bitmap_3);
 }
 
 } // namespace engine::graphics
