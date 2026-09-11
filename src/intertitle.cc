@@ -54,7 +54,7 @@ constexpr Lines s_intro[] = {
     "Now Buckopia has\0been overtaken by\0evil robobuckos!",
     "Or are they\0robuckos?",
     "But enough\0exposition",
-    "Take this\0breakout clone",
+    "Have this\0breakout clone",
     nullptr,
 };
 constexpr Lines s_meanwhile[] = {
