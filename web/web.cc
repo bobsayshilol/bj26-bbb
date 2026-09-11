@@ -10,6 +10,7 @@
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <chrono>
@@ -307,17 +308,29 @@ void draw() {
             ObjSprite sprite;
             sprite.raw = VDP.OAM[i];
             if (!sprite.parts.y_hi) {
-                SDL_Rect src {
+                const SDL_Rect src {
                     0, sprite.parts.tile_index * static_cast<int>(bg_tile_size),
                     bg_tile_size, bg_tile_size
                 };
-                SDL_Rect dst {
+                const SDL_Rect dst {
                     sprite.parts.x * web_scale, sprite.parts.y_lo * web_scale,
                     bg_tile_size * web_scale, bg_tile_size * web_scale
                 };
-                if (sprite.parts.x_flip) SDL_FlipSurface(s_sprites_buffer.get(), SDL_FlipMode::SDL_FLIP_HORIZONTAL);
+
+                auto flipit = [&] {
+                    // Only flipping the sprite we need to draw saves a ton of CPU.
+                    uint8_t flipped[bg_tile_size][bg_tile_size];
+                    uint16_t * data = VDP.tile_data + (src.y * src.h) / sizeof(uint16_t);
+                    memcpy(flipped, data, sizeof(flipped));
+                    for (auto && line : flipped) {
+                        std::reverse(std::begin(line), std::end(line));
+                    }
+                    memcpy(data, flipped, sizeof(flipped));
+                };
+
+                if (sprite.parts.x_flip) flipit();
                 SDL_BlitSurfaceScaled(s_sprites_buffer.get(), &src, window_surface, &dst, SDL_ScaleMode::SDL_SCALEMODE_NEAREST);
-                if (sprite.parts.x_flip) SDL_FlipSurface(s_sprites_buffer.get(), SDL_FlipMode::SDL_FLIP_HORIZONTAL);
+                if (sprite.parts.x_flip) flipit();
             }
         }
     }
