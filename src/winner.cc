@@ -248,7 +248,7 @@ constexpr Speech text1_text[] {
     { UIC::Bucko, "How was your trip" },
     { UIC::Bucko, "into the W.E.B.?" },
 
-    { UIC::Ami, "I... " },
+    { UIC::Ami, "I..." },
     { UIC::Ami, "don't remember." },
 
     { UIC::Bucko, "That's normal for" },
@@ -481,11 +481,9 @@ void level_advance(LevelState state) {
             font::clear_text();
             ui_character(UIC::None);
 
-            font::write_centered(FONT_LINE("Press B to print out"), printing_text_y + font::CharHeight * 0);
-            font::write_centered(FONT_LINE("a copy"), printing_text_y + font::CharHeight * 2);
+            font::write_centered(FONT_LINE("Press B to print"), printing_text_y + font::CharHeight * 0);
+            font::write_centered(FONT_LINE("out a copy"), printing_text_y + font::CharHeight * 2);
             font::write_centered(FONT_LINE("Press C to skip"), printing_text_y + font::CharHeight * 4);
-            font::write_centered(FONT_LINE("Hasn't been tested"), printing_text_y + font::CharHeight * 6);
-            font::write_centered(FONT_LINE("on real hardware!"), printing_text_y + font::CharHeight * 8);
             break;
 
         case LevelState::Printing:

@@ -878,8 +878,8 @@ void ui_redraw() {
             voice = UIC::Right;
             break;
         case UIState::Win3_3:
-            game::font::write_left(FONT_LINE("There was a cute 8"), text_padding, text_y);
-            game::font::write_left(FONT_LINE("legged bucko who"), text_padding, text_y + text_padding);
+            game::font::write_left(FONT_LINE("There was a cute"), text_padding, text_y);
+            game::font::write_left(FONT_LINE("8 legged bucko who"), text_padding, text_y + text_padding);
             game::font::write_left(FONT_LINE("gave it to me"), text_padding, text_y + text_padding * 2);
             voice = UIC::Left;
             break;

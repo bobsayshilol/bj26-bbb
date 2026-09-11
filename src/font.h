@@ -36,6 +36,8 @@ constexpr bool check_line(const char (&text)[N]) {
     int line_counter = 0;
     for (char ch : text) { if (ch != ' ' && ch != '\0') line_counter++; }
     ASSERT(line_counter <= 16); // max 16 sprites per line
+#else
+    (void)text;
 #endif
     return true;
 }

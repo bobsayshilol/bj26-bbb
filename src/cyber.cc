@@ -115,6 +115,7 @@ enum class LevelState {
 
 enum class CodeState {
     CodeA,
+    CodeFirst,
     CodeM,
     CodeI,
     CodeMid,
@@ -595,6 +596,10 @@ void cursor_update() {
     set_sprite(cursor_sprite_start, sprite);
 }
 
+void cursor_hide() {
+    engine::graphics::set_sprite(cursor_sprite_start, {});
+}
+
 uint8_t s_keypad_fade;
 void keypad_fade_draw(uint8_t pal) {
     auto undraw = [pal](const auto& lines) {
@@ -611,10 +616,15 @@ void keypad_fade_draw(uint8_t pal) {
         case CodeState::CodeT: undraw(g_lines_T); break;
         case CodeState::CodeE: undraw(g_lines_E); break;
 
-        case CodeState::CodeMid: ASSERT(false); break;
+        case CodeState::CodeFirst:
+        case CodeState::CodeMid:
+            ASSERT(false);
+            break;
     }
 }
 void keypad_fade_enter() {
+    cursor_hide();
+
     s_keypad_fade = 0;
 
     // Redraw the lines as the fade palette.
@@ -653,7 +663,10 @@ void keypad_fade_result(bool success) {
                 level_advance(LevelState::OutsideFinished);
                 break;
 
-            case CodeState::CodeMid: ASSERT(false); break;
+            case CodeState::CodeFirst:
+            case CodeState::CodeMid:
+                ASSERT(false);
+                break;
         }
     } else {
         // Repeat the help.
@@ -743,7 +756,10 @@ void keypad_update() {
                             case CodeState::CodeT: g_lines_T[idx] = line; break;
                             case CodeState::CodeE: g_lines_E[idx] = line; break;
 
-                            case CodeState::CodeMid: ASSERT(false); break;
+                            case CodeState::CodeFirst:
+                            case CodeState::CodeMid:
+                                ASSERT(false);
+                                break;
                         }
                     }
 
@@ -928,11 +944,16 @@ constexpr Speech code_A_text[] {
     nullptr,
 };
 
-constexpr Speech code_M_text[] {
+constexpr Speech code_first_text[] {
     { UIC::Bucko, "Attagirl!" },
-#if !SKIP_STUFF
     { UIC::Bucko, "That was it!" },
+
+    nullptr,
+};
+
+constexpr Speech code_M_text[] {
     { UIC::Bucko, "The next one is" },
+#if !SKIP_STUFF
     { UIC::Bucko, "clearly 4 lines" },
     { UIC::Bucko, "in the shape of" },
     { UIC::Bucko, "a 'W'." },
@@ -1041,7 +1062,7 @@ constexpr Speech inside_text[] {
 
     { UIC::Ami, "..." },
 
-    { UIC::Bucko, "Right. " },
+    { UIC::Bucko, "Oh right." },
     { UIC::Bucko, "The robuckos." },
     { UIC::Bucko, "There should be" },
     { UIC::Bucko, "an interface to" },
@@ -1107,7 +1128,10 @@ void ui_redraw() {
     font::clear_text();
 
     constexpr uint8_t speech_y = engine::graphics::SCREEN_HEIGHT * 2 / 3;
-    constexpr uint8_t speech_sky_y = engine::graphics::SCREEN_HEIGHT / 5;
+    constexpr uint8_t speech_sky_y =
+        engine::graphics::SCREEN_HEIGHT / 5
+        + engine::graphics::bg_tile_size * 3 / 2 // move it down a bit so that it doesn't overlap with buttons.
+    ;
 
     // Show any speech if it's active.
     const auto & speech = *s_current_speech;
@@ -1290,6 +1314,12 @@ void level_advance(LevelState state) {
                 case CodeState::CodeT: s_current_speech = code_T_text; set_keys(keypad_lines_T); break;
                 case CodeState::CodeE: s_current_speech = code_E_text; set_keys(keypad_lines_E); break;
 
+                case CodeState::CodeFirst:
+                    // HACK: jump back to this state with different text.
+                    s_current_speech = code_first_text;
+                    s_next_state = LevelState::OutsideTalk;
+                    s_code_state = CodeState::CodeM;
+                    break;
                 case CodeState::CodeMid:
                     // HACK: jump back to this state with different text.
                     s_current_speech = code_mid_text;

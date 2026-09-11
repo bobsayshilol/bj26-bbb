@@ -416,7 +416,7 @@ void setup_tiles() {
     // Draw the heart sprites.
     {
         constexpr uint8_t x_pos = SCREEN_WIDTH - bg_tile_size - 3;
-        constexpr uint8_t y_pos = SCREEN_HEIGHT / 3;
+        constexpr uint8_t y_pos = SCREEN_HEIGHT / 3 + bg_tile_size;
 
         ObjSprite sprite;
         sprite.set_y(y_pos);
@@ -1015,7 +1015,7 @@ void draw_sprites() {
     // Speed gauge.
     {
         constexpr uint8_t x_pos = 3;
-        constexpr uint8_t y_pos = SCREEN_HEIGHT / 3;
+        constexpr uint8_t y_pos = SCREEN_HEIGHT / 3 + bg_tile_size;
 
         // Should really be checking that max speed is number of tiles.
         static_assert(road_speed_scale + 1 == gauge_tile_count);
