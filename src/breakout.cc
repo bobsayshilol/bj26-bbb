@@ -794,15 +794,16 @@ void ui_redraw() {
 
     switch (s_ui_state) {
         case UIState::Intro_0:
-            game::font::write_centered("Press A to launch a bucko", SCREEN_HEIGHT / 2);
+            game::font::write_centered(FONT_LINE("Press A to launch"), SCREEN_HEIGHT / 2);
+            game::font::write_centered(FONT_LINE("a bucko"), SCREEN_HEIGHT / 2 + text_padding);
             break;
         case UIState::Intro_1:
-            game::font::write_centered("Press D to reset in", SCREEN_HEIGHT / 2);
-            game::font::write_centered("case anything breaks", SCREEN_HEIGHT / 2 + text_padding);
+            game::font::write_centered(FONT_LINE("Press D to reset"), SCREEN_HEIGHT / 2);
+            game::font::write_centered(FONT_LINE("if anything breaks"), SCREEN_HEIGHT / 2 + text_padding);
             break;
         case UIState::Intro_2:
-            game::font::write_centered("Press START to return", SCREEN_HEIGHT / 2);
-            game::font::write_centered("to the main menu", SCREEN_HEIGHT / 2 + text_padding);
+            game::font::write_centered(FONT_LINE("Press START to"), SCREEN_HEIGHT / 2);
+            game::font::write_centered(FONT_LINE("return to the menu"), SCREEN_HEIGHT / 2 + text_padding);
             break;
 
         case UIState::Win1_0:
@@ -815,84 +816,84 @@ void ui_redraw() {
             break;
 
         case UIState::Win1_2:
-            game::font::write_right("What was that?", text_padding, text_y);
+            game::font::write_right(FONT_LINE("What was that?"), text_padding, text_y);
             voice = UIC::Right;
             break;
         case UIState::Win1_3:
-            game::font::write_left("What was what?", text_padding, text_y);
+            game::font::write_left(FONT_LINE("What was what?"), text_padding, text_y);
             voice = UIC::Left;
             break;
         case UIState::Win1_4:
-            game::font::write_right("That flash", text_padding, text_y);
+            game::font::write_right(FONT_LINE("That flash"), text_padding, text_y);
             voice = UIC::Right;
             break;
         case UIState::Win1_5:
-            game::font::write_left("Oh", text_padding, text_y);
+            game::font::write_left(FONT_LINE("Oh"), text_padding, text_y);
             voice = UIC::Left;
             break;
         case UIState::Win1_6:
-            game::font::write_left("...", text_padding, text_y);
+            game::font::write_left(FONT_LINE("..."), text_padding, text_y);
             voice = UIC::Left;
             break;
         case UIState::Win1_7:
-            game::font::write_left("I dunno", text_padding, text_y);
+            game::font::write_left(FONT_LINE("I dunno"), text_padding, text_y);
             voice = UIC::Left;
             break;
         case UIState::Win1_8:
-            game::font::write_right("...", text_padding, text_y);
+            game::font::write_right(FONT_LINE("..."), text_padding, text_y);
             voice = UIC::Right;
             break;
         case UIState::Win1_9:
-            game::font::write_left("But the timing", text_padding, text_y);
-            game::font::write_left("matched my game", text_padding, text_y + text_padding);
+            game::font::write_left(FONT_LINE("But the timing"), text_padding, text_y);
+            game::font::write_left(FONT_LINE("matched my game"), text_padding, text_y + text_padding);
             voice = UIC::Left;
             break;
         case UIState::Win1_10:
-            game::font::write_left("It was pretty", text_padding, text_y);
-            game::font::write_left("sick", text_padding, text_y + text_padding);
+            game::font::write_left(FONT_LINE("It was pretty"), text_padding, text_y);
+            game::font::write_left(FONT_LINE("sick"), text_padding, text_y + text_padding);
             voice = UIC::Left;
             break;
         case UIState::Win1_11:
-            game::font::write_right("Sure", text_padding, text_y);
+            game::font::write_right(FONT_LINE("Sure"), text_padding, text_y);
             voice = UIC::Right;
             break;
 
         case UIState::Win2_2:
-            game::font::write_right("Again?", text_padding, text_y);
+            game::font::write_right(FONT_LINE("Again?"), text_padding, text_y);
             voice = UIC::Right;
             break;
         case UIState::Win2_3:
-            game::font::write_left("...", text_padding, text_y);
+            game::font::write_left(FONT_LINE("..."), text_padding, text_y);
             voice = UIC::Left;
             break;
         case UIState::Win2_4:
-            game::font::write_right("Hmm", text_padding, text_y);
+            game::font::write_right(FONT_LINE("Hmm"), text_padding, text_y);
             voice = UIC::Right;
             break;
 
         case UIState::Win3_2:
-            game::font::write_right("Where did you", text_padding, text_y);
-            game::font::write_right("get that game", text_padding, text_y + text_padding);
-            game::font::write_right("anyway?", text_padding, text_y + text_padding * 2);
+            game::font::write_right(FONT_LINE("Where did you"), text_padding, text_y);
+            game::font::write_right(FONT_LINE("get that game"), text_padding, text_y + text_padding);
+            game::font::write_right(FONT_LINE("anyway?"), text_padding, text_y + text_padding * 2);
             voice = UIC::Right;
             break;
         case UIState::Win3_3:
-            game::font::write_left("There was a cute 8", text_padding, text_y);
-            game::font::write_left("legged bucko outside", text_padding, text_y + text_padding);
-            game::font::write_left("who gave it to me", text_padding, text_y + text_padding * 2);
+            game::font::write_left(FONT_LINE("There was a cute 8"), text_padding, text_y);
+            game::font::write_left(FONT_LINE("legged bucko who"), text_padding, text_y + text_padding);
+            game::font::write_left(FONT_LINE("gave it to me"), text_padding, text_y + text_padding * 2);
             voice = UIC::Left;
             break;
         case UIState::Win3_4:
-            game::font::write_right("!", text_padding, text_y);
+            game::font::write_right(FONT_LINE("!"), text_padding, text_y);
             voice = UIC::Right;
             break;
         case UIState::Win3_5:
-            game::font::write_right("an 8 legged", text_padding, text_y);
-            game::font::write_right("bucko?!", text_padding, text_y + text_padding);
+            game::font::write_right(FONT_LINE("an 8 legged"), text_padding, text_y);
+            game::font::write_right(FONT_LINE("bucko?!"), text_padding, text_y + text_padding);
             voice = UIC::Right;
             break;
         case UIState::Win3_6:
-            game::font::write_right("give me that!", text_padding, text_y);
+            game::font::write_right(FONT_LINE("give me that!"), text_padding, text_y);
             voice = UIC::Right;
             break;
 
@@ -901,7 +902,7 @@ void ui_redraw() {
         case UIState::Playing3:
             break;
         case UIState::GameOver:
-            game::font::write_centered("No buckos left!", SCREEN_HEIGHT * 2 / 3);
+            game::font::write_centered(FONT_LINE("No buckos left!"), SCREEN_HEIGHT * 2 / 3);
             break;
     }
 

@@ -31,13 +31,15 @@ inline void setup_tiles() {
 }
 
 template <uint16_t N>
-constexpr void check_line(const char (&text)[N]) {
+constexpr bool check_line(const char (&text)[N]) {
 #if ENABLE_DEBUGGING
     int line_counter = 0;
     for (char ch : text) { if (ch != ' ' && ch != '\0') line_counter++; }
     ASSERT(line_counter <= 16); // max 16 sprites per line
 #endif
+    return true;
 }
+#define FONT_LINE(line) ([]{static_assert(game::font::check_line(line));}, line)
 
 // Write a line of text somewhere on screen.
 // x,y are screen co-ords.

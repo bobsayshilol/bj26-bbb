@@ -340,17 +340,17 @@ void menu_redraw() {
     uint32_t num_butts = 0;
     switch (s_menu_state) {
         case MenuState::Warning:
-            game::font::write_centered("Warning", engine::graphics::SCREEN_HEIGHT / 4);
+            game::font::write_centered(FONT_LINE("Warning"), engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::warning;
             num_butts = engine::utils::size(buttons::warning);
             break;
         case MenuState::Main:
-            game::font::write_centered("Big Bucko Breakout", engine::graphics::SCREEN_HEIGHT / 4);
+            game::font::write_centered(FONT_LINE("Big Bucko Breakout"), engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::main;
             num_butts = engine::utils::size(buttons::main);
             break;
         case MenuState::LevelSelect:
-            game::font::write_centered("Unlocked levels", engine::graphics::SCREEN_HEIGHT / 4);
+            game::font::write_centered(FONT_LINE("Unlocked levels"), engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::level_select;
             num_butts = engine::utils::size(buttons::level_select);
             // Only show the appropriate ones.
@@ -359,17 +359,17 @@ void menu_redraw() {
             if (g_unlocked < static_cast<uint8_t>(Entry::Breakout)) num_butts--;
             break;
         case MenuState::Options:
-            game::font::write_centered("Cheats", engine::graphics::SCREEN_HEIGHT / 4);
+            game::font::write_centered(FONT_LINE("Cheats"), engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::options;
             num_butts = engine::utils::size(buttons::options);
             break;
         case MenuState::Credits1:
-            game::font::write_centered("Credits", engine::graphics::SCREEN_HEIGHT / 4);
+            game::font::write_centered(FONT_LINE("Credits"), engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::credits1;
             num_butts = engine::utils::size(buttons::credits1);
             break;
         case MenuState::Credits2:
-            game::font::write_centered("Special thanks", engine::graphics::SCREEN_HEIGHT / 4);
+            game::font::write_centered(FONT_LINE("Special thanks"), engine::graphics::SCREEN_HEIGHT / 4);
             butts = buttons::credits2;
             num_butts = engine::utils::size(buttons::credits2);
             break;

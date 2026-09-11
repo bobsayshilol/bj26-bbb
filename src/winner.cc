@@ -433,8 +433,9 @@ bool logic_update() {
 
         case LevelState::Printing:
             font::clear_text();
-            font::write_centered("Attempting to print", printing_text_y + font::CharHeight * 0);
-            font::write_centered("This may take a while...", printing_text_y + font::CharHeight * 2);
+            font::write_centered(FONT_LINE("Printing..."), printing_text_y + font::CharHeight * 0);
+            font::write_centered(FONT_LINE("This will take"), printing_text_y + font::CharHeight * 2);
+            font::write_centered(FONT_LINE("a while..."), printing_text_y + font::CharHeight * 4);
 
             // Try to print it.
             s_print_error = bios_print8bpp(VDP.BITMAP_VRAM_8BIT + printout_start, VDP.PALETTE, 1);
@@ -480,10 +481,11 @@ void level_advance(LevelState state) {
             font::clear_text();
             ui_character(UIC::None);
 
-            font::write_centered("Press B to print a copy", printing_text_y + font::CharHeight * 0);
-            font::write_centered("Press C to skip", printing_text_y + font::CharHeight * 2);
-            font::write_centered("Hasn't been tested", printing_text_y + font::CharHeight * 4);
-            font::write_centered("on real hardware!", printing_text_y + font::CharHeight * 6);
+            font::write_centered(FONT_LINE("Press B to print out"), printing_text_y + font::CharHeight * 0);
+            font::write_centered(FONT_LINE("a copy"), printing_text_y + font::CharHeight * 2);
+            font::write_centered(FONT_LINE("Press C to skip"), printing_text_y + font::CharHeight * 4);
+            font::write_centered(FONT_LINE("Hasn't been tested"), printing_text_y + font::CharHeight * 6);
+            font::write_centered(FONT_LINE("on real hardware!"), printing_text_y + font::CharHeight * 8);
             break;
 
         case LevelState::Printing:
@@ -499,31 +501,33 @@ void level_advance(LevelState state) {
             // WARNING: there's a limit on text sprites so messages must be small
             switch (s_print_error) {
                 case PRINT_STATUS_SUCCESS:
-                    font::write_centered("Printing successful", printing_text_y + font::CharHeight * 0);
+                    font::write_centered(FONT_LINE("Printing was"), printing_text_y + font::CharHeight * 0);
+                    font::write_centered(FONT_LINE("successful"), printing_text_y + font::CharHeight * 2);
                     break;
                 default:
                 case PRINT_STATUS_GENERAL_FAILURE:
-                    font::write_centered("Printing failed for", printing_text_y + font::CharHeight * 0);
-                    font::write_centered("an unknown reason", printing_text_y + font::CharHeight * 2);
+                    font::write_centered(FONT_LINE("Printing failed"), printing_text_y + font::CharHeight * 0);
+                    font::write_centered(FONT_LINE("for unknown reason"), printing_text_y + font::CharHeight * 2);
                     break;
                 case PRINT_STATUS_NO_SEAL_CART:
-                    font::write_centered("Cannot print since no", printing_text_y + font::CharHeight * 0);
-                    font::write_centered("seal cart was found", printing_text_y + font::CharHeight * 2);
+                    font::write_centered(FONT_LINE("Cannot print since"), printing_text_y + font::CharHeight * 0);
+                    font::write_centered(FONT_LINE("no cart was found"), printing_text_y + font::CharHeight * 2);
                     break;
                 case PRINT_STATUS_CANCELLED:
-                    font::write_centered("Printing was cancelled", printing_text_y + font::CharHeight * 0);
+                    font::write_centered(FONT_LINE("Printing was"), printing_text_y + font::CharHeight * 0);
+                    font::write_centered(FONT_LINE("cancelled"), printing_text_y + font::CharHeight * 2);
                     break;
                 case PRINT_STATUS_PAPER_JAM:
-                    font::write_centered("Printer jammed", printing_text_y + font::CharHeight * 0);
-                    font::write_centered("Unjam and try again", printing_text_y + font::CharHeight * 2);
+                    font::write_centered(FONT_LINE("Printer jammed"), printing_text_y + font::CharHeight * 0);
+                    font::write_centered(FONT_LINE("Unjam and try again"), printing_text_y + font::CharHeight * 2);
                     break;
                 case PRINT_STATUS_OVERHEAT:
-                    font::write_centered("Printer overheated", printing_text_y + font::CharHeight * 0);
-                    font::write_centered("Wait and try again", printing_text_y + font::CharHeight * 2);
+                    font::write_centered(FONT_LINE("Printer too hot"), printing_text_y + font::CharHeight * 0);
+                    font::write_centered(FONT_LINE("Wait and try again"), printing_text_y + font::CharHeight * 2);
                     break;
             }
-            font::write_centered("B to print again", printing_text_y + font::CharHeight * 4);
-            font::write_centered("C to continue", printing_text_y + font::CharHeight * 6);
+            font::write_centered(FONT_LINE("B to print again"), printing_text_y + font::CharHeight * 4);
+            font::write_centered(FONT_LINE("C to continue"), printing_text_y + font::CharHeight * 6);
             break;
 
         case LevelState::Text2:
