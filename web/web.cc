@@ -231,42 +231,68 @@ void draw() {
 
     // Blit bitmaps.
     auto blit_bitmap = [&](auto && bitmap, std::vector<BitmapChange> & changes) {
-        // TODO
-        static uint8_t warn_occasionally = 0;
-        if (changes.size() != 1) {
-            if (warn_occasionally++ == 0) {
-                UNIMPLEMENTED_("draw scrolling");
-            }
-        }
-
         if (bitmap.show) {
-            const uint16_t start_x = bitmap.sx % 256;
-            const uint16_t start_y = bitmap.sy % 512;
-
-            auto emit = [&](uint16_t ox, uint16_t oy, uint16_t w, uint16_t h) {
+            auto emit = [&](uint16_t sx, uint16_t sy, uint16_t dx, uint16_t dy, uint16_t w, uint16_t h) {
                 // Don't draw empty.
                 if (!w || !h) return;
 
                 SDL_Rect src {
-                    (start_x + ox) % 256, (start_y + oy) % 512,
+                    sx % 256, sy % 512,
                     w, h
                 };
                 SDL_Rect dst {
-                    ((bitmap.px + ox) % SCREEN_WIDTH) * web_scale, ((bitmap.py + oy) % SCREEN_HEIGHT) * web_scale,
+                    (dx % SCREEN_WIDTH) * web_scale, (dy % SCREEN_HEIGHT) * web_scale,
                     w * web_scale, h * web_scale
                 };
                 SDL_BlitSurfaceScaled(s_vram_buffer.get(), &src, window_surface, &dst, SDL_ScaleMode::SDL_SCALEMODE_NEAREST);
             };
 
-            // Split the quad into 2 parts if it crosses the boundary.
-            const uint16_t w = bitmap.w + 1;
-            const uint16_t h = bitmap.h + 1;
-            const uint16_t w0 = start_x + w > 256 ? 256 - start_x : 0;
-            const uint16_t h0 = start_y + h > 512 ? 512 - start_y : 0;
-            emit(0,   0, w0,     h0);
-            emit(w0,  0, w - w0, h0);
-            emit(0,  h0, w0,     h - h0);
-            emit(w0, h0, w - w0, h - h0);
+            // If it's a single offset then just blit it,
+            // otherwise go line by line.
+            if (changes.size() == 1) {
+                const uint16_t src_x = bitmap.sx % 256;
+                const uint16_t src_y = bitmap.sy % 512;
+                const uint16_t dst_x = bitmap.px;
+                const uint16_t dst_y = bitmap.py;
+
+                // Split the quad into 2 parts if it crosses the boundary.
+                const uint16_t w = bitmap.w + 1;
+                const uint16_t h = bitmap.h + 1;
+                const uint16_t w0 = src_x + w > 256 ? 256 - src_x : 0;
+                const uint16_t h0 = src_y + h > 512 ? 512 - src_y : 0;
+                emit(src_x +  0, src_y +  0, dst_x +  0, dst_y +  0, w0,     h0);
+                emit(src_x + w0, src_y +  0, dst_x + w0, dst_y +  0, w - w0, h0);
+                emit(src_x +  0, src_y + h0, dst_x +  0, dst_y + h0, w0,     h - h0);
+                emit(src_x + w0, src_y + h0, dst_x + w0, dst_y + h0, w - w0, h - h0);
+
+            } else {
+                // TODO: can we be smarter here? ranges make sense but get complicated
+                const uint16_t y_start = bitmap.py;
+                const uint16_t y_end = y_start + bitmap.h;
+                const uint16_t dst_x = bitmap.px;
+                const BitmapChange * current = changes.data();
+                for (int y = 0; y < SCREEN_HEIGHT; y++) {
+                    if (y_start <= y && y < y_end) {
+                        const uint16_t line = y - y_start;
+
+                        const uint16_t src_x = current->prev_sx % 256;
+                        const uint16_t src_y = (bitmap.sy + line) % 512;
+                        const uint16_t dst_y = bitmap.py + line;
+
+                        // Split the quad into 2 parts if it crosses the boundary.
+                        const uint16_t w = bitmap.w + 1;
+                        const uint16_t h = 1;
+                        const uint16_t w0 = src_x + w > 256 ? 256 - src_x : 0;
+                        const uint16_t h0 = src_y + h > 512 ? 512 - src_y : 0;
+                        emit(src_x +  0, src_y +  0, dst_x +  0, dst_y +  0, w0,     h0);
+                        emit(src_x + w0, src_y +  0, dst_x + w0, dst_y +  0, w - w0, h0);
+                        emit(src_x +  0, src_y + h0, dst_x +  0, dst_y + h0, w0,     h - h0);
+                        emit(src_x + w0, src_y + h0, dst_x + w0, dst_y + h0, w - w0, h - h0);
+                    }
+
+                    if (y == current->line) current++;
+                }
+            }
         }
         changes.clear();
     };
