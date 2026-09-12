@@ -423,7 +423,7 @@ void keypad_setup() {
 
     // Setup the tiles.
     engine::utils::fast_memset8(get_tile_data(keypad_tile_off), pal_white, bg_tile_size * bg_tile_size);
-    engine::utils::fast_memset8(get_tile_data(keypad_tile_on), pal_blue, bg_tile_size * bg_tile_size);
+    engine::utils::fast_memset8(get_tile_data(keypad_tile_on), pal_purple, bg_tile_size * bg_tile_size);
     engine::utils::fast_memset8(get_tile_data(keypad_tile_good), pal_green, bg_tile_size * bg_tile_size);
     engine::utils::fast_memset8(get_tile_data(keypad_tile_bad), pal_red, bg_tile_size * bg_tile_size);
 
@@ -444,6 +444,29 @@ void keypad_setup() {
     s_cursor_start = {};
 }
 
+void keypad_redraw() {
+    using namespace engine::graphics;
+
+    // Draw the buttons.
+    ObjSprite sprite;
+    const uint16_t selected_bit = s_keypad_line_start_bit;
+    static_assert(button_positions.size() * 4 == keypad_sprite_count);
+    for (uint8_t i = 0; i < button_positions.size(); i++) {
+        // Highlight selected.
+        const uint16_t butt_bit = 1 << i;
+        sprite.set_tile_index(butt_bit == selected_bit ? keypad_tile_on : keypad_tile_off);
+
+        const auto & butt = button_positions[i];
+        for (uint8_t y = 0; y < 2; y++) {
+            for (uint8_t x = 0; x < 2; x++) {
+                sprite.set_x(butt.x + x * bg_tile_size);
+                sprite.set_y(butt.y + y * bg_tile_size);
+                set_sprite(keypad_sprite_start + 4 * i + 2 * y + x, sprite);
+            }
+        }
+    }
+}
+
 void keypad_show() {
     using namespace engine::graphics;
 
@@ -457,20 +480,7 @@ void keypad_show() {
     bitmap_0.scroll_x() = 0;
     bitmap_0.scroll_y() = SCREEN_HEIGHT;
 
-    // Draw the buttons.
-    ObjSprite sprite;
-    sprite.set_tile_index(keypad_tile_off);
-    static_assert(button_positions.size() * 4 == keypad_sprite_count);
-    for (uint8_t i = 0; i < button_positions.size(); i++) {
-        const auto & butt = button_positions[i];
-        for (uint8_t y = 0; y < 2; y++) {
-            for (uint8_t x = 0; x < 2; x++) {
-                sprite.set_x(butt.x + x * bg_tile_size);
-                sprite.set_y(butt.y + y * bg_tile_size);
-                set_sprite(keypad_sprite_start + 4 * i + 2 * y + x, sprite);
-            }
-        }
-    }
+    keypad_redraw();
 }
 
 void keypad_hide() {
@@ -770,6 +780,9 @@ void keypad_update() {
                     s_cursor_start = s_cursor_cur;
                     s_keypad_line_start_bit = butt_bit;
                 }
+
+                // Update the keypad to show we selected one.
+                keypad_redraw();
 
                 // No other buttons will collide.
                 break;
