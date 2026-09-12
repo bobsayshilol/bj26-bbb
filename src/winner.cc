@@ -8,6 +8,8 @@
 #include "profiler.h"
 #include "sound.h"
 
+#define WITH_BGM 0
+
 namespace game::winner {
 
 namespace {
@@ -494,7 +496,9 @@ void level_advance(LevelState state) {
 
         case LevelState::Text1a:
             s_current_speech = text1a_text;
+#if WITH_BGM
             engine::sound::play_bgm(game::music::Bgm::Bgm_MM_good);
+#endif
             break;
 
         case LevelState::Text1b:
@@ -554,7 +558,9 @@ void level_advance(LevelState state) {
             font::write_centered(FONT_LINE("B to print again"), printing_text_y + font::CharHeight * 4);
             font::write_centered(FONT_LINE("C to continue"), printing_text_y + font::CharHeight * 6);
 
+#if WITH_BGM
             engine::sound::play_bgm(game::music::Bgm::Bgm_MM_good);
+#endif
             break;
 
         case LevelState::Text2:
