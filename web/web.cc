@@ -269,7 +269,7 @@ void draw() {
             } else {
                 // TODO: can we be smarter here? ranges make sense but get complicated
                 const uint16_t y_start = bitmap.py;
-                const uint16_t y_end = y_start + bitmap.h;
+                const uint16_t y_end = y_start + bitmap.h + 1;
                 const uint16_t dst_x = bitmap.px;
                 const BitmapChange * current = changes.data();
                 for (int y = 0; y < SCREEN_HEIGHT; y++) {
