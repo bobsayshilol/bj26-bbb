@@ -293,7 +293,15 @@ constexpr Speech text1a_text[] {
     { UIC::Bucko, "We can't thank you" },
     { UIC::Bucko, "enough for doing" },
     { UIC::Bucko, "all of this to" },
-    { UIC::Bucko, "break out t' buckos" },
+    { UIC::Bucko, "break the buckos" },
+    { UIC::Bucko, "out of robucko" },
+    { UIC::Bucko, "control." },
+    { UIC::Bucko, "Oh!" },
+    { UIC::Bucko, "We can call" },
+    { UIC::Bucko, "the operation" },
+    { UIC::Bucko, "   Big   " },
+    { UIC::Bucko, "  Bucko  " },
+    { UIC::Bucko, "Breakout!" },
 
     // TODO: confetti
     { UIC::None, "title drop" },
