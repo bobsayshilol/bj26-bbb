@@ -66,7 +66,7 @@ LDFLAGS += $(SIZEDEFS) -Wl,-T $(LDSCRIPT)
 
 .PHONY: all clean data bbb_data
 
-ROMS = bbb.bin
+ROMS = bbb.bin gallery.bin
 
 all: $(ROMS)
 
@@ -136,6 +136,28 @@ bbb/data_wormhole.cc: bbb/wormhole.py
 
 BBB_DATA_C = $(BBB_MIDIS_C) $(BBB_TILES_C) bbb/data_wormhole.cc
 bbb_data: $(BBB_DATA_C)
+
+
+
+# Gallery.
+
+GALLERY_HDRS = $(wildcard gallery/*.h)
+GALLERY_S_SRC = $(wildcard gallery/*.s)
+GALLERY_C_SRC = $(wildcard gallery/*.c)
+GALLERY_CXX_SRC = $(wildcard gallery/*.cc)
+GALLERY_S_OBJS = $(patsubst gallery/%.s,$(OBJDIR)/gallery_%.o,$(GALLERY_S_SRC))
+GALLERY_C_OBJS = $(patsubst gallery/%.c,$(OBJDIR)/gallery_%.o,$(GALLERY_C_SRC))
+GALLERY_CXX_OBJS = $(patsubst gallery/%.cc,$(OBJDIR)/gallery_%.o,$(GALLERY_CXX_SRC))
+GALLERY_OBJS = $(GALLERY_S_OBJS) $(GALLERY_C_OBJS) $(GALLERY_CXX_OBJS)
+
+$(OBJDIR)/gallery_%.o: gallery/%.s $(LOOPYLIB_HDRS) $(GALLERY_HDRS) | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJDIR)/gallery_%.o: gallery/%.c $(LOOPYLIB_HDRS) $(GALLERY_HDRS) | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJDIR)/gallery_%.o: gallery/%.cc $(LOOPYLIB_HDRS) $(GALLERY_HDRS) | $(OBJDIR)
+	$(CXX) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+
+gallery.elf: $(GALLERY_OBJS) $(LOOPYLIB_OBJS)
 
 
 

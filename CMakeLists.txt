@@ -58,7 +58,19 @@ add_executable(bbb
 target_link_libraries(bbb loopylib)
 if (EMSCRIPTEN)
     target_link_options(bbb PRIVATE
-        #--embed-file "${CMAKE_SOURCE_DIR}/data@/aaa"
+        --shell-file "${CMAKE_SOURCE_DIR}/web/shell_minimal.html"
+    )
+endif()
+
+# Gallery
+add_executable(gallery
+    gallery/main.cc
+    gallery/main_menu.cc
+    gallery/attract.cc
+)
+target_link_libraries(gallery loopylib)
+if (EMSCRIPTEN)
+    target_link_options(gallery PRIVATE
         --shell-file "${CMAKE_SOURCE_DIR}/web/shell_minimal.html"
     )
 endif()
