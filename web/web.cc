@@ -1,6 +1,6 @@
 #include "loopy.h"
-#include "../src/graphics.h"
-#include "../src/utils.h"
+#include "../lib/graphics.h"
+#include "../lib/utils.h"
 
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>

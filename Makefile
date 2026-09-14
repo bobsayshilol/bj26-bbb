@@ -32,36 +32,23 @@ CONVMIDI = $(PYTHON3) ./tools/convert_midi.py
 CONVTILES = $(PYTHON3) ./tools/convert_tiles.py
 
 # File/dir locations
-SRCDIR = ./src
-INCDIR = ./include
 OBJDIR = ./obj
-DATADIR = ./data
-ROM    = ./rom.bin
 
 # Basic compile options
 OPTIMIZE = -Os
-LIBS =
 WARNINGS = -Wall -Wextra -pedantic -Werror
 
 # Below here probably doesn't need to be touched
 
 LDSCRIPT = ./tools/loopy.ld
 
-# Source/object lists
-SRCS_C = $(wildcard $(SRCDIR)/*.c)
-OBJS_C = $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SRCS_C))
-SRCS_CXX = $(wildcard $(SRCDIR)/*.cc)
-OBJS_CXX = $(patsubst $(SRCDIR)/%.cc,$(OBJDIR)/%.o,$(SRCS_CXX))
-SRCS_S = $(wildcard $(SRCDIR)/*.s)
-OBJS_S = $(patsubst $(SRCDIR)/%.s,$(OBJDIR)/%.o,$(SRCS_S))
-HDRS = $(wildcard $(SRCDIR)/*.h $(INCDIR)/*.h $(INCDIR)/loopy/*.h)
-
 CFLAGS  = $(OPTIMIZE) -g -gdwarf-4
 CFLAGS += -m1 -mrenesas
 CFLAGS += -ffreestanding
 CFLAGS += -falign-functions=4 -ffunction-sections -fdata-sections
 CFLAGS += -fomit-frame-pointer -fno-asynchronous-unwind-tables -fno-unwind-tables
-CFLAGS += -Wstack-usage=$(shell numfmt --from=iec $(STACKSIZE)) -I$(INCDIR)
+CFLAGS += -Wstack-usage=$(shell numfmt --from=iec $(STACKSIZE))
+CFLAGS += -I./include -I./lib
 CFLAGS += $(WARNINGS)
 CFLAGS += -DWEB_BUILD=0
 
@@ -71,58 +58,97 @@ SIZEDEFS  = -Wl,--defsym=SRAMSIZE=$(SRAMSIZE)
 SIZEDEFS += -Wl,--defsym=STACKSIZE=$(STACKSIZE)
 
 LDFLAGS  = -nostartfiles -nolibc -Wl,--gc-sections -Wl,--no-warn-rwx-segment -Wl,--orphan-handling=error -Wl,--print-memory-usage
-LDFLAGS += $(SIZEDEFS) -Wl,-T $(LDSCRIPT) $(LIBS)
+LDFLAGS += $(SIZEDEFS) -Wl,-T $(LDSCRIPT)
 
-.PHONY: clean rom data music images
 
-all: rom
 
-rom: $(ROM)
+# Add targets here.
+
+.PHONY: all clean data bbb_data
+
+ROMS = bbb.bin
+
+all: $(ROMS)
+
+data: bbb_data
+
+clean:
+	$(RMDIR) $(OBJDIR)
+	$(RM) $(ROMS) $(ROMS:.bin=.elf)
+	$(RM) $(BBB_DATA_C)
+
+
+
+# Loopy library.
+
+LOOPYLIB_HDRS = $(wildcard lib/*.h)
+LOOPYLIB_S_SRC = $(wildcard lib/*.s)
+LOOPYLIB_C_SRC = $(wildcard lib/*.c)
+LOOPYLIB_CXX_SRC = $(wildcard lib/*.cc)
+LOOPYLIB_S_OBJS = $(patsubst lib/%.s,$(OBJDIR)/lib_%.o,$(LOOPYLIB_S_SRC))
+LOOPYLIB_C_OBJS = $(patsubst lib/%.c,$(OBJDIR)/lib_%.o,$(LOOPYLIB_C_SRC))
+LOOPYLIB_CXX_OBJS = $(patsubst lib/%.cc,$(OBJDIR)/lib_%.o,$(LOOPYLIB_CXX_SRC))
+LOOPYLIB_OBJS = $(LOOPYLIB_S_OBJS) $(LOOPYLIB_C_OBJS) $(LOOPYLIB_CXX_OBJS)
+
+$(OBJDIR)/lib_%.o: lib/%.s $(LOOPYLIB_HDRS) | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJDIR)/lib_%.o: lib/%.c $(LOOPYLIB_HDRS) | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJDIR)/lib_%.o: lib/%.cc $(LOOPYLIB_HDRS) | $(OBJDIR)
+	$(CXX) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+
+
+
+# BBB.
+
+BBB_HDRS = $(wildcard bbb/*.h)
+BBB_S_SRC = $(wildcard bbb/*.s)
+BBB_C_SRC = $(wildcard bbb/*.c)
+BBB_CXX_SRC = $(wildcard bbb/*.cc)
+BBB_S_OBJS = $(patsubst bbb/%.s,$(OBJDIR)/bbb_%.o,$(BBB_S_SRC))
+BBB_C_OBJS = $(patsubst bbb/%.c,$(OBJDIR)/bbb_%.o,$(BBB_C_SRC))
+BBB_CXX_OBJS = $(patsubst bbb/%.cc,$(OBJDIR)/bbb_%.o,$(BBB_CXX_SRC))
+BBB_OBJS = $(BBB_S_OBJS) $(BBB_C_OBJS) $(BBB_CXX_OBJS)
+
+$(OBJDIR)/bbb_%.o: bbb/%.s $(LOOPYLIB_HDRS) $(BBB_HDRS) | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJDIR)/bbb_%.o: bbb/%.c $(LOOPYLIB_HDRS) $(BBB_HDRS) | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJDIR)/bbb_%.o: bbb/%.cc $(LOOPYLIB_HDRS) $(BBB_HDRS) | $(OBJDIR)
+	$(CXX) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+
+bbb.elf: $(BBB_OBJS) $(LOOPYLIB_OBJS)
+
+
+
+BBB_MIDIS = $(wildcard bbb_data/*.mid)
+BBB_MIDIS_C = $(patsubst bbb_data/%.mid,bbb/data_%.mid.cc,$(BBB_MIDIS))
+bbb/data_%.mid.cc: bbb_data/%.mid
+	$(CONVMIDI) $^ $@ $$(basename $^)
+
+BBB_TILES = $(wildcard bbb_data/*.png)
+BBB_TILES_C = $(patsubst bbb_data/%.png,bbb/data_%.png.cc,$(BBB_TILES))
+bbb/data_%.png.cc: bbb_data/%.png
+	$(CONVTILES) $^ $@
+
+bbb/data_wormhole.cc: bbb/wormhole.py
+	cd bbb && $(PYTHON3) wormhole.py
+
+BBB_DATA_C = $(BBB_MIDIS_C) $(BBB_TILES_C) bbb/data_wormhole.cc
+bbb_data: $(BBB_DATA_C)
+
+
+
+# Helpers.
 
 %.elf:
 	$(CC) $(LDFLAGS) $^ -o $@
 
 %.bin: %.elf
 	$(OBJ) -O binary $< $@
-	$(FIXROM) $(ROM)
-	$(CONVLE) $(ROM)
-
-$(ROM:.bin=.elf): $(OBJS_S) $(OBJS_C) $(OBJS_CXX)
-
-$(OBJDIR)/%.o: $(SRCDIR)/%.s $(HDRS) | $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-$(OBJDIR)/%.o: $(SRCDIR)/%.c $(HDRS) | $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-$(OBJDIR)/%.o: $(SRCDIR)/%.cc $(HDRS) | $(OBJDIR)
-	$(CXX) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(FIXROM) $@
+	$(CONVLE) $@
 
 $(OBJDIR):
 	$(MKDIR) $@
-
-
-MIDIS = $(wildcard $(DATADIR)/*.mid)
-MIDIS_C = $(patsubst $(DATADIR)/%.mid,$(SRCDIR)/data_%.mid.cc,$(MIDIS))
-music: $(MIDIS)
-	for f in $(MIDIS) ; do \
-		$(CONVMIDI) $${f} $(SRCDIR)/data_$$(basename $${f}).cc $$(basename $${f}) || exit 1; \
-	done
-
-TILES = $(wildcard $(DATADIR)/*.png)
-TILES_C = $(patsubst $(DATADIR)/%.png,$(SRCDIR)/data_%.png.cc,$(TILES))
-images: $(TILES)
-	for f in $(TILES) ; do \
-		$(CONVTILES) $${f} $(SRCDIR)/data_$$(basename $${f}).cc || exit 1; \
-	done
-
-wormhole:
-	cd src && $(PYTHON3) wormhole.py
-
-data: music images wormhole
-
-
-clean:
-	$(RMDIR) $(OBJDIR)
-	$(RM) $(ROM)
-	$(RM) $(MIDIS_C)
-	$(RM) $(TILES_C)
 
