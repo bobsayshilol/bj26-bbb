@@ -27,27 +27,27 @@ int main() {
 	init();
 
 	// Basic state machine.
-	gallery::Entry state = gallery::Entry::Attract;
+	gallery::Screen state = gallery::Screen::Attract;
 	while (true) {
 		// Enter new state.
 		switch (state) {
-			case gallery::Entry::Attract: gallery::attract::enter(); break;
-			case gallery::Entry::MainMenu: gallery::main_menu::enter(); break;
+			case gallery::Screen::Attract: gallery::attract::enter(); break;
+			case gallery::Screen::MainMenu: gallery::main_menu::enter(); break;
 		}
 
 		// Run main loop.
-		gallery::Entry next = state;
+		gallery::Screen next = state;
 		while (next == state) {
 			switch (state) {
-				case gallery::Entry::Attract: next = gallery::attract::loop(); break;
-				case gallery::Entry::MainMenu: next = gallery::main_menu::loop(); break;
+				case gallery::Screen::Attract: next = gallery::attract::loop(); break;
+				case gallery::Screen::MainMenu: next = gallery::main_menu::loop(); break;
 			}
 		}
 
 		// Leave the old state.
 		switch (state) {
-			case gallery::Entry::Attract: gallery::attract::leave(); break;
-			case gallery::Entry::MainMenu: gallery::main_menu::leave(); break;
+			case gallery::Screen::Attract: gallery::attract::leave(); break;
+			case gallery::Screen::MainMenu: gallery::main_menu::leave(); break;
 		}
 
 		// Update state.

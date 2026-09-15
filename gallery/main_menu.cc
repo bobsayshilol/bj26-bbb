@@ -9,10 +9,10 @@ void enter() {
 void leave() {
 }
 
-Entry loop() {
+Screen loop() {
     DEBUG_MSG("TODO: ", __func__);
     bios_vsync();
-    return Entry::MainMenu;
+    return Screen::MainMenu;
 }
 
 } // namespace main_menu

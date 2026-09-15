@@ -7,7 +7,7 @@
 
 namespace gallery {
 
-enum class Entry : uint8_t {
+enum class Screen : uint8_t {
     Attract,
     MainMenu,
     //BGM,
@@ -16,13 +16,13 @@ enum class Entry : uint8_t {
 
 namespace attract {
 void enter();
-Entry loop();
+Screen loop();
 void leave();
 } // namespace attract
 
 namespace main_menu {
 void enter();
-Entry loop();
+Screen loop();
 void leave();
 } // namespace main_menu
 

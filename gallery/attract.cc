@@ -8,9 +8,9 @@ void enter() {
 void leave() {
 }
 
-Entry loop() {
+Screen loop() {
     DEBUG_MSG("TODO: ", __func__);
-    return Entry::MainMenu;
+    return Screen::MainMenu;
 }
 
 } // namespace gallery::attract
