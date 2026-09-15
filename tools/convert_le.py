@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 rom = Path(sys.argv[1])
-rom_le = rom.parent / (rom.stem + "_mame" + rom.suffix)
+rom_le = rom.with_stem(rom.stem + "_mame")
 
 with open(rom, "rb") as inp:
 	with open(rom_le, "wb") as out:

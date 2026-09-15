@@ -64,13 +64,13 @@ LDFLAGS += $(SIZEDEFS) -Wl,-T $(LDSCRIPT)
 
 # Add targets here.
 
-.PHONY: all clean data bbb_data
+.PHONY: all clean data bbb_data gallery_data
 
 ROMS = bbb.bin gallery.bin
 
 all: $(ROMS)
 
-data: bbb_data
+data: bbb_data gallery_data
 
 clean:
 	$(RMDIR) $(OBJDIR)
@@ -158,6 +158,20 @@ $(OBJDIR)/gallery_%.o: gallery/%.cc $(LOOPYLIB_HDRS) $(GALLERY_HDRS) | $(OBJDIR)
 	$(CXX) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
 
 gallery.elf: $(GALLERY_OBJS) $(LOOPYLIB_OBJS)
+
+
+
+GALLERY_MIDIS = $(wildcard gallery_data/*.mid)
+GALLERY_MIDIS_C = $(patsubst gallery_data/%.mid,gallery/data_%.mid.cc,$(GALLERY_MIDIS))
+gallery/data_%.mid.cc: gallery_data/%.mid
+	$(CONVMIDI) $^ $@ $$(basename $^)
+
+GALLERY_ARTS = $(wildcard gallery_data/art_*.png)
+gallery/data_gallery.cc: gallery/convert_images.py $(GALLERY_ARTS)
+	$(PYTHON3) gallery/convert_images.py --output $@ $(GALLERY_ARTS)
+
+GALLERY_DATA_C = $(GALLERY_MIDIS_C) gallery/data_gallery.cc gallery/data_gallery.h
+gallery_data: $(GALLERY_DATA_C)
 
 
 
