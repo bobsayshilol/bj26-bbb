@@ -64,9 +64,11 @@ endif()
 
 # Gallery
 add_executable(gallery
+    gallery/attract.cc
+    gallery/data_gallery.cc
     gallery/main.cc
     gallery/main_menu.cc
-    gallery/attract.cc
+    gallery/viewer.cc
 )
 target_link_libraries(gallery loopylib)
 if (EMSCRIPTEN)

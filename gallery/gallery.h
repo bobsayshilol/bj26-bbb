@@ -11,7 +11,7 @@ enum class Screen : uint8_t {
     Attract,
     MainMenu,
     //BGM,
-    //Viewer,
+    Viewer,
 };
 
 namespace attract {
@@ -25,5 +25,11 @@ void enter();
 Screen loop();
 void leave();
 } // namespace main_menu
+
+namespace viewer {
+void enter();
+Screen loop();
+void leave();
+} // namespace viewer
 
 } // namespace gallery

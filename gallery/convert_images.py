@@ -11,6 +11,9 @@ from pathlib import Path
 # Each image gets 208 colours.
 max_palette_size = 208
 
+full_width = 256
+full_height = 224
+
 # Shrunk versions get a simpler palette.
 simple_scale = 4 # quarter width and height
 simple_palette = []
@@ -69,10 +72,10 @@ def _get_idx(pal, px, approx):
 
 def _extract(filename :Path):
 	with Image.open(filename) as img:
-		if img.width != 256:
-			raise RuntimeError(f"Image height must be 256: {img.width}")
-		if img.height != 224:
-			raise RuntimeError(f"Image height must be 224: {img.height}")
+		if img.width != full_width:
+			raise RuntimeError(f"Image height must be {full_width}: {img.width}")
+		if img.height != full_height:
+			raise RuntimeError(f"Image height must be {full_height}: {img.height}")
 
 		# Build up a colour palette.
 		pal = _make_palette(img)
@@ -80,7 +83,7 @@ def _extract(filename :Path):
 		# Read the data.
 		data_full :list[int] = []
 		for y in range(img.height):
-			for x in range(img.height):
+			for x in range(img.width):
 				px = img.getpixel((x, y))
 				idx = _get_idx(pal, px, approx=False)
 				data_full.append(idx)
@@ -89,7 +92,7 @@ def _extract(filename :Path):
 		data_simple :list[int] = []
 		if True:
 			for y in range(img.height // simple_scale):
-				for x in range(img.height // simple_scale):
+				for x in range(img.width // simple_scale):
 					px = img.getpixel((x * simple_scale, y * simple_scale))
 					idx = _get_idx(simple_palette, px, approx=True)
 					data_simple.append(idx)
@@ -97,7 +100,7 @@ def _extract(filename :Path):
 			img = img.reduce(simple_scale)
 			data_simple :list[int] = []
 			for y in range(img.height):
-				for x in range(img.height):
+				for x in range(img.width):
 					px = img.getpixel((x, y))
 					idx = _get_idx(simple_palette, px, approx=True)
 					data_simple.append(idx)
@@ -138,6 +141,7 @@ def _write_rle(suffix :str, data :list[int], file :TextIOWrapper):
 
 	file.write(f"static void decompress_{suffix}(uint8_t pal_offset, uint8_t * output)\n")
 	file.write(f"{{ rle_decompress(compressed_{suffix}, engine::utils::size(compressed_{suffix}), pal_offset, output, {len(data)}); }}\n")
+	file.write(f"static_assert({len(data)} == {suffix}_width * {suffix}_height);\n")
 
 
 def convert(filenames :list[Path], out_cc :Path):
@@ -190,7 +194,7 @@ static void rle_decompress(
 			output.write(f"struct {symbol} {{\n")
 
 			# Write out both full and preview data.
-			_write_rle("full", data_full, output)
+			_write_rle("fullscreen", data_full, output)
 			_write_rle("preview", data_preview, output)
 
 			# Palette.
@@ -202,15 +206,19 @@ static void rle_decompress(
 
 		output.write("} // namespace\n")
 
-		output.write("void decompress_fullscreen(Image img, uint8_t pal_offset, uint8_t * output) { switch (img) {\n")
+		output.write("void decompress_fullscreen(Image img, uint8_t pal_offset, uint8_t * output) {\n")
+		output.write("\tASSERT(pal_offset != 0); // 0 is transparent\n")
+		output.write("\tswitch (img) {\n")
 		for symbol in symbols:
 			output.write(f"\tcase Image::{symbol}:\n")
-			output.write(f"\t\t{symbol}::decompress_full(pal_offset, output);\n")
+			output.write(f"\t\t{symbol}::decompress_fullscreen(pal_offset, output);\n")
 			output.write("\t\tbreak;\n")
 		output.write("\tdefault: ASSERT(\"Unknown image\"); break;\n")
 		output.write("}}\n")
 
-		output.write("void decompress_preview(Image img, uint8_t pal_offset, uint8_t * output) { switch (img) {\n")
+		output.write("void decompress_preview(Image img, uint8_t pal_offset, uint8_t * output) {\n")
+		output.write("\tASSERT(pal_offset != 0); // 0 is transparent\n")
+		output.write("\tswitch (img) {\n")
 		for symbol in symbols:
 			output.write(f"\tcase Image::{symbol}:\n")
 			output.write(f"\t\t{symbol}::decompress_preview(pal_offset, output);\n")
@@ -246,6 +254,10 @@ static void rle_decompress(
 			output.write(f"\t{symbol},\n")
 		output.write("};\n")
 		output.write(f"inline constexpr uint8_t max_palette_size = {max_palette_size};\n")
+		output.write(f"inline constexpr uint16_t fullscreen_width = {full_width};\n")
+		output.write(f"inline constexpr uint16_t fullscreen_height = {full_height};\n")
+		output.write(f"inline constexpr uint16_t preview_width = {full_width // simple_scale};\n")
+		output.write(f"inline constexpr uint16_t preview_height = {full_height // simple_scale};\n")
 		output.write("void decompress_fullscreen(Image img, uint8_t pal_offset, uint8_t * output);\n")
 		output.write("void decompress_preview(Image img, uint8_t pal_offset, uint8_t * output);\n")
 		output.write("uint16_t load_palette(Image img, uint16_t * output);\n")

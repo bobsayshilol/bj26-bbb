@@ -33,6 +33,7 @@ int main() {
 		switch (state) {
 			case gallery::Screen::Attract: gallery::attract::enter(); break;
 			case gallery::Screen::MainMenu: gallery::main_menu::enter(); break;
+			case gallery::Screen::Viewer: gallery::viewer::enter(); break;
 		}
 
 		// Run main loop.
@@ -41,6 +42,7 @@ int main() {
 			switch (state) {
 				case gallery::Screen::Attract: next = gallery::attract::loop(); break;
 				case gallery::Screen::MainMenu: next = gallery::main_menu::loop(); break;
+				case gallery::Screen::Viewer: next = gallery::viewer::loop(); break;
 			}
 		}
 
@@ -48,6 +50,7 @@ int main() {
 		switch (state) {
 			case gallery::Screen::Attract: gallery::attract::leave(); break;
 			case gallery::Screen::MainMenu: gallery::main_menu::leave(); break;
+			case gallery::Screen::Viewer: gallery::viewer::leave(); break;
 		}
 
 		// Update state.
