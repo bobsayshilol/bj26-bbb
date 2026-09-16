@@ -12,7 +12,7 @@ void leave() {
 Screen loop() {
     DEBUG_MSG("TODO: ", __func__);
     bios_vsync();
-    return Screen::MainMenu;
+    return Screen::Viewer;
 }
 
 } // namespace main_menu
