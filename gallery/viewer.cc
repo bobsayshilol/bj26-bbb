@@ -27,6 +27,22 @@ static_assert(preview_start + 4 * preview_size <= engine::utils::size(VDP.BITMAP
 
 //
 
+// Start it as early as possible so we don't have any issues with printing.
+static_assert(engine::graphics::pal_transparent == 0);
+constexpr uint8_t fullscreen_pal_offset = 1;
+
+//
+
+// TODO: cursor
+//constexpr uint8_t cursor_pal_start = fullscreen_pal_offset + stickers::max_palette_size;
+//constexpr uint8_t cursor_pal_size = 
+
+// TODO: font
+
+// TODO: bg for menus
+
+//
+
 // Page is idx / 4.
 int16_t s_selected_idx;
 constexpr int16_t previews_per_page = 4;
@@ -75,16 +91,27 @@ void change_ui() {
 
 //
 
+void do_print() {
+    DEBUG_MSG("printing");
+
+    // TODO: display a message
+
+    // TODO: pause/unpause music
+
+    bios_print8bpp(VDP.BITMAP_VRAM_8BIT + fullscreen_start, VDP.PALETTE, 1);
+}
+
+//
+
 void ui_redraw() {
-    const uint8_t pal_offset = 2;
     uint8_t * temp_data = VDP.BITMAP_VRAM_8BIT + temp_start;
     const uint8_t idx = s_selected_idx;
 
     switch (s_ui_state) {
         case UIState::Fullscreen: {
             const auto img = (stickers::Image)idx;
-            stickers::decompress_fullscreen(img, pal_offset, temp_data);
-            stickers::load_palette(img, VDP.PALETTE + pal_offset);
+            stickers::decompress_fullscreen(img, fullscreen_pal_offset, temp_data);
+            stickers::load_palette(img, VDP.PALETTE + fullscreen_pal_offset);
 
             // TODO: could just decompress straight to the visible region
             uint8_t * fullscreen_data = VDP.BITMAP_VRAM_8BIT + fullscreen_start;
@@ -94,7 +121,7 @@ void ui_redraw() {
         case UIState::Previews: {
             const auto end = engine::utils::min<uint8_t>(idx + previews_per_page, stickers::num_stickers);
             for (uint16_t i = idx; i < end; i++) {
-                stickers::decompress_preview((stickers::Image)i, pal_offset, temp_data);
+                stickers::decompress_preview((stickers::Image)i, fullscreen_pal_offset, temp_data);
 
                 uint8_t * preview_data = VDP.BITMAP_VRAM_8BIT + preview_start + stickers::preview_width * (i - idx);
                 for (uint16_t y = 0; y < stickers::preview_height; y++) {
@@ -114,7 +141,7 @@ void ui_redraw() {
                 }
             }
 
-            stickers::preview_palette(VDP.PALETTE + pal_offset);
+            stickers::preview_palette(VDP.PALETTE + fullscreen_pal_offset);
         } break;
     }
 
@@ -156,7 +183,7 @@ bool ui_update() {
                 if (s_selected_idx >= stickers::num_stickers) s_selected_idx = 0;
                 redraw = true;
             } else if (pressed & GAMEPAD_BTN_A) {
-                DEBUG_MSG("print?");
+                do_print();
             } else if (pressed & GAMEPAD_BTN_B) {
                 s_ui_state = UIState::Previews;
                 s_selected_idx = static_cast<uint16_t>(s_selected_idx) / 4 * 4;
