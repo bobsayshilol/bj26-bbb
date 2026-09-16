@@ -4,7 +4,7 @@ __pycache__/
 
 obj/
 bin/
-data/
+/*_data
 bbb/data_*.cc
 gallery/data_*
 *.bin
