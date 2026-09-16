@@ -173,6 +173,8 @@ uint32_t update_input() {
     if (keys[SDL_Scancode::SDL_SCANCODE_DOWN]) bits |= GAMEPAD_BTN_DOWN;
     if (keys[SDL_Scancode::SDL_SCANCODE_LEFT]) bits |= GAMEPAD_BTN_LEFT;
     if (keys[SDL_Scancode::SDL_SCANCODE_RIGHT]) bits |= GAMEPAD_BTN_RIGHT;
+    if (keys[SDL_Scancode::SDL_SCANCODE_Q]) bits |= GAMEPAD_BTN_LTRIG;
+    if (keys[SDL_Scancode::SDL_SCANCODE_W]) bits |= GAMEPAD_BTN_RTRIG;
     if (keys[SDL_Scancode::SDL_SCANCODE_KP_ENTER]) bits |= GAMEPAD_BTN_START;
     if (keys[SDL_Scancode::SDL_SCANCODE_RETURN]) bits |= GAMEPAD_BTN_START;
     if (keys[SDL_Scancode::SDL_SCANCODE_RETURN2]) bits |= GAMEPAD_BTN_START;
