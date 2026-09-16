@@ -213,7 +213,7 @@ static void rle_decompress(
 			output.write(f"\tcase Image::{symbol}:\n")
 			output.write(f"\t\t{symbol}::decompress_fullscreen(pal_offset, output);\n")
 			output.write("\t\tbreak;\n")
-		output.write("\tdefault: ASSERT(\"Unknown image\"); break;\n")
+		output.write("\tdefault: ASSERT(!\"Unknown image\"); break;\n")
 		output.write("}}\n")
 
 		output.write("void decompress_preview(Image img, uint8_t pal_offset, uint8_t * output) {\n")
@@ -223,7 +223,7 @@ static void rle_decompress(
 			output.write(f"\tcase Image::{symbol}:\n")
 			output.write(f"\t\t{symbol}::decompress_preview(pal_offset, output);\n")
 			output.write("\t\tbreak;\n")
-		output.write("\tdefault: ASSERT(\"Unknown image\"); break;\n")
+		output.write("\tdefault: ASSERT(!\"Unknown image\"); break;\n")
 		output.write("}}\n")
 
 		output.write("uint16_t load_palette(Image img, uint16_t * output) { switch (img) {\n")
@@ -249,10 +249,11 @@ static void rle_decompress(
 		output.write("#include \"graphics.h\"\n")
 		output.write("#include \"utils.h\"\n")
 		output.write("namespace gallery::stickers {\n")
-		output.write("enum class Image {\n")
+		output.write("enum class Image : uint8_t {\n")
 		for symbol in symbols:
 			output.write(f"\t{symbol},\n")
 		output.write("};\n")
+		output.write(f"inline constexpr uint8_t num_stickers = {len(symbols)};\n")
 		output.write(f"inline constexpr uint8_t max_palette_size = {max_palette_size};\n")
 		output.write(f"inline constexpr uint16_t fullscreen_width = {full_width};\n")
 		output.write(f"inline constexpr uint16_t fullscreen_height = {full_height};\n")
