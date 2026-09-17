@@ -4,6 +4,9 @@
 
 namespace engine::font {
 
+// Expected layout is: [A-Z]['!?.][0-9]
+static constexpr uint8_t tile_count = 40;
+
 constexpr uint16_t CharWidth = engine::graphics::bg_tile_size;
 constexpr uint16_t CharHeight = engine::graphics::bg_tile_size;
 
@@ -19,7 +22,7 @@ template <uint8_t TileStart, uint8_t SpriteStart, typename Config>
 inline void setup_tiles() {
     engine::graphics::copy_tile_data<
         Config::palette_start, Config::palette_count,
-        TileStart, Config::tile_count,
+        TileStart, tile_count,
         typename Config::Tileset
     >();
     detail::s_tile_start = TileStart;

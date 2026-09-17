@@ -8,7 +8,6 @@ namespace game::font {
 struct FontConfig {
     static constexpr uint8_t palette_start = 128;
     static constexpr uint8_t palette_count = 10;
-    static constexpr uint8_t tile_count = 40;
     static constexpr uint8_t max_sprites = 64; // max chars on screen too
     using Tileset = game::images::text_font;
 };
@@ -22,7 +21,7 @@ inline void setup_tiles() {
 // For backwards compat.
 constexpr uint8_t font_palette_start = FontConfig::palette_start;
 constexpr uint8_t font_palette_count = FontConfig::palette_count;
-constexpr uint8_t font_tile_count = FontConfig::tile_count;
+constexpr uint8_t font_tile_count = engine::font::tile_count;
 constexpr uint8_t font_max_sprites = FontConfig::max_sprites;
 using engine::font::write_text;
 using engine::font::write_left;
