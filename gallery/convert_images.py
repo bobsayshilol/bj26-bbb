@@ -241,6 +241,19 @@ static void rle_decompress(
 		output.write("\treturn size;\n")
 		output.write("}\n")
 
+		def format(name: str):
+			# TODO: newlines?
+			return name.replace("_", " ")
+
+		output.write("const char * image_name(Image img, uint8_t & length) {\n")
+		output.write("\tswitch (img) {\n")
+		for symbol in symbols:
+			output.write(f"\tcase Image::{symbol}:\n")
+			output.write(f"\t\tlength = {len(symbol)};\n")
+			output.write(f"\t\treturn \"{format(symbol)}\";\n")
+		output.write("\tdefault: ASSERT(!\"Unknown image\"); length = 0; return \"missingno\";\n")
+		output.write("}}\n")
+
 		output.write("} // namespace gallery::stickers\n")
 
 	# Write the header.
@@ -261,6 +274,7 @@ static void rle_decompress(
 		output.write(f"inline constexpr uint16_t preview_height = {full_height // simple_scale};\n")
 		output.write("void decompress_fullscreen(Image img, uint8_t pal_offset, uint8_t * output);\n")
 		output.write("void decompress_preview(Image img, uint8_t pal_offset, uint8_t * output);\n")
+		output.write("const char * image_name(Image img, uint8_t & length);\n")
 		output.write("uint16_t load_palette(Image img, uint16_t * output);\n")
 		output.write("uint16_t preview_palette(uint16_t * output);\n")
 		output.write("} // namespace gallery::stickers\n")
