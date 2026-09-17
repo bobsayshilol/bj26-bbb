@@ -14,6 +14,7 @@ add_library(loopylib
     lib/engine.cc
     lib/graphics.cc
     lib/input.cc
+    lib/midi.cc
     lib/profiler.cc
     lib/sound.cc
     web/web.cc
