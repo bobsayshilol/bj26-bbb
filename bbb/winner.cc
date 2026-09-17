@@ -420,12 +420,12 @@ void ui_setup() {
     game::font::setup_tiles<font_tile_start, font_sprite_start>();
 
     // Character sprites.
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         bucko_left_pal_start, bucko_left_pal_count,
         bucko_left_tile_start, bucko_left_tile_count,
         images::bucko_left
     >();
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         ami_left_pal_start, ami_left_pal_count,
         ami_left_tile_start, ami_left_tile_count,
         images::ami_left

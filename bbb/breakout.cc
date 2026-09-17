@@ -383,7 +383,7 @@ void ball_setup() {
     ball_reset_to_paddle();
 
     // Copy the tile data for the ball.
-    game::images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         pal_ball_start, pal_ball_count,
         ball_tile_start, ball_tile_count,
         game::images::bucko_ball
@@ -1062,12 +1062,12 @@ Entry ui_update() {
 
 void ui_setup() {
     // Copy the tile data for the characters.
-    game::images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         left_char_pal_start, left_char_pal_count,
         left_char_tile_start, left_char_tile_count,
         game::images::bucko_left
     >();
-    game::images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         right_char_pal_start, right_char_pal_count,
         right_char_tile_start, right_char_tile_count,
         game::images::robucko_right

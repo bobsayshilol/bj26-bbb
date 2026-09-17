@@ -2,6 +2,8 @@
 
 #include "loopy.h"
 #include "debug.h"
+#include "memory.h"
+#include "utils.h"
 
 namespace engine::graphics {
 
@@ -84,6 +86,7 @@ constexpr bool sprite_is_8bpp = true;
 // BG tiles are 8x8.
 constexpr uint32_t bg_tile_size = 8;
 constexpr uint32_t bg_tile_size_enum = BG_TILESIZE_8X8;
+constexpr uint32_t tile_data_size = bg_tile_size * bg_tile_size;
 
 // BG is 32x32 tiles.
 constexpr uint32_t bg_tilemap_size = 32;
@@ -211,13 +214,13 @@ static_assert(sizeof(BGSprite) == sizeof(uint16_t));
 // MAME says it's only legal to store uint16_t's too...
 using Pixel2 = uint16_t;
 inline Pixel2 * get_tile_data(TileIndex idx) {
-    [[maybe_unused]] constexpr TileIndex max_idx = (0x10000 - sprite_tile_data_start) / (bg_tile_size * bg_tile_size);
+    [[maybe_unused]] constexpr TileIndex max_idx = (0x10000 - sprite_tile_data_start) / tile_data_size;
     ASSERT(idx < max_idx);
-    const uint32_t offset = idx * bg_tile_size * bg_tile_size;
+    const uint32_t offset = idx * tile_data_size;
 #if !WEB_BUILD
     auto * data = VDP.TILE_VRAM + (sprite_tile_data_start >> 1);
 #else
-    static_assert(sizeof(VDP.tile_data) == max_idx * bg_tile_size * bg_tile_size);
+    static_assert(sizeof(VDP.tile_data) == max_idx * tile_data_size);
     auto * data = VDP.tile_data;
 #endif
     // |offset| is even so this is safe.
@@ -287,6 +290,33 @@ inline void reset_sprites() {
     ObjSprite sprite;
     for (int i = 0; i < Count; i++) {
         set_sprite(i, sprite);
+    }
+}
+
+
+
+// Copy a tileset into video memory.
+// Tilesets are defined as:
+//   struct Tileset {
+//     static constexpr uint8_t pal_offset = PalStart;
+//     static const uint8_t data[TileCount * TileSize];
+//     static const uint16_t palette[PalCount];
+//   };
+template <uint8_t PalStart, uint8_t PalCount, uint8_t TileStart, uint8_t TileCount, typename Tileset>
+inline void copy_tile_data() {
+    // Set the palette.
+    static_assert(PalStart == Tileset::pal_offset);
+    static_assert(PalCount == engine::utils::size(Tileset::palette));
+    for (int idx = 0; idx < PalCount; idx++) {
+        set_palette_colour(PalStart + idx, Tileset::palette[idx]);
+    }
+
+    // Copy each frame to a tile.
+    static_assert(TileCount * tile_data_size == engine::utils::size(Tileset::data));
+    for (int idx = 0; idx < TileCount; idx++) {
+        auto * dst = get_tile_data(TileStart + idx);
+        auto * tile = Tileset::data + tile_data_size * idx;
+        engine::utils::fast_memcpy(dst, tile, tile_data_size);
     }
 }
 

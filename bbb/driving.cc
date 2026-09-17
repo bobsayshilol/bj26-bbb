@@ -359,55 +359,55 @@ void setup_tiles() {
     using namespace engine::graphics;
 
     // Car tiles.
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         car_pal_start, car_pal_count,
         car_tile_start, car_tile_count,
         images::car
     >();
 
     // Tree tiles.
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         tree_pal_start, tree_pal_count,
         tree_tile_start, tree_tile_count,
         images::tree
     >();
 
     // UFO tiles.
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         ufo_pal_start, ufo_pal_count,
         ufo_tile_start, ufo_tile_count,
         images::ufo
     >();
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         bomb_pal_start, bomb_pal_count,
         bomb_tile_start, bomb_tile_count,
         images::bomb
     >();
 
     // Characters.
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         bucko_left_pal_start, bucko_left_pal_count,
         bucko_left_tile_start, bucko_left_tile_count,
         images::bucko_left
     >();
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         ami_left_pal_start, ami_left_pal_count,
         ami_left_tile_start, ami_left_tile_count,
         images::ami_left
     >();
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         bucko_troll_right_pal_start, bucko_troll_right_pal_count,
         bucko_troll_right_tile_start, bucko_troll_right_tile_count,
         images::bucko_troll_right
     >();
 
     // UI bits.
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         gauge_pal_start, gauge_pal_count,
         gauge_tile_start, gauge_tile_count,
         images::gauge
     >();
-    images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         heart_pal_start, heart_pal_count,
         heart_tile_start, heart_tile_count,
         images::heart
@@ -1447,12 +1447,12 @@ void ui_setup() {
     game::font::setup_tiles<font_tile_start, font_sprite_start>();
 
     // Copy the tile data for the characters.
-    game::images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         ami_left_pal_start, ami_left_pal_count,
         ami_left_tile_start, ami_left_tile_count,
         game::images::ami_left
     >();
-    game::images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         bucko_left_pal_start, bucko_left_pal_count,
         bucko_left_tile_start, bucko_left_tile_count,
         game::images::bucko_left

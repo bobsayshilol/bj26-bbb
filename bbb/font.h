@@ -21,7 +21,7 @@ extern bool s_glitch;
 // Setup tile data for the font.
 template <uint8_t TileStart, uint8_t SpriteStart>
 inline void setup_tiles() {
-    game::images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         font_palette_start, font_palette_count,
         TileStart, font_tile_count,
         game::images::text_font

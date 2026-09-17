@@ -134,7 +134,7 @@ void bouncers_setup() {
     }
 
     // Copy the tile data for the bouncers.
-    game::images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         pal_bouncer_start, pal_bouncer_count,
         bouncer_tile_start, bouncer_tile_count,
         game::images::mm_bouncer
@@ -391,7 +391,7 @@ void menu_setup() {
     menu_redraw();
 
     // Mouse bits.
-    game::images::copy_tile_data<
+    engine::graphics::copy_tile_data<
         mouse_pal_start, mouse_pal_count,
         mouse_tile_start, mouse_tile_count,
         game::images::mouse
