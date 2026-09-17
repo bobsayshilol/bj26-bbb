@@ -9,7 +9,7 @@
 #include "profiler.h"
 #include "sound.h"
 #include "music.h"
-#include "font.h"
+#include "game_font.h"
 #include "utils.h"
 
 // Skip stuff for testing/debugging.

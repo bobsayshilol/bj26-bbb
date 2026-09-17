@@ -1,13 +1,8 @@
 #pragma once
 
-#include "images.h"
+#include "graphics.h"
 
-namespace game::font {
-
-constexpr uint8_t font_palette_start = 128;
-constexpr uint8_t font_palette_count = 10;
-constexpr uint8_t font_tile_count = 40;
-constexpr uint8_t font_max_sprites = 64; // max chars on screen too
+namespace engine::font {
 
 constexpr uint16_t CharWidth = engine::graphics::bg_tile_size;
 constexpr uint16_t CharHeight = engine::graphics::bg_tile_size;
@@ -15,19 +10,21 @@ constexpr uint16_t CharHeight = engine::graphics::bg_tile_size;
 namespace detail {
 extern uint16_t s_tile_start;
 extern uint16_t s_sprite_start;
+extern uint8_t s_max_sprites;
 extern bool s_glitch;
 } // namespace detail
 
 // Setup tile data for the font.
-template <uint8_t TileStart, uint8_t SpriteStart>
+template <uint8_t TileStart, uint8_t SpriteStart, typename Config>
 inline void setup_tiles() {
     engine::graphics::copy_tile_data<
-        font_palette_start, font_palette_count,
-        TileStart, font_tile_count,
-        game::images::text_font
+        Config::palette_start, Config::palette_count,
+        TileStart, Config::tile_count,
+        typename Config::Tileset
     >();
     detail::s_tile_start = TileStart;
     detail::s_sprite_start = SpriteStart;
+    detail::s_max_sprites = Config::max_sprites;
 }
 
 template <uint16_t N>
@@ -41,7 +38,7 @@ constexpr bool check_line(const char (&text)[N]) {
 #endif
     return true;
 }
-#define FONT_LINE(line) ([]{static_assert(game::font::check_line(line));}, line)
+#define FONT_LINE(line) ([]{static_assert(engine::font::check_line(line));}, line)
 
 // Write a line of text somewhere on screen.
 // x,y are screen co-ords.
@@ -81,4 +78,4 @@ void clear_text();
 // Make next text glitchy.
 inline void glitch_it() { detail::s_glitch = true; }
 
-} // namespace game::font
+} // namespace engine::font

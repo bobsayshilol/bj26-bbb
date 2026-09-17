@@ -12,6 +12,7 @@ find_package(SDL3 REQUIRED COMPONENTS SDL3-static)
 add_library(loopylib
     lib/debug.cc
     lib/engine.cc
+    lib/font.cc
     lib/graphics.cc
     lib/input.cc
     lib/midi.cc
@@ -49,7 +50,6 @@ add_executable(bbb
     bbb/data_ufo.png.cc
     bbb/data_wormhole.cc
     bbb/driving.cc
-    bbb/font.cc
     bbb/intertitle.cc
     bbb/main_menu.cc
     bbb/main.cc

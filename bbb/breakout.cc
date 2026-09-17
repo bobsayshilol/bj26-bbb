@@ -1,6 +1,6 @@
 #include "aabb.h"
 #include "fixed.h"
-#include "font.h"
+#include "game_font.h"
 #include "game.h"
 #include "images.h"
 #include "input.h"

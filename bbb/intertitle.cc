@@ -1,7 +1,7 @@
 #include "debug.h"
 #include "game.h"
 #include "graphics.h"
-#include "font.h"
+#include "game_font.h"
 #include "input.h"
 #include "utils.h"
 #include "vector.h"

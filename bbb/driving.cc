@@ -8,7 +8,7 @@
 #include "input.h"
 #include "sound.h"
 #include "images.h"
-#include "font.h"
+#include "game_font.h"
 #include "utils.h"
 #include "vector.h"
 #include "aabb.h"

@@ -2,7 +2,7 @@
 #include "graphics.h"
 #include "utils.h"
 
-namespace game::font {
+namespace engine::font {
 
 namespace {
 
@@ -39,6 +39,7 @@ uint32_t char_to_idx(uint8_t ch) {
 namespace detail {
 uint16_t s_tile_start;
 uint16_t s_sprite_start;
+uint8_t s_max_sprites;
 bool s_glitch;
 } // namespace detail
 
@@ -90,7 +91,7 @@ void write_text(const char *text, uint16_t x, uint16_t y) {
 
         // Assign the next sprite to it.
         const uint32_t sprite_idx = sprite_start + used;
-        ASSERT(used < font_max_sprites);
+        ASSERT(used < detail::s_max_sprites);
         engine::graphics::set_sprite(sprite_idx, sprite);
 
         // Advance to the next character.
@@ -125,4 +126,4 @@ void clear_text() {
     detail::s_glitch = false;
 }
 
-} // namespace game::font
+} // namespace engine::font

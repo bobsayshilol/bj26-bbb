@@ -1,5 +1,5 @@
 #include "draw_line.h"
-#include "font.h"
+#include "game_font.h"
 #include "game.h"
 #include "graphics.h"
 #include "input.h"
