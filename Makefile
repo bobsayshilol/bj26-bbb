@@ -170,7 +170,12 @@ GALLERY_ARTS = $(wildcard gallery_data/art_*.png)
 gallery/data_gallery.cc: gallery/convert_images.py $(GALLERY_ARTS)
 	$(PYTHON3) gallery/convert_images.py --output $@ $(GALLERY_ARTS)
 
-GALLERY_DATA_C = $(GALLERY_MIDIS_C) gallery/data_gallery.cc gallery/data_gallery.h
+GALLERY_TILES = $(wildcard gallery_data/tiles_*.png)
+GALLERY_TILES_C = $(patsubst gallery_data/tiles_%.png,gallery/data_%.png.cc,$(GALLERY_TILES))
+gallery/data_%.png.cc: gallery_data/tiles_%.png
+	$(CONVTILES) $^ $@
+
+GALLERY_DATA_C = $(GALLERY_MIDIS_C) $(GALLERY_TILES_C) gallery/data_gallery.cc gallery/data_gallery.h
 gallery_data: $(GALLERY_DATA_C)
 
 

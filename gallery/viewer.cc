@@ -3,6 +3,7 @@
 #include "input.h"
 #include "data_gallery.h"
 #include "memory.h"
+#include "game_font.h"
 
 namespace gallery::viewer {
 
@@ -34,12 +35,36 @@ constexpr uint8_t fullscreen_pal_offset = 1;
 //
 
 // TODO: cursor
-//constexpr uint8_t cursor_pal_start = fullscreen_pal_offset + stickers::max_palette_size;
-//constexpr uint8_t cursor_pal_size = 
+constexpr uint8_t cursor_pal_start = fullscreen_pal_offset + stickers::max_palette_size;
+constexpr uint8_t cursor_pal_count = 0;
+constexpr uint8_t cursor_tile_start = 0;
+constexpr uint8_t cursor_tile_count = 1;
+constexpr uint8_t cursor_sprite_start = 0; // highest prio
+constexpr uint8_t cursor_sprite_count = 1;
 
 // TODO: font
+constexpr uint8_t font_pal_start = cursor_pal_start + cursor_pal_count;
+constexpr uint8_t font_pal_count = font::FontConfig::palette_count;
+constexpr uint8_t font_tile_start = cursor_tile_start + cursor_tile_count;
+constexpr uint8_t font_tile_count = engine::font::tile_count;
+constexpr uint8_t font_sprite_start = cursor_sprite_start + cursor_sprite_count;
+constexpr uint8_t font_sprite_count = font::FontConfig::max_sprites;
+
+// TODO: arrows
+constexpr uint8_t arrows_pal_start = font_pal_start + font_pal_count;
+constexpr uint8_t arrows_pal_count = 10;
+constexpr uint8_t arrows_tile_start = font_tile_start + font_tile_count;
+constexpr uint8_t arrows_tile_count = 1;
+constexpr uint8_t arrows_sprite_start = font_sprite_start + font_sprite_count;
+constexpr uint8_t arrows_sprite_count = 2; // one on either side, flipped
 
 // TODO: bg for menus
+constexpr uint8_t bg0_pal_start = arrows_pal_start + arrows_pal_count;
+constexpr uint8_t bg0_pal_count = 10;
+constexpr uint8_t bg0_tile_start = arrows_tile_start + arrows_tile_count;
+constexpr uint8_t bg0_tile_count = 4; // repeating pattern
+
+// TODO: highlight for preview
 
 //
 
@@ -104,6 +129,9 @@ void do_print() {
 //
 
 void ui_redraw() {
+    // Remove any text.
+    engine::font::clear_text();
+
     uint8_t * temp_data = VDP.BITMAP_VRAM_8BIT + temp_start;
     const uint8_t idx = s_selected_idx;
 
@@ -199,6 +227,13 @@ bool ui_update() {
     return false;
 }
 
+void ui_setup() {
+    // Load font.
+    font::setup_tiles<font_tile_start, font_sprite_start>();
+
+    ui_redraw();
+}
+
 } // namespace
 
 void enter() {
@@ -206,10 +241,25 @@ void enter() {
     s_selected_idx = 0;
     s_ui_state = UIState::Previews;
 
-    ui_redraw();
+    ui_setup();
+
+    // This screen uses sprites and has a background.
+    bios_vsync();
+    engine::graphics::enable_sprites();
+    //engine::graphics::background_0.enable(); // TODO
 }
 
 void leave() {
+    // Reset graphics state.
+    bios_vsync();
+    engine::graphics::disable_sprites();
+    engine::graphics::background_0.disable();
+    engine::graphics::bitmap_0.disable();
+    engine::graphics::bitmap_1.disable();
+    engine::graphics::bitmap_2.disable();
+    engine::graphics::bitmap_3.disable();
+    engine::graphics::reset_sprites<arrows_sprite_start + arrows_sprite_count>();
+    engine::font::clear_text();
 }
 
 Screen loop() {
