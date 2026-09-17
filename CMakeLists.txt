@@ -66,6 +66,8 @@ endif()
 # Gallery
 add_executable(gallery
     gallery/attract.cc
+    gallery/data_bg.png.cc
+    gallery/data_font.png.cc
     gallery/data_gallery.cc
     gallery/main.cc
     gallery/main_menu.cc

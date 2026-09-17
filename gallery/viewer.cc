@@ -1,5 +1,6 @@
 #include "gallery.h"
 #include "graphics.h"
+#include "images.h"
 #include "input.h"
 #include "data_gallery.h"
 #include "memory.h"
@@ -42,13 +43,13 @@ constexpr uint8_t cursor_tile_count = 1;
 constexpr uint8_t cursor_sprite_start = 0; // highest prio
 constexpr uint8_t cursor_sprite_count = 1;
 
-// TODO: font
 constexpr uint8_t font_pal_start = cursor_pal_start + cursor_pal_count;
 constexpr uint8_t font_pal_count = font::FontConfig::palette_count;
 constexpr uint8_t font_tile_start = cursor_tile_start + cursor_tile_count;
 constexpr uint8_t font_tile_count = engine::font::tile_count;
 constexpr uint8_t font_sprite_start = cursor_sprite_start + cursor_sprite_count;
 constexpr uint8_t font_sprite_count = font::FontConfig::max_sprites;
+static_assert(font_pal_start == font::FontConfig::palette_start);
 
 // TODO: arrows
 constexpr uint8_t arrows_pal_start = font_pal_start + font_pal_count;
@@ -62,7 +63,7 @@ constexpr uint8_t arrows_sprite_count = 2; // one on either side, flipped
 constexpr uint8_t bg0_pal_start = arrows_pal_start + arrows_pal_count;
 constexpr uint8_t bg0_pal_count = 10;
 constexpr uint8_t bg0_tile_start = arrows_tile_start + arrows_tile_count;
-constexpr uint8_t bg0_tile_count = 4; // repeating pattern
+constexpr uint8_t bg0_tile_count = 1; // repeating pattern
 
 // TODO: highlight for preview
 
@@ -234,6 +235,28 @@ void ui_setup() {
     ui_redraw();
 }
 
+void background_setup() {
+    using namespace engine::graphics;
+
+    // Copy tiles.
+    copy_tile_data<
+        bg0_pal_start, bg0_pal_count,
+        bg0_tile_start, bg0_tile_count,
+        images::tiles_bg
+    >();
+
+    // Setup bg.
+    BGSprite sprite;
+    for (uint8_t y = 0; y < bg_tilemap_size; y++) {
+        sprite.set_y_flip(y & 1);
+        for (uint8_t x = 0; x < bg_tilemap_size; x++) {
+            sprite.set_tile_index(bg0_tile_start);
+            sprite.set_x_flip(x & 1);
+            background_0.set_sprite(x, y, sprite);
+        }
+    }
+}
+
 } // namespace
 
 void enter() {
@@ -242,11 +265,12 @@ void enter() {
     s_ui_state = UIState::Previews;
 
     ui_setup();
+    background_setup();
 
     // This screen uses sprites and has a background.
     bios_vsync();
     engine::graphics::enable_sprites();
-    //engine::graphics::background_0.enable(); // TODO
+    engine::graphics::background_0.enable();
 }
 
 void leave() {
