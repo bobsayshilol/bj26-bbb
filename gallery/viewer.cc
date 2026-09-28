@@ -5,6 +5,7 @@
 #include "data_gallery.h"
 #include "memory.h"
 #include "game_font.h"
+#include "aabb.h"
 
 namespace gallery::viewer {
 
@@ -85,6 +86,48 @@ struct alignas(2) Mouse {
     uint8_t x, y;
 } s_mouse;
 
+//
+
+enum class ButtonType : uint8_t {
+    // PreviewX is used as an offset, so needs to be fixed numbers.
+    Preview0 = 0, Preview1 = 1, Preview2 = 2, Preview3 = 3,
+};
+struct Button {
+    engine::utils::AABB aabb;
+    ButtonType type;
+    constexpr Button(uint8_t x, uint8_t y, uint8_t w, uint8_t h, ButtonType t)
+        : aabb{x, y, w, h}
+        , type(t)
+    {}
+};
+
+constexpr Button buttons[] {
+    Button(
+        engine::graphics::SCREEN_WIDTH * 3 / 16, engine::graphics::SCREEN_HEIGHT * 3 / 16,
+        stickers::preview_width, stickers::preview_height,
+        ButtonType::Preview0
+    ),
+    Button(
+        engine::graphics::SCREEN_WIDTH * 9 / 16, engine::graphics::SCREEN_HEIGHT * 3 / 16,
+        stickers::preview_width, stickers::preview_height,
+        ButtonType::Preview1
+    ),
+    Button(
+        engine::graphics::SCREEN_WIDTH * 3 / 16, engine::graphics::SCREEN_HEIGHT * 9 / 16,
+        stickers::preview_width, stickers::preview_height,
+        ButtonType::Preview2
+    ),
+    Button(
+        engine::graphics::SCREEN_WIDTH * 9 / 16, engine::graphics::SCREEN_HEIGHT * 9 / 16,
+        stickers::preview_width, stickers::preview_height,
+        ButtonType::Preview3
+    ),
+};
+
+const Button * s_current_button;
+
+//
+
 void mouse_redraw() {
     // Update sprite.
     engine::graphics::ObjSprite sprite;
@@ -110,6 +153,39 @@ void mouse_setup() {
         cursor_tile_start, cursor_tile_count,
         images::tiles_mouse
     >();
+}
+
+void mouse_enter(const Button & button);
+void mouse_leave(const Button & button);
+
+void mouse_reset() {
+    if (s_current_button) {
+        mouse_leave(*s_current_button);
+        s_current_button = nullptr;
+    }
+}
+
+void mouse_move() {
+    const engine::utils::AABB cursor_aabb{
+        s_mouse.x, s_mouse.y,
+        engine::graphics::bg_tile_size, engine::graphics::bg_tile_size,
+    };
+    if (s_current_button) {
+        // Check for moving off of the button.
+        if (!s_current_button->aabb.intersects(cursor_aabb)) {
+            mouse_reset();
+        }
+    } else {
+        // Look for a new button.
+        for (const Button & butt : buttons) {
+            // No overlapping so should be single hit.
+            if (cursor_aabb.intersects(butt.aabb)) {
+                s_current_button = &butt;
+                mouse_enter(butt);
+                break;
+            }
+        }
+    }
 }
 
 void mouse_update() {
@@ -141,6 +217,7 @@ void mouse_update() {
         engine::graphics::SCREEN_HEIGHT - tile_size - padding
     );
 
+    mouse_move();
     mouse_redraw();
 }
 
@@ -151,19 +228,19 @@ void change_ui() {
 
     switch (s_ui_state) {
         case UIState::Previews: {
-            auto quad = [](auto && bitmap, uint16_t sx, uint16_t x, uint16_t y) {
-                bitmap.position_x() = x;
-                bitmap.position_y() = y;
+            auto quad = [](auto && bitmap, uint16_t sx, const Button & button) {
+                bitmap.position_x() = button.aabb.x;
+                bitmap.position_y() = button.aabb.y;
                 bitmap.width() = stickers::preview_width - 1;
                 bitmap.height() = stickers::preview_height - 1;
                 bitmap.scroll_x() = sx;
                 bitmap.scroll_y() = preview_start / SCREEN_WIDTH;
                 bitmap.enable();
             };
-            quad(bitmap_0, stickers::preview_width * 0, SCREEN_WIDTH * 3 / 16, SCREEN_HEIGHT * 3 / 16);
-            quad(bitmap_1, stickers::preview_width * 1, SCREEN_WIDTH * 9 / 16, SCREEN_HEIGHT * 3 / 16);
-            quad(bitmap_2, stickers::preview_width * 2, SCREEN_WIDTH * 3 / 16, SCREEN_HEIGHT * 9 / 16);
-            quad(bitmap_3, stickers::preview_width * 3, SCREEN_WIDTH * 9 / 16, SCREEN_HEIGHT * 9 / 16);
+            quad(bitmap_0, stickers::preview_width * 0, buttons[0]); static_assert(buttons[0].type == ButtonType::Preview0);
+            quad(bitmap_1, stickers::preview_width * 1, buttons[1]); static_assert(buttons[1].type == ButtonType::Preview1);
+            quad(bitmap_2, stickers::preview_width * 2, buttons[2]); static_assert(buttons[2].type == ButtonType::Preview2);
+            quad(bitmap_3, stickers::preview_width * 3, buttons[3]); static_assert(buttons[3].type == ButtonType::Preview3);
         } break;
 
         case UIState::Fullscreen:
@@ -196,8 +273,8 @@ void do_print() {
 //
 
 void ui_redraw() {
-    // Remove any text.
-    engine::font::clear_text();
+    // Reset the mouse to clear stuff since we reuse the same buttons.
+    mouse_reset();
 
     uint8_t * temp_data = VDP.BITMAP_VRAM_8BIT + temp_start;
     const uint8_t idx = s_selected_idx;
@@ -261,8 +338,16 @@ bool ui_update() {
                 if (s_selected_idx >= stickers::num_stickers) s_selected_idx = 0;
                 redraw = true;
             } else if (pressed & GAMEPAD_BTN_A) {
-                ui_advance(UIState::Fullscreen);
-                redraw = true;
+                if (s_current_button) {
+                    // Select the one that's selected.
+                    const uint8_t preview_idx = static_cast<uint8_t>(s_current_button->type);
+                    // TODO: should really avoid making the button if it'd be out of bounds
+                    if (s_selected_idx + preview_idx < stickers::num_stickers) {
+                        s_selected_idx += preview_idx;
+                        ui_advance(UIState::Fullscreen);
+                        redraw = true;
+                    }
+                }
             } else if (pressed & GAMEPAD_BTN_B) {
                 // Return from menu.
                 return true;
@@ -337,6 +422,31 @@ void ui_advance(UIState state) {
     }
 }
 
+void mouse_enter(const Button & button) {
+    switch (button.type) {
+        case ButtonType::Preview0:
+        case ButtonType::Preview1:
+        case ButtonType::Preview2:
+        case ButtonType::Preview3: {
+            // Work out which image we're looking at.
+            const uint8_t preview_index = s_selected_idx + static_cast<uint8_t>(button.type);
+            if (preview_index < stickers::num_stickers) {
+                uint8_t length = 0;
+                const char * name = stickers::image_name((stickers::Image)preview_index, length);
+
+                // Display it.
+                constexpr uint8_t y = engine::graphics::SCREEN_HEIGHT - engine::graphics::bg_tile_size * 2;
+                engine::font::write_centered(name, length + 1, y);
+            }
+        } break;
+    }
+}
+
+void mouse_leave(const Button &) {
+    // Remove the name.
+    engine::font::clear_text();
+}
+
 } // namespace
 
 void enter() {
@@ -347,6 +457,7 @@ void enter() {
 
     // Reset state.
     s_selected_idx = 0;
+    s_current_button = nullptr;
     ui_advance(UIState::Previews);
     ui_redraw();
 
