@@ -6,7 +6,7 @@
 namespace gallery::font {
 
 struct FontConfig {
-    static constexpr uint8_t palette_start = 209;
+    static constexpr uint8_t palette_start = 219;
     static constexpr uint8_t palette_count = 10;
     static constexpr uint8_t max_sprites = 64; // max chars on screen too
     using Tileset = gallery::images::tiles_font;

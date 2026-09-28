@@ -35,9 +35,8 @@ constexpr uint8_t fullscreen_pal_offset = 1;
 
 //
 
-// TODO: cursor
 constexpr uint8_t cursor_pal_start = fullscreen_pal_offset + stickers::max_palette_size;
-constexpr uint8_t cursor_pal_count = 0;
+constexpr uint8_t cursor_pal_count = 10;
 constexpr uint8_t cursor_tile_start = 0;
 constexpr uint8_t cursor_tile_count = 1;
 constexpr uint8_t cursor_sprite_start = 0; // highest prio
@@ -77,6 +76,73 @@ enum class UIState {
     Previews,
     Fullscreen,
 } s_ui_state;
+
+void ui_advance(UIState state);
+
+//
+
+struct alignas(2) Mouse {
+    uint8_t x, y;
+} s_mouse;
+
+void mouse_redraw() {
+    // Update sprite.
+    engine::graphics::ObjSprite sprite;
+    sprite.set_tile_index(cursor_tile_start);
+    sprite.set_x(s_mouse.x);
+    sprite.set_y(s_mouse.y);
+    engine::graphics::set_sprite(cursor_sprite_start, sprite);
+}
+
+void mouse_show(bool show) {
+    if (show) {
+        s_mouse.x = engine::graphics::SCREEN_WIDTH / 2;
+        s_mouse.y = engine::graphics::SCREEN_HEIGHT / 2;
+        mouse_redraw();
+    } else {
+        engine::graphics::set_sprite(cursor_sprite_start, {});
+    }
+}
+
+void mouse_setup() {
+    engine::graphics::copy_tile_data<
+        cursor_pal_start, cursor_pal_count,
+        cursor_tile_start, cursor_tile_count,
+        images::tiles_mouse
+    >();
+}
+
+void mouse_update() {
+    const auto held = engine::input::g_buttons_held;
+
+    constexpr uint8_t speed = 2;
+    constexpr uint8_t tile_size = engine::graphics::bg_tile_size;
+    constexpr uint8_t padding = 3;
+
+    if (held & GAMEPAD_BTN_LEFT) {
+        s_mouse.x = s_mouse.x - speed;
+    } else if (held & GAMEPAD_BTN_RIGHT) {
+        s_mouse.x = s_mouse.x + speed;
+    }
+    s_mouse.x = engine::utils::clamp<int16_t>(
+        s_mouse.x,
+        padding,
+        engine::graphics::SCREEN_WIDTH - tile_size - padding
+    );
+
+    if (held & GAMEPAD_BTN_DOWN) {
+        s_mouse.y = s_mouse.y + speed;
+    } else if (held & GAMEPAD_BTN_UP) {
+        s_mouse.y = s_mouse.y - speed;
+    }
+    s_mouse.y = engine::utils::clamp<int16_t>(
+        s_mouse.y,
+        padding,
+        engine::graphics::SCREEN_HEIGHT - tile_size - padding
+    );
+
+    mouse_redraw();
+}
 
 //
 
@@ -185,6 +251,7 @@ bool ui_update() {
 
     switch (state) {
         case UIState::Previews:
+            mouse_update();
             if (pressed & GAMEPAD_BTN_LTRIG) {
                 s_selected_idx -= previews_per_page;
                 if (s_selected_idx < 0) s_selected_idx = (stickers::num_stickers - 1) / 4 * 4;
@@ -194,7 +261,7 @@ bool ui_update() {
                 if (s_selected_idx >= stickers::num_stickers) s_selected_idx = 0;
                 redraw = true;
             } else if (pressed & GAMEPAD_BTN_A) {
-                s_ui_state = UIState::Fullscreen;
+                ui_advance(UIState::Fullscreen);
                 redraw = true;
             } else if (pressed & GAMEPAD_BTN_B) {
                 // Return from menu.
@@ -214,7 +281,7 @@ bool ui_update() {
             } else if (pressed & GAMEPAD_BTN_A) {
                 do_print();
             } else if (pressed & GAMEPAD_BTN_B) {
-                s_ui_state = UIState::Previews;
+                ui_advance(UIState::Previews);
                 s_selected_idx = static_cast<uint16_t>(s_selected_idx) / 4 * 4;
                 redraw = true;
             }
@@ -231,8 +298,6 @@ bool ui_update() {
 void ui_setup() {
     // Load font.
     font::setup_tiles<font_tile_start, font_sprite_start>();
-
-    ui_redraw();
 }
 
 void background_setup() {
@@ -257,15 +322,33 @@ void background_setup() {
     }
 }
 
+//
+
+void ui_advance(UIState state) {
+    s_ui_state = state;
+    switch (state) {
+        case UIState::Previews:
+            mouse_show(true);
+            break;
+
+        case UIState::Fullscreen:
+            mouse_show(false);
+            break;
+    }
+}
+
 } // namespace
 
 void enter() {
-    // Reset state.
-    s_selected_idx = 0;
-    s_ui_state = UIState::Previews;
-
+    // Load stuff.
     ui_setup();
     background_setup();
+    mouse_setup();
+
+    // Reset state.
+    s_selected_idx = 0;
+    ui_advance(UIState::Previews);
+    ui_redraw();
 
     // This screen uses sprites and has a background.
     bios_vsync();
