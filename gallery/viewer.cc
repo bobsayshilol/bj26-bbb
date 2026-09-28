@@ -79,6 +79,7 @@ enum class UIState {
 } s_ui_state;
 
 void ui_advance(UIState state);
+void ui_redraw();
 
 //
 
@@ -223,6 +224,80 @@ void mouse_update() {
 
 //
 
+enum class PreviewAnimation {
+    None,
+    Spiral,
+} s_preview_anim;
+
+uint16_t s_anim_time;
+
+enum class PreviewAction {
+    Decrement, Increment,
+} s_anim_action;
+
+void animation_start(PreviewAction action) {
+    // TODO: random animations
+    s_preview_anim = PreviewAnimation::Spiral;
+    s_anim_time = 0;
+    s_anim_action = action;
+}
+
+bool animation_update() {
+    const uint16_t t = s_anim_time++;
+
+    enum class AnimState { Inactive, Playing, Trigger, };
+    AnimState state = AnimState::Inactive;
+
+    // Display the animation.
+    switch (s_preview_anim) {
+        case PreviewAnimation::None:
+            break;
+
+        case PreviewAnimation::Spiral:
+            if (t == 30) {
+                state = AnimState::Trigger;
+            } else if (t > 60) {
+                state = AnimState::Inactive;
+                s_preview_anim = PreviewAnimation::None;
+            } else {
+                state = AnimState::Playing;
+                using namespace engine::graphics;
+
+                constexpr int16_t speed = 6;
+                const uint16_t dt = t > 30 ? 60 - t : t;
+
+                auto update_bitmap = [&](auto && bitmap, int16_t dx, int16_t dy, const Button & button) {
+                    bitmap.position_x() = button.aabb.x + bios_mathMulS16(dx, dt);
+                    bitmap.position_y() = button.aabb.y + bios_mathMulS16(dy, dt);
+                };
+                update_bitmap(bitmap_0, -speed, -speed, buttons[0]); static_assert(buttons[0].type == ButtonType::Preview0);
+                update_bitmap(bitmap_1, speed, -speed, buttons[1]); static_assert(buttons[1].type == ButtonType::Preview1);
+                update_bitmap(bitmap_2, -speed, speed, buttons[2]); static_assert(buttons[2].type == ButtonType::Preview2);
+                update_bitmap(bitmap_3, speed, speed, buttons[3]); static_assert(buttons[3].type == ButtonType::Preview3);
+            }
+            break;
+    }
+
+    // Trigger the action.
+    if (state == AnimState::Trigger) {
+        switch (s_anim_action) {
+            case PreviewAction::Increment:
+                s_selected_idx += previews_per_page;
+                if (s_selected_idx >= stickers::num_stickers) s_selected_idx = 0;
+                break;
+            case PreviewAction::Decrement:
+                s_selected_idx -= previews_per_page;
+                if (s_selected_idx < 0) s_selected_idx = (stickers::num_stickers - 1) / 4 * 4;
+                break;
+        }
+        ui_redraw();
+    }
+
+    return state != AnimState::Inactive;
+}
+
+//
+
 void change_ui() {
     using namespace engine::graphics;
 
@@ -316,8 +391,6 @@ void ui_redraw() {
             stickers::preview_palette(VDP.PALETTE + fullscreen_pal_offset);
         } break;
     }
-
-    change_ui();
 }
 
 bool ui_update() {
@@ -326,17 +399,18 @@ bool ui_update() {
 
     bool redraw = false;
 
+    // If there's an animation playing, do that.
+    if (animation_update()) {
+        return false;
+    }
+
     switch (state) {
         case UIState::Previews:
             mouse_update();
             if (pressed & GAMEPAD_BTN_LTRIG) {
-                s_selected_idx -= previews_per_page;
-                if (s_selected_idx < 0) s_selected_idx = (stickers::num_stickers - 1) / 4 * 4;
-                redraw = true;
+                animation_start(PreviewAction::Decrement);
             } else if (pressed & GAMEPAD_BTN_RTRIG) {
-                s_selected_idx += previews_per_page;
-                if (s_selected_idx >= stickers::num_stickers) s_selected_idx = 0;
-                redraw = true;
+                animation_start(PreviewAction::Increment);
             } else if (pressed & GAMEPAD_BTN_A) {
                 if (s_current_button) {
                     // Select the one that's selected.
@@ -375,6 +449,7 @@ bool ui_update() {
 
     if (redraw) {
         ui_redraw();
+        change_ui();
     }
 
     return false;
@@ -458,8 +533,10 @@ void enter() {
     // Reset state.
     s_selected_idx = 0;
     s_current_button = nullptr;
+    s_preview_anim = PreviewAnimation::None;
     ui_advance(UIState::Previews);
     ui_redraw();
+    change_ui();
 
     // This screen uses sprites and has a background.
     bios_vsync();
